@@ -1,6 +1,6 @@
 module VoronoiMeshes
 
-using TensorsLite, ImmutableVectors, TensorsLiteGeometry
+using Zeros, TensorsLite, ImmutableVectors, TensorsLiteGeometry
 
 export @parallel
 

@@ -8,16 +8,17 @@ ImmutableVectors = "d6059b30-97e8-4ff2-b426-20b29c0469af"
 NCDatasets = "85f8d34a-cbdd-5861-8df4-14fed0d494ab"
 TensorsLite = "1a1b94bd-d244-45e0-965a-8acfeb92b70f"
 TensorsLiteGeometry = "f9cc0174-84f8-4243-a119-6cf6c33db921"
+Zeros = "bd1ec220-6eb4-527a-9b49-e79c3db6233b"
 
 [weakdeps]
+DelaunayTriangulation = "927a84f5-c5f4-47a5-9785-b46e178433df"
 GeometryBasics = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
 NCDatasets = "85f8d34a-cbdd-5861-8df4-14fed0d494ab"
-DelaunayTriangulation = "927a84f5-c5f4-47a5-9785-b46e178433df"
 
 [extensions]
+DelaunayTriangulationExt = "DelaunayTriangulation"
 GeometryBasicsExt = "GeometryBasics"
 NCDatasetsExt = "NCDatasets"
-DelaunayTriangulationExt = "DelaunayTriangulation"
 
 [compat]
 DelaunayTriangulation = "1.6.0"
@@ -25,6 +26,7 @@ ImmutableVectors = "1.0.0"
 NCDatasets = "0.14.5"
 TensorsLite = "1.0.0"
 TensorsLiteGeometry = "1.0.0"
+Zeros = "0.3.0"
 julia = "1.10"
 
 [extras]

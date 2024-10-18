@@ -166,18 +166,18 @@ end
 
 function VoronoiMeshes.VoronoiDiagram(ncfile::NCDatasets.NCDataset)
     if on_a_sphere(ncfile)
-        return SphericalVoronoiDiagram(ncfile)
+        return VoronoiDiagram(SphericalVoronoiDiagram(ncfile))
     else
-        return PlanarVoronoiDiagram(ncfile)
+        return VoronoiDiagram(PlanarVoronoiDiagram(ncfile))
     end
 end
 
 function VoronoiMeshes.VoronoiDiagram(n::Val{maxEdges}, ncfile::NCDatasets.NCDataset) where {maxEdges}
     maxEdges == Int(maximum(ncfile["nEdgesOnCell"][:]::Vector{Int32})) || throw(error("nEdges not consistent with data in NetCDF file"))
     if on_a_sphere(ncfile)
-        return VoronoiMeshes.SphericalVoronoiDiagram(n, ncfile)
+        return VoronoiDiagram(VoronoiMeshes.SphericalVoronoiDiagram(n, ncfile))
     else
-        return VoronoiMeshes.PlanarVoronoiDiagram(n, ncfile)
+        return VoronoiDiagram(VoronoiMeshes.PlanarVoronoiDiagram(n, ncfile))
     end
 end
 

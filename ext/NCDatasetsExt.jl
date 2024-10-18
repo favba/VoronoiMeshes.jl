@@ -23,7 +23,7 @@ for T in (Int32, Int64)
     end
 end
 
-function VoronoiMeshes.PlanarPeriodicVoronoiDiagram(::Val{N}, nEdgesOnCell, ncfile::NCDatasets.NCDataset) where N
+function VoronoiMeshes.PlanarVoronoiDiagram(::Val{N}, nEdgesOnCell, ncfile::NCDatasets.NCDataset) where N
     verticesOnCellArray = (ncfile["verticesOnCell"][:,:])::Matrix{Int32}
     l = UInt8.(nEdgesOnCell)
     nCells = length(l)
@@ -50,14 +50,14 @@ function VoronoiMeshes.PlanarPeriodicVoronoiDiagram(::Val{N}, nEdgesOnCell, ncfi
     wait(t1)
     wait(t2)
 
-    return VoronoiMeshes.PlanarPeriodicVoronoiDiagram(generators, vertices, verticesOnCell, cellsOnVertex, x_period, y_period)
+    return VoronoiMeshes.PlanarVoronoiDiagram(generators, vertices, verticesOnCell, cellsOnVertex, x_period, y_period)
 end
 
 for N in 6:10
-    precompile(VoronoiMeshes.PlanarPeriodicVoronoiDiagram, (Val{N}, Vector{Int32}, NCDatasets.NCDataset{Nothing, Missing}))
+    precompile(VoronoiMeshes.PlanarVoronoiDiagram, (Val{N}, Vector{Int32}, NCDatasets.NCDataset{Nothing, Missing}))
 end
 
-function VoronoiMeshes.PlanarPeriodicVoronoiDiagram(ncfile::NCDatasets.NCDataset)
+function VoronoiMeshes.PlanarVoronoiDiagram(ncfile::NCDatasets.NCDataset)
     on_a_sphere(ncfile) && throw(error("Mesh is not planar"))
 
     nEdgesOnCell = ncfile["nEdgesOnCell"][:]::Vector{Int32}
@@ -65,19 +65,32 @@ function VoronoiMeshes.PlanarPeriodicVoronoiDiagram(ncfile::NCDatasets.NCDataset
 
     #Avoid dynamic dispatch for most common cases
     if maxEdges == 6
-        return VoronoiMeshes.PlanarPeriodicVoronoiDiagram(Val{6}(), nEdgesOnCell,ncfile)
+        return VoronoiMeshes.PlanarVoronoiDiagram(Val{6}(), nEdgesOnCell,ncfile)
     elseif maxEdges == 7
-        return VoronoiMeshes.PlanarPeriodicVoronoiDiagram(Val{7}(), nEdgesOnCell,ncfile)
+        return VoronoiMeshes.PlanarVoronoiDiagram(Val{7}(), nEdgesOnCell,ncfile)
     elseif maxEdges == 8
-        return VoronoiMeshes.PlanarPeriodicVoronoiDiagram(Val{8}(), nEdgesOnCell,ncfile)
+        return VoronoiMeshes.PlanarVoronoiDiagram(Val{8}(), nEdgesOnCell,ncfile)
     elseif maxEdges == 9
-        return VoronoiMeshes.PlanarPeriodicVoronoiDiagram(Val{9}(), nEdgesOnCell,ncfile)
+        return VoronoiMeshes.PlanarVoronoiDiagram(Val{9}(), nEdgesOnCell,ncfile)
     elseif maxEdges == 10
-        return VoronoiMeshes.PlanarPeriodicVoronoiDiagram(Val{10}(), nEdgesOnCell,ncfile)
+        return VoronoiMeshes.PlanarVoronoiDiagram(Val{10}(), nEdgesOnCell,ncfile)
     else
-        return VoronoiMeshes.PlanarPeriodicVoronoiDiagram(Val(maxEdges), nEdgesOnCell, ncfile)
+        return VoronoiMeshes.PlanarVoronoiDiagram(Val(maxEdges), nEdgesOnCell, ncfile)
     end
 
+end
+
+function VoronoiMeshes.PlanarVoronoiDiagram(n::Val{maxEdges}, ncfile::NCDatasets.NCDataset) where {maxEdges}
+    on_a_sphere(ncfile) && throw(error("Mesh is not planar"))
+
+    nEdgesOnCell = ncfile["nEdgesOnCell"][:]::Vector{Int32}
+    maxEdges == Int(maximum(nEdgesOnCell)) || throw(error("nEdges not consistent with data in NetCDF file"))
+
+       return VoronoiMeshes.PlanarVoronoiDiagram(n, nEdgesOnCell, ncfile)
+end
+
+for N in 6:10
+    precompile(VoronoiMeshes.PlanarVoronoiDiagram, (Val{N}, NCDatasets.NCDataset{Nothing, Missing}))
 end
 
 function VoronoiMeshes.SphericalVoronoiDiagram(::Val{N}, nEdgesOnCell, ncfile::NCDatasets.NCDataset) where {N}
@@ -138,11 +151,45 @@ function VoronoiMeshes.SphericalVoronoiDiagram(ncfile::NCDatasets.NCDataset)
 
 end
 
-for func in  (:PlanarPeriodicVoronoiDiagram, :SphericalVoronoiDiagram)
+function VoronoiMeshes.SphericalVoronoiDiagram(n::Val{maxEdges}, ncfile::NCDatasets.NCDataset) where {maxEdges}
+    on_a_sphere(ncfile) || throw(error("Mesh is not spherical"))
+
+    nEdgesOnCell = ncfile["nEdgesOnCell"][:]::Vector{Int32}
+    maxEdges == Int(maximum(nEdgesOnCell)) || throw(error("nEdges not consistent with data in NetCDF file"))
+
+    return VoronoiMeshes.SphericalVoronoiDiagram(n, nEdgesOnCell, ncfile)
+end
+
+for N in 6:10
+    precompile(VoronoiMeshes.SphericalVoronoiDiagram, (Val{N}, NCDatasets.NCDataset{Nothing, Missing}))
+end
+
+function VoronoiMeshes.VoronoiDiagram(ncfile::NCDatasets.NCDataset)
+    if on_a_sphere(ncfile)
+        return SphericalVoronoiDiagram(ncfile)
+    else
+        return PlanarVoronoiDiagram(ncfile)
+    end
+end
+
+function VoronoiMeshes.VoronoiDiagram(n::Val{maxEdges}, ncfile::NCDatasets.NCDataset) where {maxEdges}
+    maxEdges == Int(maximum(ncfile["nEdgesOnCell"][:]::Vector{Int32})) || throw(error("nEdges not consistent with data in NetCDF file"))
+    if on_a_sphere(ncfile)
+        return VoronoiMeshes.SphericalVoronoiDiagram(n, ncfile)
+    else
+        return VoronoiMeshes.PlanarVoronoiDiagram(n, ncfile)
+    end
+end
+
+for func in  (:PlanarVoronoiDiagram, :SphericalVoronoiDiagram, :VoronoiDiagram)
     @eval begin
         VoronoiMeshes.$func(file_name::String) = NCDataset(file_name) do f; VoronoiMeshes.$func(f);end
+        VoronoiMeshes.$func(v::Val, file_name::String) = NCDataset(file_name) do f; VoronoiMeshes.$func(v, f);end
         precompile(VoronoiMeshes.$func,(NCDatasets.NCDataset{Nothing, Missing},))
         precompile(VoronoiMeshes.$func,(String,))
+    end
+    for N in 6:10
+        @eval precompile(VoronoiMeshes.$func,(Val{$N}, NCDatasets.NCDataset{Nothing, Missing},))
     end
 end
 

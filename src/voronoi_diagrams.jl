@@ -1,6 +1,6 @@
 abstract type VoronoiDiagram{MAX_EDGES, TI <: Integer, TF <: Real} end
 
-struct PlanarPeriodicVoronoiDiagram{MAX_EDGES, TI, TF} <: VoronoiDiagram{MAX_EDGES, TI, TF}
+struct PlanarVoronoiDiagram{MAX_EDGES, TI, TF} <: VoronoiDiagram{MAX_EDGES, TI, TF}
     generators::Vec2DxyArray{TF, 1}
     vertices::Vec2DxyArray{TF, 1}
     verticesOnCell::ImVecArray{MAX_EDGES, TI, 1}

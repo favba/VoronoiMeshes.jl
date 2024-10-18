@@ -4,7 +4,7 @@ using TensorsLite, ImmutableVectors, TensorsLiteGeometry
 
 export @parallel
 
-export VoronoiDiagram, PlanarPeriodicVoronoiDiagram, SphericalVoronoiDiagram
+export VoronoiDiagram, PlanarVoronoiDiagram, SphericalVoronoiDiagram
 
 include("utils_pre.jl")
 

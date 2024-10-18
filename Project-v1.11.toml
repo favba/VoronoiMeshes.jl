@@ -8,6 +8,11 @@ ImmutableVectors = "d6059b30-97e8-4ff2-b426-20b29c0469af"
 TensorsLite = "1a1b94bd-d244-45e0-965a-8acfeb92b70f"
 TensorsLiteGeometry = "f9cc0174-84f8-4243-a119-6cf6c33db921"
 
+[sources]
+ImmutableVectors = {url = "https://github.com/favba/ImmutableVectors.jl.git"}
+TensorsLite = {url = "https://github.com/favba/TensorsLite.jl.git"}
+TensorsLiteGeometry = {url = "https://github.com/favba/TensorsLiteGeometry.jl.git"}
+
 [compat]
 ImmutableVectors = "1.0.0"
 TensorsLite = "1.0.0"

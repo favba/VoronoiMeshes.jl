@@ -243,6 +243,40 @@ end
 VoronoiMeshes.Cells(ncfile::NCDatasets.NCDataset) = Cells(VoronoiDiagram(ncfile), ncfile)
 VoronoiMeshes.Cells(v::Val{N}, ncfile::NCDatasets.NCDataset) where {N} = Cells(VoronoiDiagram(v, ncfile), ncfile)
 
+function VoronoiMeshes.VertexInfo(voro::VoronoiDiagram{S, NE, TI, TF, Tz}, ncfile::NCDatasets.NCDataset) where {S, NE, TI, TF, Tz}
+  vertex_info = VertexInfo(voro)
+
+    haskey(ncfile, "centroidVertex") && (vertex_info.area = ncfile["centroidVertex"][:]::Vector{Float64})
+    haskey(ncfile, "centroidTriangle") && (vertex_info.area = ncfile["centroidTriangle"][:]::Vector{Float64})
+    haskey(ncfile, "areaVertex") && (vertex_info.area = ncfile["areaVertex"][:]::Vector{Float64})
+    haskey(ncfile, "areaTriangle") && (vertex_info.area = ncfile["areaTriangle"][:]::Vector{Float64})
+    haskey(ncfile, "lonVertex") && (vertex_info.longitude = ncfile["lonVertex"][:]::Vector{Float64})
+    haskey(ncfile, "latVertex") && (vertex_info.latitude = ncfile["latVertex"][:]::Vector{Float64})
+
+    if haskey(ncfile, "kiteAreasOnVertex")
+        kiteAreasArray = ncfile["kiteAreasOnVertex"][:,:]
+        kiteAreas = [(kiteAreasArray[1,k],kiteAreasArray[2,k],kiteAreasArray[3,k]) for k in axes(kiteAreasArray,2)]
+        vertex_info.kiteAreas = kiteAreas
+    end
+
+    return vertex_info
+end
+
+VoronoiMeshes.VertexInfo(ncfile::NCDatasets.NCDataset) = VertexInfo(VoronoiDiagram(ncfile), ncfile)
+VoronoiMeshes.VertexInfo(v::Val{N}, ncfile::NCDatasets.NCDataset) where {N} = VertexInfo(VoronoiDiagram(v, ncfile), ncfile)
+
+function VoronoiMeshes.Vertices(voro::VoronoiDiagram{S, NE, TI, TF, Tz}, ncfile::NCDatasets.NCDataset) where {S, NE, TI, TF, Tz}
+    position = voro.vertices
+    n = length(position)
+    cells = voro.cellsOnVertex
+    edges = similar(cells)
+    copy_matrix_to_tuple_vector!(edges, ncfile["edgesOnVertex"][:,:]::Matrix{Int32})
+    return Vertices(n, position, edges, cells, VertexInfo(voro, ncfile))
+end
+
+VoronoiMeshes.Vertices(ncfile::NCDatasets.NCDataset) = Vertices(VoronoiDiagram(ncfile), ncfile)
+VoronoiMeshes.Vertices(v::Val{N}, ncfile::NCDatasets.NCDataset) where {N} = Vertices(VoronoiDiagram(v, ncfile), ncfile)
+
 for S in (true, false)
     for NE in 6:12
         for TI in (Int32, Int64)
@@ -250,6 +284,8 @@ for S in (true, false)
                 for Tz in (TF, Zero)
                     precompile(VoronoiMeshes.CellInfo, (VoronoiDiagram{S, NE, TI, TF, Tz}, NCDatasets.NCDataset{Nothing, Missing}))
                     precompile(VoronoiMeshes.Cells, (VoronoiDiagram{S, NE, TI, TF, Tz}, NCDatasets.NCDataset{Nothing, Missing}))
+                    precompile(VoronoiMeshes.VertexInfo, (VoronoiDiagram{S, NE, TI, TF, Tz}, NCDatasets.NCDataset{Nothing, Missing}))
+                    precompile(VoronoiMeshes.Vertices, (VoronoiDiagram{S, NE, TI, TF, Tz}, NCDatasets.NCDataset{Nothing, Missing}))
                 end
             end
         end
@@ -257,7 +293,7 @@ for S in (true, false)
 end
 
 for func in  (:PlanarVoronoiDiagram, :SphericalVoronoiDiagram, :VoronoiDiagram,
-             :CellInfo, :Cells)
+             :CellInfo, :Cells, :VertexInfo, :Vertices)
     @eval begin
         VoronoiMeshes.$func(file_name::String) = NCDataset(file_name) do f; VoronoiMeshes.$func(f);end
         VoronoiMeshes.$func(v::Val, file_name::String) = NCDataset(file_name) do f; VoronoiMeshes.$func(v, f);end

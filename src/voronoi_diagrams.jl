@@ -5,6 +5,7 @@ struct PlanarVoronoiDiagram{nEdges, TI, TF} <: AbstractVoronoiDiagram{false, nEd
     vertices::Vec2DxyArray{TF, 1}
     verticesOnCell::ImVecArray{nEdges, TI, 1}
     cellsOnVertex::Vector{NTuple{3, TI}}
+    meshDensity::Vector{TF}
     x_period::TF
     y_period::TF
 end
@@ -14,11 +15,12 @@ struct SphericalVoronoiDiagram{nEdges, TI, TF} <: AbstractVoronoiDiagram{true, n
     vertices::Vec3DArray{TF, 1}
     verticesOnCell::ImVecArray{nEdges, TI, 1}
     cellsOnVertex::Vector{NTuple{3, TI}}
+    meshDensity::Vector{TF}
     sphere_radius::TF
 end
 
 struct VoronoiDiagram{S, nEdges, TI, TF, Tz} <: AbstractVoronoiDiagram{S, nEdges, TI, TF, Tz}
-    data::AbstractVoronoiDiagram{S, nEdges, TI, TF, Tz}
+    data::Union{PlanarVoronoiDiagram{nEdges, TI, TF}, SphericalVoronoiDiagram{nEdges, TI, TF}}
 
     function VoronoiDiagram(d::PlanarVoronoiDiagram{nEdges, TI, TF}) where {nEdges, TI, TF}
         return new{false, nEdges, TI, TF, Zero}(d)

@@ -218,33 +218,47 @@ function VoronoiMeshes.PlanarVoronoiDiagram(initial_generator_points::AbstractVe
 
     generators, vertices, verticesOnCell, cellsOnVertex = extract_periodic_vertices_and_cells(N, lx, ly, voro)
 
+    meshDensity = Vector{nonzero_eltype(eltype(generators))}(undef, N)
+
+    @inbounds for i in eachindex(meshDensity)
+        meshDensity[i] = density(generators[i])
+    end
+
     maxEdges = maximum(length, verticesOnCell)
     if maxEdges == 6
         verticesOnCell_6 = ImVecArray{6,Int32}(N)
         verticesOnCell_6 .= verticesOnCell
-        return PlanarVoronoiDiagram(generators, vertices, verticesOnCell_6, cellsOnVertex, lx, ly)
+        return PlanarVoronoiDiagram(generators, vertices, verticesOnCell_6, cellsOnVertex, meshDensity, lx, ly)
     elseif maxEdges == 7
         verticesOnCell_7 = ImVecArray{7,Int32}(N)
         verticesOnCell_7 .= verticesOnCell
-        return PlanarVoronoiDiagram(generators, vertices, verticesOnCell_7, cellsOnVertex, lx, ly)
+        return PlanarVoronoiDiagram(generators, vertices, verticesOnCell_7, cellsOnVertex, meshDensity, lx, ly)
     elseif maxEdges == 8
         verticesOnCell_8 = ImVecArray{8,Int32}(N)
         verticesOnCell_8 .= verticesOnCell
-        return PlanarVoronoiDiagram(generators, vertices, verticesOnCell_8, cellsOnVertex, lx, ly)
+        return PlanarVoronoiDiagram(generators, vertices, verticesOnCell_8, cellsOnVertex, meshDensity, lx, ly)
     elseif maxEdges == 9
         verticesOnCell_9 = ImVecArray{9,Int32}(N)
         verticesOnCell_9 .= verticesOnCell
-        return PlanarVoronoiDiagram(generators, vertices, verticesOnCell_9, cellsOnVertex, lx, ly)
+        return PlanarVoronoiDiagram(generators, vertices, verticesOnCell_9, cellsOnVertex, meshDensity, lx, ly)
     elseif maxEdges > 10
         throw(error("Generated Voronoi diagram has polygons of more than 10 sides"))
     else
-        return PlanarVoronoiDiagram(generators, vertices, verticesOnCell, cellsOnVertex, lx, ly)
+        return PlanarVoronoiDiagram(generators, vertices, verticesOnCell, cellsOnVertex, meshDensity, lx, ly)
     end
+end
+
+function VoronoiMeshes.VoronoiDiagram(initial_generator_points::AbstractVector{<:Vec2Dxy}, lx::Real, ly::Real; density::F=const_density, max_iter::Integer = 20000, rtol::Real = 1e-4/100) where F <: Function
+    VoronoiDiagram(PlanarVoronoiDiagram(initial_generator_points, lx, ly, density = density, max_iter = max_iter, rtol = rtol))
 end
 
 function VoronoiMeshes.PlanarVoronoiDiagram(N::Integer, lx::Real, ly::Real; density::F=const_density, max_iter::Integer = 20000, rtol::Real = 1e-4/100) where F <: Function
     points = generate_inital_points(N, lx, ly)
     return VoronoiMeshes.PlanarVoronoiDiagram(points, lx, ly, density = density, max_iter = max_iter, rtol = rtol)
+end
+
+function VoronoiMeshes.VoronoiDiagram(N::Integer, lx::Real, ly::Real; density::F=const_density, max_iter::Integer = 20000, rtol::Real = 1e-4/100) where F <: Function
+    VoronoiDiagram(PlanarVoronoiDiagram(N, lx, ly, density = density, max_iter = max_iter, rtol = rtol))
 end
 
 end # Module

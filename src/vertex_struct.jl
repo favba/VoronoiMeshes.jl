@@ -30,7 +30,7 @@ for s in fieldnames(VertexInfo)
     @eval function _getproperty(vertex::Vertices, ::Val{$(QuoteNode(s))})
         info = getfield(vertex, :info)
         if !isdefined(info, $(QuoteNode(s)))
-            setfield!(info, $(QuoteNode(s)), $func(cell))
+            setfield!(info, $(QuoteNode(s)), $func(vertex))
         end
         return getfield(info, $(QuoteNode(s)))
     end

@@ -5,8 +5,9 @@ mutable struct CellInfo{S, nEdges, TI, TF, Tz}
     area::Vector{TF}
     longitude::Vector{TF}
     latitude::Vector{TF}
-    verticalUnitVectors::TensorsLite.VecMaybe2DxyArray{Tz, TF, 1} # Actually, Maybe1DzArray
-    tangentPlane::NTuple{2, TensorsLite.VecMaybe2DxyArray{TF, Tz, 1}}
+    normal::TensorsLite.VecMaybe2DxyArray{Tz, TF, 1} # The same as Maybe1DzArray{TF, Tz, 1}
+    zonalVector::VecMaybe1DxArray{TF, Tz, 1}
+    meridionalVector::VecMaybe1DyArray{TF, Tz, 1}
 
     function CellInfo(diagram::VoronoiDiagram{S, nEdges, TI, TF, Tz}) where {S, nEdges, TI, TF, Tz}
         return new{S, nEdges, TI, TF, Tz}(diagram)

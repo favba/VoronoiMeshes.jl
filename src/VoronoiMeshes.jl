@@ -33,4 +33,15 @@ _getproperty(mesh::VoronoiMesh{false}, ::Val{:x_period}) = getfield(mesh, :cells
 _getproperty(mesh::VoronoiMesh{false}, ::Val{:y_period}) = getfield(mesh, :cells).y_period
 _getproperty(mesh::VoronoiMesh{true}, ::Val{:sphere_radius}) = getfield(mesh, :cells).sphere_radius
 
+#functions to be defined when Makie is loaded
+
+function create_cells_polygons_periodic end
+function create_cells_polygons end
+function create_dual_triangles_periodic end
+function create_dual_triangles end
+function create_edge_quadrilaterals_periodic end
+function create_edge_quadrilaterals end
+function create_cell_linesegments_periodic end
+function create_cell_linesegments end
+
 end

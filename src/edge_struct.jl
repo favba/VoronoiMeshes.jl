@@ -41,3 +41,109 @@ end
 
 include("edge_info_creation.jl")
 
+function Edges(diagram::VoronoiDiagram{false, NE, TI, TF}) where {NE, TI, TF}
+
+    cpos = diagram.generators
+    verticesOnCell = diagram.verticesOnCell
+    cellsOnVertex = diagram.cellsOnVertex
+    nVertex = length(cellsOnVertex)
+    nCells = length(verticesOnCell)
+    nEdges = nVertex + nCells
+
+    position = similar(diagram.vertices, nEdges)
+    vertices = Vector{NTuple{2, TI}}(undef, nEdges)
+    cells = Vector{NTuple{2, TI}}(undef, nEdges)
+
+    xp = diagram.x_period
+    yp = diagram.y_period
+
+    touched_vertex_pair = Set{NTuple{2,TI}}()
+    e = 0
+    @inbounds for c in eachindex(cpos)
+        cell_vertices = verticesOnCell[c]
+        cp = cpos[c]
+        v_1 = cell_vertices[1]
+        v2 = v_1
+        for v in 2:length(cell_vertices)
+            v1 = v2
+            v2 = cell_vertices[v]
+            pair = ordered(v1,v2)
+            if !(pair in touched_vertex_pair)
+                e+=one(TI)
+                push!(touched_vertex_pair, pair)
+                c2 = find_cellOnCell(c, v2, v1, cellsOnVertex)
+                position[e] = periodic_to_base_point((cp + closest(cp, cpos[c2], xp, yp) / 2), xp, yp)
+                vertices[e] =  (v1, v2)
+                cells[e] = (c, c2)
+            end
+        end
+        v1 = v2
+        v2 = v_1
+        pair = ordered(v1,v2)
+        if !(pair in touched_vertex_pair)
+            e+=one(TI)
+            push!(touched_vertex_pair, pair)
+            c2 = find_cellOnCell(c, v2, v1, cellsOnVertex)
+            position[e] = periodic_to_base_point((cp + closest(cp, cpos[c2], xp, yp) / 2), xp, yp)
+            vertices[e] =  (v1, v2)
+            cells[e] = (c, c2)
+        end
+    end
+
+    @assert e == nEdges
+
+    return Edges(e, position, vertices, cells, EdgeInfo(diagram))
+end
+
+function Edges(diagram::VoronoiDiagram{true, NE, TI, TF}) where {NE, TI, TF}
+
+    cpos = diagram.generators
+    verticesOnCell = diagram.verticesOnCell
+    cellsOnVertex = diagram.cellsOnVertex
+    nVertex = length(cellsOnVertex)
+    nCells = length(verticesOnCell)
+    nEdges = nVertex + nCells - 2
+
+    position = similar(diagram.vertices, nEdges)
+    vertices = Vector{NTuple{2, TI}}(undef, nEdges)
+    cells = Vector{NTuple{2, TI}}(undef, nEdges)
+
+    R = diagram.sphere_radius
+
+    touched_vertex_pair = Set{NTuple{2,TI}}()
+    e = 0
+    @inbounds for c in eachindex(cpos)
+        cell_vertices = verticesOnCell[c]
+        cp = cpos[c]
+        v_1 = cell_vertices[1]
+        v2 = v_1
+        for v in 2:length(cell_vertices)
+            v1 = v2
+            v2 = cell_vertices[v]
+            pair = ordered(v1,v2)
+            if !(pair in touched_vertex_pair)
+                e+=one(TI)
+                push!(touched_vertex_pair, pair)
+                c2 = find_cellOnCell(c, v2, v1, cellsOnVertex)
+                position[e] = arc_midpoint(R, cp, cpos[c2])
+                vertices[e] =  (v1, v2)
+                cells[e] = (c, c2)
+            end
+        end
+        v1 = v2
+        v2 = v_1
+        pair = ordered(v1,v2)
+        if !(pair in touched_vertex_pair)
+            e+=one(TI)
+            push!(touched_vertex_pair, pair)
+            c2 = find_cellOnCell(c, v2, v1, cellsOnVertex)
+            position[e] = arc_midpoint(R, cp, cpos[c2])
+            vertices[e] =  (v1, v2)
+            cells[e] = (c, c2)
+        end
+    end
+
+    @assert e == nEdges
+
+    return Edges(e, position, vertices, cells, EdgeInfo(diagram))
+end

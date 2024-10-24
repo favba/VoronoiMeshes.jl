@@ -137,12 +137,40 @@ function centroidal_voronoi_loyd(::TT, vor::TV, initial_generator_points, N::Int
         new_vor = voronoi(new_tri, clip=true)
     end
 
-    println("")
+    println("Stopped Loyd's algorithm at iteration $iter")
  
     return initial_new, p_new, inds_new, new_vor, iter
 end
 
-function generate_periodic_centroidal_voronoi(initial_generator_points::AbstractVector, lx::Real, ly::Real; density::F=const_density, max_iter::Integer = 20000, rtol::Real = 1e-4/100) where F <: Function
+is_inside_box(p::Vec2Dxy, lx::Number, ly::Number) = (0 <= p.x < lx) && (0 <= p.y < ly)
+
+function check_and_fix_periodicity_points(points, lx::Number, ly::Number)
+    x_max, _ = findmax(v -> v.x, points)
+    x_min, _ = findmin(v -> v.x, points)
+    y_max, _ = findmax(v -> v.y, points)
+    y_min, _ = findmin(v -> v.y, points)
+
+    if ((x_max - x_min) >= lx) || ((y_max - y_min) >= ly)
+        throw(DomainError((lx, ly), "Points cannot be cast to periodic domain [0, $lx) × [0, $ly)"))
+    end
+
+    if (0 <= x_min < x_max < lx) && (0 <= y_min < y_max < ly)
+        return points
+    end
+
+    displacement = (((x_max + x_min) / 2) * 𝐢 + ((y_max + y_min) / 2) * 𝐣) - ((lx / 2) * 𝐢 + (ly / 2) * 𝐣)
+
+    @warn "Points given will be shifted by ($(displacement.x), $(displacement.y)) in order to be centered in the [0, $lx) × [0, $ly) domain"
+
+    points_periodic = similar(points)
+    points_periodic .= points .- displacement
+    return points_periodic
+end
+
+function generate_periodic_centroidal_voronoi(points::AbstractVector, lx::Real, ly::Real; density::F=const_density, max_iter::Integer = 20000, rtol::Real = 1e-4/100) where F <: Function
+
+    initial_generator_points = check_and_fix_periodicity_points(points, lx, ly)
+
     N = length(initial_generator_points)
     p, inds = expand_periodic_points(initial_generator_points, lx, ly)
     p_tuple = reinterpret(NTuple{2, Float64}, p)
@@ -151,6 +179,10 @@ function generate_periodic_centroidal_voronoi(initial_generator_points::Abstract
 
     initial_new, p_new, inds_new, new_vor, n_iter = centroidal_voronoi_loyd(tri, vor, initial_generator_points, N, lx, ly, density = density, max_iter = max_iter, rtol = rtol)
     return new_vor
+end
+
+function find_base_point_index(point::Vec2Dxy, interior_points, x_period::Number, y_period::Number)
+    findfirst(j -> isapprox_periodic(point, @inbounds(interior_points[j]), x_period, y_period), eachindex(interior_points))
 end
 
 function extract_periodic_vertices_and_cells(N::Integer, lx::Number, ly::Number, vor::VoronoiTessellation)
@@ -170,40 +202,23 @@ function extract_periodic_vertices_and_cells(N::Integer, lx::Number, ly::Number,
     interior_vertex_pos = VecArray(x = map(a->a[1], @view(vertices_pos_tuple[interior_vertex_i])),
                                    y = map(a->a[2], @view(vertices_pos_tuple[interior_vertex_i])))
 
-    # Vector that maps all vertices to those in the base domain [0, lx) × [0, ly)
-    # Note that the outermost vertices will not have a representative in the base domain,
-    # those we set to 0
-    global_to_interior_vertex_i = Vector{Int32}(undef, length(vertices_pos_tuple))
-    for i in eachindex(global_to_interior_vertex_i)
-        vp = reinterpret(Vec2Dxy{Float64}, vertices_pos_tuple[i])
-        j_p = findfirst(j -> isapprox_periodic(vp, interior_vertex_pos[j], lx, ly), eachindex(interior_vertex_pos))
-        j = isnothing(j_p) ? 0 : j_p # The outermost vertices are not periodic but we will not need them, so set them to zero
-        global_to_interior_vertex_i[i] = j
-    end
-
     T = ImmutableVector{10,Int32}
     verticesOnCell_global = vor.polygons
     verticesOnCell = Vector{T}(undef, N)
     for c in eachindex(verticesOnCell)
         vocg = T(@view(verticesOnCell_global[c][1:end-1]))
-        verticesOnCell[c] = map(x->global_to_interior_vertex_i[x], vocg)
+        vps = map(x->reinterpret(Vec2Dxy{Float64},getindex(vertices_pos_tuple,x)), vocg)
+        verticesOnCell[c] = map(v -> find_base_point_index(v, interior_vertex_pos, lx, ly), vps)
     end
 
     cell_pos = parent(vor.triangulation.points)
     interior_cell_pos = cell_pos[Base.OneTo(N)]
-    global_to_interior_cell_i = Vector{Int32}(undef, length(cell_pos))
-    for i in eachindex(global_to_interior_cell_i)
-        cp = cell_pos[i]
-        j_p = findfirst(j -> isapprox_periodic(cp, interior_cell_pos[j], lx, ly), eachindex(interior_cell_pos))
-        j = isnothing(j_p) ? 0 : j_p
-        global_to_interior_cell_i[i] = j
-    end
-
     cellsOnVertex_global = vor.circumcenter_to_triangle
     cellsOnVertex = Vector{NTuple{3,Int32}}(undef, nVertices)
     for v in eachindex(cellsOnVertex)
         gcov = cellsOnVertex_global[interior_vertex_i[v]]
-        cellsOnVertex[v] = map(x->Int32.(global_to_interior_cell_i[x]), gcov)
+        cps = map(x->getindex(cell_pos,x), gcov)
+        cellsOnVertex[v] = map(c -> find_base_point_index(c, interior_cell_pos, lx, ly), cps)
     end
 
     return interior_cell_pos, interior_vertex_pos, verticesOnCell, cellsOnVertex
@@ -259,6 +274,14 @@ end
 
 function VoronoiMeshes.VoronoiDiagram(N::Integer, lx::Real, ly::Real; density::F=const_density, max_iter::Integer = 20000, rtol::Real = 1e-4/100) where F <: Function
     VoronoiDiagram(PlanarVoronoiDiagram(N, lx, ly, density = density, max_iter = max_iter, rtol = rtol))
+end
+
+function VoronoiMeshes.VoronoiMesh(initial_generator_points::AbstractVector{<:Vec2Dxy}, lx::Real, ly::Real; density::F=const_density, max_iter::Integer = 20000, rtol::Real = 1e-4/100) where F <: Function
+    VoronoiMesh(VoronoiDiagram(PlanarVoronoiDiagram(initial_generator_points, lx, ly, density = density, max_iter = max_iter, rtol = rtol)))
+end
+
+function VoronoiMeshes.VoronoiMesh(N::Integer, lx::Real, ly::Real; density::F=const_density, max_iter::Integer = 20000, rtol::Real = 1e-4/100) where F <: Function
+    VoronoiMesh(VoronoiDiagram(PlanarVoronoiDiagram(N, lx, ly, density = density, max_iter = max_iter, rtol = rtol)))
 end
 
 end # Module

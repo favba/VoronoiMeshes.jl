@@ -327,7 +327,7 @@ function VoronoiMeshes.Edges(voro::VoronoiDiagram{S, NE, TI, TF, Tz}, ncfile::NC
     copy_matrix_to_tuple_vector!(cells, cellsOnEdgeArray)
 
     xEdge = ncfile["xEdge"][:]::Vector{Float64}
-    yEdge = ncfile["xEdge"][:]::Vector{Float64}
+    yEdge = ncfile["yEdge"][:]::Vector{Float64}
     
     if S
         zEdge = ncfile["zEdge"][:]::Vector{Float64}

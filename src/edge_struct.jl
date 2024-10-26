@@ -72,7 +72,7 @@ function Edges(diagram::VoronoiDiagram{false, NE, TI, TF}) where {NE, TI, TF}
                 e+=one(TI)
                 push!(touched_vertex_pair, pair)
                 c2 = find_cellOnCell(c, v2, v1, cellsOnVertex)
-                position[e] = periodic_to_base_point((cp + closest(cp, cpos[c2], xp, yp) / 2), xp, yp)
+                position[e] = periodic_to_base_point(((cp + closest(cp, cpos[c2], xp, yp)) / 2), xp, yp)
                 vertices[e] =  (v1, v2)
                 cells[e] = (c, c2)
             end
@@ -84,7 +84,7 @@ function Edges(diagram::VoronoiDiagram{false, NE, TI, TF}) where {NE, TI, TF}
             e+=one(TI)
             push!(touched_vertex_pair, pair)
             c2 = find_cellOnCell(c, v2, v1, cellsOnVertex)
-            position[e] = periodic_to_base_point((cp + closest(cp, cpos[c2], xp, yp) / 2), xp, yp)
+            position[e] = periodic_to_base_point(((cp + closest(cp, cpos[c2], xp, yp)) / 2), xp, yp)
             vertices[e] =  (v1, v2)
             cells[e] = (c, c2)
         end

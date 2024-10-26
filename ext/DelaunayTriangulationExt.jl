@@ -259,7 +259,9 @@ function VoronoiMeshes.PlanarVoronoiDiagram(initial_generator_points::AbstractVe
     elseif maxEdges > 10
         throw(error("Generated Voronoi diagram has polygons of more than 10 sides"))
     else
-        return PlanarVoronoiDiagram(generators, vertices, verticesOnCell, cellsOnVertex, meshDensity, lx, ly)
+        verticesOnCell_10 = ImVecArray{10, Int32}(N)
+        verticesOnCell_10 .= verticesOnCell
+        return PlanarVoronoiDiagram(generators, vertices, verticesOnCell_10, cellsOnVertex, meshDensity, lx, ly)
     end
 end
 

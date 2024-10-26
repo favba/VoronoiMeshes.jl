@@ -7,6 +7,7 @@ export @parallel
 export VoronoiDiagram, PlanarVoronoiDiagram, SphericalVoronoiDiagram
 export CellInfo, Cells, VertexInfo, Vertices, EdgeInfo, Edges
 export VoronoiMesh
+export meshplot, meshplot!, diagramplot, diagramplot!
 
 const VecMaybe1DxArray{TX, TYZ, N} = TensorsLite.VecArray{Union{TX, TYZ}, N, Array{TX, N}, Array{TYZ, N}, Array{TYZ, N}}
 const VecMaybe1DyArray{TY, TXZ, N} = TensorsLite.VecArray{Union{TY, TXZ}, N, Array{TXZ, N}, Array{TY, N}, Array{TXZ, N}}
@@ -55,7 +56,6 @@ end
 
 #functions to be used when Makie is loaded
 #Definitions are in ext/GeometryBasicsExt.jl
-
 function create_cells_polygons_periodic end
 function create_cells_polygons end
 function create_dual_triangles_periodic end
@@ -64,5 +64,14 @@ function create_edge_quadrilaterals_periodic end
 function create_edge_quadrilaterals end
 function create_cell_linesegments_periodic end
 function create_cell_linesegments end
+function create_diagram_linesegments_periodic end
+function create_diagram_linesegments end
 
-end
+# Defined in ext/MakieExt.jl
+function meshplot end
+function meshplot! end
+
+function diagramplot end
+function diagramplot! end
+
+end # Module

@@ -202,7 +202,7 @@ function extract_periodic_vertices_and_cells(N::Integer, lx::Number, ly::Number,
     interior_vertex_pos = VecArray(x = map(a->a[1], @view(vertices_pos_tuple[interior_vertex_i])),
                                    y = map(a->a[2], @view(vertices_pos_tuple[interior_vertex_i])))
 
-    T = ImmutableVector{10,Int32}
+    T = ImmutableVector{16,Int32}
     verticesOnCell_global = vor.polygons
     verticesOnCell = Vector{T}(undef, N)
     for c in eachindex(verticesOnCell)

@@ -14,15 +14,18 @@ Zeros = "bd1ec220-6eb4-527a-9b49-e79c3db6233b"
 DelaunayTriangulation = "927a84f5-c5f4-47a5-9785-b46e178433df"
 GeometryBasics = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
 NCDatasets = "85f8d34a-cbdd-5861-8df4-14fed0d494ab"
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 
 [extensions]
 DelaunayTriangulationExt = "DelaunayTriangulation"
 GeometryBasicsExt = "GeometryBasics"
 NCDatasetsExt = "NCDatasets"
+MakieExt = "Makie"
 
 [compat]
 DelaunayTriangulation = "1.6.0"
 ImmutableVectors = "1.0.0"
+Makie = "0.21.14"
 NCDatasets = "0.14.5"
 TensorsLite = "1.0.0"
 TensorsLiteGeometry = "1.0.0"

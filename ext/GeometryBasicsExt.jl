@@ -110,10 +110,11 @@ function VoronoiMeshes.create_cell_linesegments_periodic(vert_pos,edge_pos,cell_
             if !(closest_e_pos in touched_edges_pos)
                 p = verticesOnEdge[j]
 
+                is_interior = closest_e_pos == e_pos
                 for k in p
                     v_pos = vert_pos[k]
-                    closest_v_pos = closest(closest_e_pos,v_pos,x_period,y_period)
-                    if (closest_e_pos == e_pos)
+                    closest_v_pos = closest(closest_e_pos, v_pos, x_period, y_period)
+                    if (is_interior)
                         push!(x, closest_v_pos.x)
                         push!(y, closest_v_pos.y)
                     else
@@ -134,6 +135,45 @@ end
 
 function VoronoiMeshes.create_cell_linesegments(mesh::VoronoiMesh{false})
     return VoronoiMeshes.create_cell_linesegments_periodic(mesh.vertices.position, mesh.edges.position, mesh.cells.position, mesh.cells.edges, mesh.edges.vertices, mesh.x_period, mesh.y_period) 
+end
+
+function VoronoiMeshes.create_diagram_linesegments_periodic(vert_pos, cell_pos, verticesOnCell, cellsOnVertex,x_period,y_period)
+    x = eltype(vert_pos.x)[]
+    y = eltype(vert_pos.y)[]
+    nEdges = length(verticesOnCell) + length(cellsOnVertex)
+    sizehint!(x,2*nEdges)
+    sizehint!(y,2*nEdges)
+
+    touched_edges_pos = Set{eltype(vert_pos)}()
+
+    @inbounds for i in eachindex(verticesOnCell)
+        c_pos = cell_pos[i]
+        vertices_ind = verticesOnCell[i]
+
+        L = length(vertices_ind)
+        for j in Base.OneTo(L)
+            j
+            jp1 = j+1
+            j2 = ifelse(jp1 > L, jp1 - L, jp1)
+            v1 = vertices_ind[j]
+            v2 = vertices_ind[j2]
+            v1_pos = closest(c_pos, vert_pos[v1], x_period, y_period)
+            v2_pos = closest(c_pos, vert_pos[v2], x_period, y_period)
+            e_pos = (v1_pos + v2_pos) / 2
+            if !(e_pos in touched_edges_pos)
+                push!(x, v1_pos.x)
+                push!(x, v2_pos.x)
+                push!(y, v1_pos.y)
+                push!(y, v2_pos.y)
+                push!(touched_edges_pos,e_pos)
+            end
+        end
+    end
+    return (x, y)
+end
+
+function VoronoiMeshes.create_diagram_linesegments(diagram::VoronoiDiagram{false})
+    return VoronoiMeshes.create_diagram_linesegments_periodic(diagram.vertices, diagram.generators, diagram.verticesOnCell, diagram.cellsOnVertex, diagram.x_period, diagram.y_period) 
 end
 
 end

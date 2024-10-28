@@ -441,4 +441,7 @@ for func in  (:PlanarVoronoiDiagram, :SphericalVoronoiDiagram, :VoronoiDiagram,
     end
 end
 
+include("precompile_NCDataset.jl")
+
 end # module
+

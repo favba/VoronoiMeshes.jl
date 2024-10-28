@@ -6,7 +6,7 @@ export @parallel
 
 export VoronoiDiagram, PlanarVoronoiDiagram, SphericalVoronoiDiagram
 export CellInfo, Cells, VertexInfo, Vertices, EdgeInfo, Edges
-export VoronoiMesh
+export VoronoiMesh, on_sphere, max_edges, integer_type, float_type
 export meshplot, meshplot!, diagramplot, diagramplot!
 
 const VecMaybe1DxArray{TX, TYZ, N} = TensorsLite.VecArray{Union{TX, TYZ}, N, Array{TX, N}, Array{TYZ, N}, Array{TYZ, N}}
@@ -33,6 +33,22 @@ _getproperty(mesh::VoronoiMesh, ::Val{s}) where s = getfield(mesh, s)
 _getproperty(mesh::VoronoiMesh{false}, ::Val{:x_period}) = getfield(mesh, :cells).x_period
 _getproperty(mesh::VoronoiMesh{false}, ::Val{:y_period}) = getfield(mesh, :cells).y_period
 _getproperty(mesh::VoronoiMesh{true}, ::Val{:sphere_radius}) = getfield(mesh, :cells).sphere_radius
+
+for T in (:VoronoiMesh,
+          :Cells, :CellInfo,
+          :Vertices, :VertexInfo,
+          :Edges, :EdgeInfo,
+          :VoronoiDiagram)
+    @eval begin
+        on_sphere(::Type{<:$T{S}}) where S = S
+        max_edges(::Type{<:$T{S, N}}) where {S, N} = N
+        integer_type(::Type{<:$T{S, N, TI}}) where {S, N, TI} = TI
+        float_type(::Type{<:$T{S, N, TI, TF}}) where {S, N, TI, TF} = TF
+    end
+    for func in (:on_sphere, :max_edges, :integer_type, :float_type)
+        @eval $func(field::$T) = $func(typeof(field))
+    end
+end
 
 function VoronoiMesh(voronoi::VoronoiDiagram)
     verticesOnCell = voronoi.verticesOnCell

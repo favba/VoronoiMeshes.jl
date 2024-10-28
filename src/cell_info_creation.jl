@@ -1,32 +1,28 @@
-function compute_cell_area_periodic!(output,vpos,verticesOnCell,xp::Number,yp::Number)
-    @parallel for c in eachindex(verticesOnCell)
-        @inbounds output[c] = area(vpos,verticesOnCell[c],xp,yp)
-    end
-    return output
-end
+compute_cell_area!(output,cells::Cells{false}) = compute_polygon_area_periodic!(output, cells.info.diagram.vertices, cells.vertices, cells.x_period, cells.y_period)
 
-function compute_cell_area_periodic(vpos,verticesOnCell,xp::Number,yp::Number)
-    output = Vector{nonzero_eltype(eltype(vpos))}(undef,length(verticesOnCell))
-    return compute_cell_area_periodic!(output,vpos,verticesOnCell,xp,yp)
-end
+compute_cell_area(cells::Cells{false}) = compute_polygon_area_periodic(cells.info.diagram.vertices, cells.vertices,cells.x_period, cells.y_period)
 
-compute_cell_area!(output,cells::Cells{false}) = compute_cell_area_periodic!(output, cells.info.diagram.vertices, cells.vertices, cells.x_period, cells.y_period)
+compute_cell_area!(output,cells::Cells{true}) = compute_polygon_area_spherical!(output, cells.info.diagram.vertices, cells.vertices, cells.sphere_radius)
 
-compute_cell_area(cells::Cells{false}) = compute_cell_area_periodic(cells.info.diagram.vertices, cells.vertices,cells.x_period, cells.y_period)
+compute_cell_area(cells::Cells{true}) = compute_polygon_area_spherical(cells.info.diagram.vertices, cells.vertices, cells.sphere_radius)
 
-function compute_cell_area_spherical!(output, vpos, verticesOnCell, R::Number)
-    @parallel for c in eachindex(verticesOnCell)
-        @inbounds output[c] = spherical_polygon_area(R, vpos,verticesOnCell[c])
-    end
-    return output
-end
+compute_cell_centroid!(output,cells::Cells{false}) = compute_polygon_centroid_periodic!(output, cells.info.diagram.vertices, cells.vertices, cells.x_period, cells.y_period)
 
-function compute_cell_area_spherical(vpos, verticesOnCell, R::Number)
-    output = Vector{nonzero_eltype(eltype(vpos))}(undef, length(verticesOnCell))
-    return compute_cell_area_spherical!(output, vpos, verticesOnCell, R)
-end
+compute_cell_centroid(cells::Cells{false}) = compute_polygon_centroid_periodic(cells.info.diagram.vertices, cells.vertices,cells.x_period, cells.y_period)
 
-compute_cell_area!(output,cells::Cells{true}) = compute_cell_area_spherical!(output, cells.info.diagram.vertices, cells.vertices, cells.sphere_radius)
+compute_cell_centroid!(output,cells::Cells{true}) = compute_polygon_centroid_spherical!(output, cells.info.diagram.vertices, cells.vertices, cells.sphere_radius)
 
-compute_cell_area(cells::Cells{true}) = compute_cell_area_spherical(cells.info.diagram.vertices, cells.vertices, cells.sphere_radius)
+compute_cell_centroid(cells::Cells{true}) = compute_polygon_centroid_spherical(cells.info.diagram.vertices, cells.vertices, cells.sphere_radius)
+
+compute_cell_longitude!(output,cells::Cells{false}) = fill!(output, zero(float_type(cells)))
+compute_cell_longitude(cells::Cells{false}) = compute_longitude_periodic(cells.position)
+
+compute_cell_longitude!(output,cells::Cells{true}) = compute_longitude!(output, cells.position)
+compute_cell_longitude(cells::Cells{true}) = compute_longitude_spherical(cells.position)
+
+compute_cell_latitude!(output,cells::Cells{false}) = fill!(output, zero(float_type(cells)))
+compute_cell_latitude(cells::Cells{false}) = compute_latitude_periodic(cells.position)
+
+compute_cell_latitude!(output,cells::Cells{true}) = compute_latitude!(output, cells.position)
+compute_cell_latitude(cells::Cells{true}) = compute_latitude_spherical(cells.position)
 

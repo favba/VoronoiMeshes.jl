@@ -122,3 +122,95 @@ function compute_edgesOnVertex(cellsOnVertex::Vector{NTuple{3, TI}}, cellsOnEdge
     return compute_edgesOnVertex!(edgesOnVertex, cellsOnVertex, cellsOnEdge)
 end
 
+function compute_polygon_area_periodic!(output,vpos,verticesOnPolygon,xp::Number,yp::Number)
+    @parallel for c in eachindex(verticesOnPolygon)
+        @inbounds output[c] = area(vpos,verticesOnPolygon[c],xp,yp)
+    end
+    return output
+end
+
+function compute_polygon_area_periodic(vpos,verticesOnPolygon,xp::Number,yp::Number)
+    output = Vector{nonzero_eltype(eltype(vpos))}(undef,length(verticesOnPolygon))
+    return compute_polygon_area_periodic!(output,vpos,verticesOnPolygon,xp,yp)
+end
+
+function compute_polygon_area_spherical!(output, vpos, verticesOnPolygon, R::Number)
+    @parallel for c in eachindex(verticesOnPolygon)
+        @inbounds output[c] = spherical_polygon_area(R, vpos,verticesOnPolygon[c])
+    end
+    return output
+end
+
+function compute_polygon_area_spherical(vpos, verticesOnPolygon, R::Number)
+    output = Vector{nonzero_eltype(eltype(vpos))}(undef, length(verticesOnPolygon))
+    return compute_polygon_area_spherical!(output, vpos, verticesOnPolygon, R)
+end
+
+function compute_polygon_centroid_periodic!(output,vpos,verticesOnPolygon,xp::Number,yp::Number)
+    @parallel for c in eachindex(verticesOnPolygon)
+        @inbounds output[c] = centroid(vpos,verticesOnPolygon[c],xp,yp)
+    end
+    return output
+end
+
+function compute_polygon_centroid_periodic(vpos,verticesOnPolygon,xp::Number,yp::Number)
+    output = similar(vpos,length(verticesOnPolygon))
+    return compute_polygon_centroid_periodic!(output,vpos,verticesOnPolygon,xp,yp)
+end
+
+function compute_polygon_centroid_spherical!(output, vpos, verticesOnPolygon, R::Number)
+    @parallel for c in eachindex(verticesOnPolygon)
+        @inbounds output[c] = spherical_polygon_centroid(R, vpos,verticesOnPolygon[c])
+    end
+    return output
+end
+
+function compute_polygon_centroid_spherical(vpos, verticesOnPolygon, R::Number)
+    output = similar(vpos,length(verticesOnPolygon))
+    return compute_polygon_centroid_spherical!(output, vpos, verticesOnPolygon, R)
+end
+
+function compute_longitude_periodic(cpos::Vec2DxyArray{T,1}) where {T}
+    return zeros(T, length(cpos))
+end
+
+function compute_longitude!(longitude::Vector, pos::VecArray)
+    px = pos.x
+    py = pos.y
+    @parallel for c in eachindex(pos)
+        @inbounds begin
+            longitude[c] = atan(py[c], px[c])
+        end
+    end
+    return longitude
+end
+
+function compute_longitude_spherical(cpos::Vec3DArray{T,1}) where {T}
+    longitude = Vector{eltype(T)}(undef, length(cpos))
+    return compute_longitude!(longitude, cpos)
+end
+
+function compute_latitude_periodic(cpos::Vec2DxyArray{T,1}) where {T}
+    return zeros(T, length(cpos))
+end
+
+function compute_latitude!(latitude::Vector, pos::VecArray)
+    px = pos.x
+    py = pos.y
+    pz = pos.z
+    @parallel for c in eachindex(pos)
+        @inbounds begin
+            x = px[c]
+            y = py[c]
+            z = pz[c]
+            latitude[c] = atan(z / sqrt(x*x + y*y))
+        end
+    end
+    return latitude
+end
+
+function compute_latitude_spherical(cpos::Vec3DArray{T,1}) where {T}
+    latitude = Vector{eltype(T)}(undef, length(cpos))
+    return compute_latitude!(latitude, cpos)
+end
+

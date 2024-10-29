@@ -208,9 +208,9 @@ for nEdges in 6:10
     precompile(compute_polygon_area_spherical, (Vec3DArray{Float64, 1}, ImVecArray{nEdges, Int32, 1}, Float64))
 end
 
-function compute_polygon_centroid_periodic!(output,vpos,verticesOnPolygon,xp::Number,yp::Number)
+function compute_polygon_centroid_periodic!(output, vpos, verticesOnPolygon, xp::Number, yp::Number)
     @parallel for c in eachindex(verticesOnPolygon)
-        @inbounds output[c] = centroid(vpos,verticesOnPolygon[c],xp,yp)
+        @inbounds output[c] = centroid(vpos,verticesOnPolygon[c], xp, yp)
     end
     return output
 end

@@ -25,16 +25,28 @@ _getproperty(cell::Vertices{false}, ::Val{:x_period}) = getfield(cell, :info).di
 _getproperty(cell::Vertices{false}, ::Val{:y_period}) = getfield(cell, :info).diagram.y_period
 _getproperty(cell::Vertices{true}, ::Val{:sphere_radius}) = getfield(cell, :info).diagram.sphere_radius
 
+include("vertex_info_creation.jl")
+
 for s in fieldnames(VertexInfo)
-    func = Symbol(string("compute_vertex_",s))
-    @eval function _getproperty(vertex::Vertices, ::Val{$(QuoteNode(s))})
-        info = getfield(vertex, :info)
-        if !isdefined(info, $(QuoteNode(s)))
-            setfield!(info, $(QuoteNode(s)), $func(vertex))
+    if s !== :diagram
+        func = Symbol(string("compute_vertex_",s))
+        @eval function _getproperty(vertex::Vertices, ::Val{$(QuoteNode(s))})
+            info = getfield(vertex, :info)
+            if !isdefined(info, $(QuoteNode(s)))
+                setfield!(info, $(QuoteNode(s)), $func(vertex))
+            end
+            return getfield(info, $(QuoteNode(s)))
         end
-        return getfield(info, $(QuoteNode(s)))
+        for nEdges in 6:10
+            for TI in (Int32, Int64)
+                for TF in (Float32, Float64)
+                    @eval precompile($func, (Vertices{true, $nEdges, $TI, $TF, $TF},))
+                    @eval precompile($func, (Vertices{false, $nEdges, $TI, $TF, Zero},))
+                end
+            end
+        end
+    else
+        _getproperty(vertex::Vertices, ::Val{:diagram}) = getfield(vertex, :info).diagram
     end
 end
-
-include("vertex_info_creation.jl")
 

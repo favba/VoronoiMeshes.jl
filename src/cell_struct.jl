@@ -47,16 +47,16 @@ _getproperty(cell::Cells{true}, ::Val{:sphere_radius}) = getfield(cell, :info).d
 include("cell_info_creation.jl")
 
 for s in fieldnames(CellInfo)
-    func = Symbol(string("compute_cell_",s))
-    @eval function _getproperty(cell::Cells, ::Val{$(QuoteNode(s))})
-        info = getfield(cell, :info)
-        if !isdefined(info, $(QuoteNode(s)))
-            setfield!(info, $(QuoteNode(s)), $func(cell))
-        end
-        return getfield(info, $(QuoteNode(s)))
-    end
-
     if s !== :diagram
+        func = Symbol(string("compute_cell_",s))
+        @eval function _getproperty(cell::Cells, ::Val{$(QuoteNode(s))})
+            info = getfield(cell, :info)
+            if !isdefined(info, $(QuoteNode(s)))
+                setfield!(info, $(QuoteNode(s)), $func(cell))
+            end
+            return getfield(info, $(QuoteNode(s)))
+        end
+
         for nEdges in 6:10
             for TI in (Int32, Int64)
                 for TF in (Float32, Float64)
@@ -65,5 +65,8 @@ for s in fieldnames(CellInfo)
                 end
             end
         end
+    else
+        _getproperty(cell::Cells, ::Val{:diagram}) = getfield(cell,:info).diagram
     end
 end
+

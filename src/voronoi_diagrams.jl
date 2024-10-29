@@ -37,10 +37,38 @@ get_diagram(v::VoronoiDiagram{false, nEdges, TI, TF, Zero}) where {nEdges, TI, T
 Base.getproperty(v::VoronoiDiagram, s::Symbol) = _getproperty(v, Val{s}())
 _getproperty(v::VoronoiDiagram, ::Val{:data}) = get_diagram(v)
 
+for nEdges in 6:10
+    let TF = Float64, TI = Int32
+        precompile(PlanarVoronoiDiagram, (Vec2DxyArray{TF, 1}, Vec2DxyArray{TF, 1}, ImVecArray{nEdges, TI, 1}, Vector{NTuple{3, TI}}, Vector{TF}, TF, TF))
+        precompile(SphericalVoronoiDiagram, (Vec3DArray{TF, 1}, Vec3DArray{TF, 1}, ImVecArray{nEdges, TI, 1}, Vector{NTuple{3, TI}}, Vector{TF}, TF))
+        precompile(VoronoiDiagram, (PlanarVoronoiDiagram{nEdges, TI, TF},))
+        precompile(VoronoiDiagram, (SphericalVoronoiDiagram{nEdges, TI, TF},))
+        precompile(get_diagram, (VoronoiDiagram{true, nEdges, TI, TF, TF},))
+        precompile(get_diagram, (VoronoiDiagram{false, nEdges, TI, TF, Zero},))
+        precompile(Base.getproperty, (VoronoiDiagram{true, nEdges, TI, TF, TF}, Symbol))
+        precompile(Base.getproperty, (VoronoiDiagram{false, nEdges, TI, TF, Zero}, Symbol))
+        precompile(_getproperty, (VoronoiDiagram{true, nEdges, TI, TF, TF}, Val{:data}))
+        precompile(_getproperty, (VoronoiDiagram{false, nEdges, TI, TF, Zero}, Val{:data}))
+    end
+end
+
 for s in fieldnames(PlanarVoronoiDiagram)
     @eval _getproperty(v::VoronoiDiagram{false}, ::Val{$(QuoteNode(s))}) = getfield(get_diagram(v), $(QuoteNode(s)))
+
+    for nEdges in 6:10
+        let TF = Float64, TI = Int32
+            @eval precompile(_getproperty,(VoronoiDiagram{false, $nEdges, $TI, $TF, Zero}, Val{$(QuoteNode(s))}))
+        end
+    end
 end
 
 for s in fieldnames(SphericalVoronoiDiagram)
     @eval _getproperty(v::VoronoiDiagram{true}, ::Val{$(QuoteNode(s))}) = getfield(get_diagram(v), $(QuoteNode(s)))
+
+    for nEdges in 6:10
+        let TF = Float64, TI = Int32
+            @eval precompile(_getproperty,(VoronoiDiagram{true, $nEdges, $TI, $TF, $TF}, Val{$(QuoteNode(s))}))
+        end
+    end
 end
+

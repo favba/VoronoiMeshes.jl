@@ -14,6 +14,11 @@ mutable struct CellInfo{S, nEdges, TI, TF, Tz}
     end
 end
 
+for nEdges in 6:10
+    precompile(CellInfo, (VoronoiDiagram{false, nEdges, Int32, Float64, Zero},))
+    precompile(CellInfo, (VoronoiDiagram{true, nEdges, Int32, Float64, Float64},))
+end
+
 struct Cells{S, nEdges, TI, TF, Tz}
     n::Int
     position::TensorsLite.VecMaybe2DxyArray{TF,Tz, 1}
@@ -24,11 +29,22 @@ struct Cells{S, nEdges, TI, TF, Tz}
     info::CellInfo{S, nEdges, TI, TF, Tz}
 end
 
+for nEdges in 6:10
+    precompile(Cells, (Int, Vec2DxyArray{Float64, 1}, Vector{UInt8}, ImVecArray{nEdges, Int32, 1},
+                       ImVecArray{nEdges, Int32, 1}, ImVecArray{nEdges, Int32, 1},
+                       CellInfo{false, nEdges, Int32, Float64, Zero}))
+    precompile(Cells, (Int, Vec3DArray{Float64, 1}, Vector{UInt8}, ImVecArray{nEdges, Int32, 1},
+                       ImVecArray{nEdges, Int32, 1}, ImVecArray{nEdges, Int32, 1},
+                       CellInfo{true, nEdges, Int32, Float64, Float64}))
+end
+
 Base.getproperty(cell::Cells, s::Symbol) = _getproperty(cell, Val(s))
 _getproperty(cell::Cells, ::Val{s}) where s = getfield(cell, s)
 _getproperty(cell::Cells{false}, ::Val{:x_period}) = getfield(cell, :info).diagram.x_period
 _getproperty(cell::Cells{false}, ::Val{:y_period}) = getfield(cell, :info).diagram.y_period
 _getproperty(cell::Cells{true}, ::Val{:sphere_radius}) = getfield(cell, :info).diagram.sphere_radius
+
+include("cell_info_creation.jl")
 
 for s in fieldnames(CellInfo)
     func = Symbol(string("compute_cell_",s))
@@ -39,6 +55,15 @@ for s in fieldnames(CellInfo)
         end
         return getfield(info, $(QuoteNode(s)))
     end
-end
 
-include("cell_info_creation.jl")
+    if s !== :diagram
+        for nEdges in 6:10
+            for TI in (Int32, Int64)
+                for TF in (Float32, Float64)
+                    @eval precompile($func, (Cells{true, $nEdges, $TI, $TF, $TF},))
+                    @eval precompile($func, (Cells{false, $nEdges, $TI, $TF, Zero},))
+                end
+            end
+        end
+    end
+end

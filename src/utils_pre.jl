@@ -21,7 +21,7 @@ function tmap!(output, func::F, var::Vararg) where F <: Function
     return output
 end
 
-@inline function unsafe_drop_element(t::NTuple{3}, el)
+@inline function unsafe_drop_element(t::NTuple{3}, el::Integer)
     if t[1] == el
         return (t[2], t[3])
     elseif t[2] == el
@@ -31,13 +31,19 @@ end
     end
 end
 
+precompile(unsafe_drop_element, (NTuple{3, Int32}, Int32))
+precompile(unsafe_drop_element, (NTuple{3, Int64}, Int64))
+
 @inline function unsafe_tuple2_intersection(t1::NTuple{2}, t2::NTuple{2})
     t11, t12 = t1
     t21, t22 = t2
     t11 == t21 ? t11 : t11 == t22 ? t11 : t12
 end
 
-@inline function find_cellOnCell(current_cell, shared_vertex1, shared_vertex2, cellsOnVertex)
+precompile(unsafe_tuple2_intersection, (NTuple{2, Int32}, NTuple{2, Int32}))
+precompile(unsafe_tuple2_intersection, (NTuple{2, Int64}, NTuple{2, Int64}))
+
+@inline function find_cellOnCell(current_cell::Integer, shared_vertex1::Integer, shared_vertex2::Integer, cellsOnVertex::AbstractVector)
     cells_v1 = cellsOnVertex[shared_vertex1]
     cells_v2 = cellsOnVertex[shared_vertex2]
     cells1 = unsafe_drop_element(cells_v1, current_cell)
@@ -45,9 +51,12 @@ end
     return unsafe_tuple2_intersection(cells1, cells2)
 end
 
+precompile(find_cellOnCell, (Int32, Int32, Int32, Vector{NTuple{3,Int32}}))
+precompile(find_cellOnCell, (Int64, Int64, Int64, Vector{NTuple{3,Int64}}))
+
 @inline ordered(x,y) = y < x ? (y, x) : (x, y)
 
-function compute_cellsOnCell!(cellsOnCell, verticesOnCell, cellsOnVertex)
+function compute_cellsOnCell!(cellsOnCell::ImVecArray, verticesOnCell::AbstractVector, cellsOnVertex::AbstractVector)
 # The ordering of the indices is the same as seen in the meshes provided by NCAR
 # They DO NOT follow what is described in their Mesh Specification document
 # It seems the document (at least v1.0) specification is not correct.
@@ -79,9 +88,19 @@ function compute_cellsOnCell!(cellsOnCell, verticesOnCell, cellsOnVertex)
     return cellsOnCell
 end
 
-function compute_cellsOnCell(verticesOnCell, cellsOnVertex)
+for nEdges in 6:10
+    precompile(compute_cellsOnCell!, (ImVecArray{nEdges, Int32, 1}, ImVecArray{nEdges, Int32, 1}, Vector{NTuple{3, Int32}}))
+    precompile(compute_cellsOnCell!, (ImVecArray{nEdges, Int64, 1}, ImVecArray{nEdges, Int64, 1}, Vector{NTuple{3, Int64}}))
+end
+
+function compute_cellsOnCell(verticesOnCell::ImVecArray, cellsOnVertex::AbstractVector)
     cellsOnCell = ImmutableVectorArray(similar(verticesOnCell.data), verticesOnCell.length)
     return compute_cellsOnCell!(cellsOnCell, verticesOnCell, cellsOnVertex)
+end
+
+for nEdges in 6:10
+    precompile(compute_cellsOnCell, (ImVecArray{nEdges, Int32, 1}, Vector{NTuple{3, Int32}}))
+    precompile(compute_cellsOnCell, (ImVecArray{nEdges, Int64, 1}, Vector{NTuple{3, Int64}}))
 end
 
 function compute_edgesOnCell!(edgesOnCell, cellsOnCell, cellsOnEdge::Vector{NTuple{2, TI}}) where TI
@@ -102,12 +121,22 @@ function compute_edgesOnCell!(edgesOnCell, cellsOnCell, cellsOnEdge::Vector{NTup
     return edgesOnCell
 end
 
-function compute_edgesOnCell(cellsOnCell, cellsOnEdge)
+for nEdges in 6:10
+    precompile(compute_edgesOnCell!, (ImVecArray{nEdges, Int32, 1}, ImVecArray{nEdges, Int32, 1}, Vector{NTuple{2, Int32}}))
+    precompile(compute_edgesOnCell!, (ImVecArray{nEdges, Int64, 1}, ImVecArray{nEdges, Int64, 1}, Vector{NTuple{2, Int64}}))
+end
+
+function compute_edgesOnCell(cellsOnCell::ImVecArray, cellsOnEdge)
     edgesOnCell = ImmutableVectorArray(similar(cellsOnCell.data), cellsOnCell.length)
     return compute_edgesOnCell!(edgesOnCell, cellsOnCell, cellsOnEdge)
 end
 
-function compute_edgesOnVertex!(edgesOnVertex, cellsOnVertex, cellsOnEdge::Vector{NTuple{2, TI}}) where TI
+for nEdges in 6:10
+    precompile(compute_edgesOnCell, (ImVecArray{nEdges, Int32, 1}, Vector{NTuple{2, Int32}}))
+    precompile(compute_edgesOnCell, (ImVecArray{nEdges, Int64, 1}, Vector{NTuple{2, Int64}}))
+end
+
+function compute_edgesOnVertex!(edgesOnVertex::AbstractVector, cellsOnVertex::AbstractVector, cellsOnEdge::Vector{NTuple{2, TI}}) where TI
 
     @parallel for v in eachindex(edgesOnVertex)
         @inbounds begin
@@ -124,10 +153,16 @@ function compute_edgesOnVertex!(edgesOnVertex, cellsOnVertex, cellsOnEdge::Vecto
     return edgesOnVertex
 end
 
+precompile(compute_edgesOnVertex!, (Vector{NTuple{3, Int32}}, Vector{NTuple{3, Int32}}, Vector{NTuple{2, Int32}}))
+precompile(compute_edgesOnVertex!, (Vector{NTuple{3, Int64}}, Vector{NTuple{3, Int64}}, Vector{NTuple{2, Int64}}))
+
 function compute_edgesOnVertex(cellsOnVertex::Vector{NTuple{3, TI}}, cellsOnEdge) where TI
     edgesOnVertex = Vector{NTuple{3,TI}}(undef,length(cellsOnVertex))
     return compute_edgesOnVertex!(edgesOnVertex, cellsOnVertex, cellsOnEdge)
 end
+
+precompile(compute_edgesOnVertex, (Vector{NTuple{3, Int32}}, Vector{NTuple{2, Int32}}))
+precompile(compute_edgesOnVertex, (Vector{NTuple{3, Int64}}, Vector{NTuple{2, Int64}}))
 
 function compute_polygon_area_periodic!(output,vpos,verticesOnPolygon,xp::Number,yp::Number)
     @parallel for c in eachindex(verticesOnPolygon)
@@ -136,9 +171,19 @@ function compute_polygon_area_periodic!(output,vpos,verticesOnPolygon,xp::Number
     return output
 end
 
+precompile(compute_polygon_area_periodic!, (Vector{Float64}, Vec2DxyArray{Float64, 1}, Vector{NTuple{3, Int32}}, Float64, Float64))
+for nEdges in 6:10
+    precompile(compute_polygon_area_periodic!, (Vector{Float64}, Vec2DxyArray{Float64, 1}, ImVecArray{nEdges, Int32, 1}, Float64, Float64))
+end
+
 function compute_polygon_area_periodic(vpos,verticesOnPolygon,xp::Number,yp::Number)
     output = Vector{nonzero_eltype(eltype(vpos))}(undef,length(verticesOnPolygon))
     return compute_polygon_area_periodic!(output,vpos,verticesOnPolygon,xp,yp)
+end
+
+precompile(compute_polygon_area_periodic, (Vec2DxyArray{Float64, 1}, Vector{NTuple{3, Int32}}, Float64, Float64))
+for nEdges in 6:10
+    precompile(compute_polygon_area_periodic, (Vec2DxyArray{Float64, 1}, ImVecArray{nEdges, Int32, 1}, Float64, Float64))
 end
 
 function compute_polygon_area_spherical!(output, vpos, verticesOnPolygon, R::Number)
@@ -148,9 +193,19 @@ function compute_polygon_area_spherical!(output, vpos, verticesOnPolygon, R::Num
     return output
 end
 
+precompile(compute_polygon_area_spherical!, (Vector{Float64}, Vec3DArray{Float64, 1}, Vector{NTuple{3, Int32}}, Float64))
+for nEdges in 6:10
+    precompile(compute_polygon_area_spherical!, (Vector{Float64}, Vec3DArray{Float64, 1}, ImVecArray{nEdges, Int32, 1}, Float64))
+end
+
 function compute_polygon_area_spherical(vpos, verticesOnPolygon, R::Number)
     output = Vector{nonzero_eltype(eltype(vpos))}(undef, length(verticesOnPolygon))
     return compute_polygon_area_spherical!(output, vpos, verticesOnPolygon, R)
+end
+
+precompile(compute_polygon_area_spherical, (Vec3DArray{Float64, 1}, Vector{NTuple{3, Int32}}, Float64))
+for nEdges in 6:10
+    precompile(compute_polygon_area_spherical, (Vec3DArray{Float64, 1}, ImVecArray{nEdges, Int32, 1}, Float64))
 end
 
 function compute_polygon_centroid_periodic!(output,vpos,verticesOnPolygon,xp::Number,yp::Number)
@@ -160,9 +215,19 @@ function compute_polygon_centroid_periodic!(output,vpos,verticesOnPolygon,xp::Nu
     return output
 end
 
+precompile(compute_polygon_centroid_periodic!, (Vec2DxyArray{Float64, 1}, Vec2DxyArray{Float64, 1}, Vector{NTuple{3, Int32}}, Float64, Float64))
+for nEdges in 6:10
+    precompile(compute_polygon_centroid_periodic!, (Vec2DxyArray{Float64, 1}, Vec2DxyArray{Float64, 1}, ImVecArray{nEdges, Int32, 1}, Float64, Float64))
+end
+
 function compute_polygon_centroid_periodic(vpos,verticesOnPolygon,xp::Number,yp::Number)
     output = similar(vpos,length(verticesOnPolygon))
     return compute_polygon_centroid_periodic!(output,vpos,verticesOnPolygon,xp,yp)
+end
+
+precompile(compute_polygon_centroid_periodic, (Vec2DxyArray{Float64, 1}, Vector{NTuple{3, Int32}}, Float64, Float64))
+for nEdges in 6:10
+    precompile(compute_polygon_centroid_periodic, (Vec2DxyArray{Float64, 1}, ImVecArray{nEdges, Int32, 1}, Float64, Float64))
 end
 
 function compute_polygon_centroid_spherical!(output, vpos, verticesOnPolygon, R::Number)
@@ -171,15 +236,24 @@ function compute_polygon_centroid_spherical!(output, vpos, verticesOnPolygon, R:
     end
     return output
 end
+precompile(compute_polygon_centroid_spherical!, (Vec3DArray{Float64, 1}, Vec3DArray{Float64, 1}, Vector{NTuple{3, Int32}}, Float64))
+for nEdges in 6:10
+    precompile(compute_polygon_centroid_spherical!, (Vec3DArray{Float64, 1}, Vec3DArray{Float64, 1}, ImVecArray{nEdges, Int32, 1}, Float64))
+end
 
 function compute_polygon_centroid_spherical(vpos, verticesOnPolygon, R::Number)
     output = similar(vpos,length(verticesOnPolygon))
     return compute_polygon_centroid_spherical!(output, vpos, verticesOnPolygon, R)
 end
+precompile(compute_polygon_centroid_spherical, (Vec3DArray{Float64, 1}, Vector{NTuple{3, Int32}}, Float64))
+for nEdges in 6:10
+    precompile(compute_polygon_centroid_spherical, (Vec3DArray{Float64, 1}, ImVecArray{nEdges, Int32, 1}, Float64))
+end
 
 function compute_longitude_periodic(cpos::Vec2DxyArray{T,1}) where {T}
     return zeros(T, length(cpos))
 end
+precompile(compute_longitude_periodic, (Vec2DxyArray{Float64, 1},))
 
 function compute_longitude!(longitude::Vector, pos::VecArray)
     px = pos.x
@@ -191,15 +265,18 @@ function compute_longitude!(longitude::Vector, pos::VecArray)
     end
     return longitude
 end
+precompile(compute_longitude!, (Vector{Float64}, Vec3DArray{Float64, 1}))
 
 function compute_longitude_spherical(cpos::Vec3DArray{T,1}) where {T}
     longitude = Vector{eltype(T)}(undef, length(cpos))
     return compute_longitude!(longitude, cpos)
 end
+precompile(compute_longitude_spherical, (Vec3DArray{Float64, 1},))
 
 function compute_latitude_periodic(cpos::Vec2DxyArray{T,1}) where {T}
     return zeros(T, length(cpos))
 end
+precompile(compute_latitude_periodic, (Vec2DxyArray{Float64, 1},))
 
 function compute_latitude!(latitude::Vector, pos::VecArray)
     px = pos.x
@@ -215,15 +292,18 @@ function compute_latitude!(latitude::Vector, pos::VecArray)
     end
     return latitude
 end
+precompile(compute_latitude!, (Vector{Float64}, Vec3DArray{Float64, 1}))
 
 function compute_latitude_spherical(cpos::Vec3DArray{T,1}) where {T}
     latitude = Vector{eltype(T)}(undef, length(cpos))
     return compute_latitude!(latitude, cpos)
 end
+precompile(compute_latitude_spherical, (Vec3DArray{Float64, 1},))
 
 function compute_zonalVector_periodic(cpos::Vec2DxyArray{T,1}) where {T}
     return VecArray(x = ones(T, length(cpos)))
 end
+precompile(compute_zonalVector_periodic, (Vec2DxyArray{Float64, 1},))
 
 function compute_zonalVector!(zonalVector::VecArray, pos::VecArray)
     px = pos.x
@@ -236,6 +316,7 @@ function compute_zonalVector!(zonalVector::VecArray, pos::VecArray)
     end
     return zonalVector
 end
+precompile(compute_zonalVector!, (Vec2DxyArray{Float64, 1}, Vec3DArray{Float64, 1}))
 
 function compute_zonalVector_spherical(cpos::Vec3DArray{T,1}) where {T}
     xv = Vector{eltype(T)}(undef, length(cpos))
@@ -243,10 +324,12 @@ function compute_zonalVector_spherical(cpos::Vec3DArray{T,1}) where {T}
     zonalVector = VecArray(x = xv, y = yv)
     return compute_zonalVector!(zonalVector, cpos)
 end
+precompile(compute_zonalVector_spherical, (Vec3DArray{Float64, 1},))
 
 function compute_meridionalVector_periodic(cpos::Vec2DxyArray{T,1}) where {T}
     return VecArray(y = ones(T, length(cpos)))
 end
+precompile(compute_meridionalVector_periodic, (Vec2DxyArray{Float64, 1},))
 
 function compute_meridionalVector!(meridionalVector::VecArray, pos::VecArray)
     px = pos.x
@@ -268,9 +351,11 @@ function compute_meridionalVector!(meridionalVector::VecArray, pos::VecArray)
     end
     return meridionalVector
 end
+precompile(compute_meridionalVector!, (Vec3DArray{Float64, 1}, Vec3DArray{Float64, 1}))
 
 function compute_meridionalVector_spherical(cpos::Vec3DArray{T,1}) where {T}
     meridionalVector = similar(cpos)
     return compute_meridionalVector!(meridionalVector, cpos)
 end
+precompile(compute_meridionalVector_spherical, (Vec3DArray{Float64, 1},))
 

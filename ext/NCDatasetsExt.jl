@@ -211,10 +211,9 @@ function VoronoiMeshes.CellInfo(voro::VoronoiDiagram{S, NE, TI, TF, Tz}, ncfile:
         tvy = ctp[2,2,:]
         if S
             tuy = ctp[2,1,:]
-            tuz = ctp[3,1,:]
             tvx = ctp[1,2,:]
             tvz = ctp[3,2,:]
-            cell_info.zonalVector = VecArray(tux, tuy, tuz)
+            cell_info.zonalVector = VecArray(x = tux, y = tuy)
             cell_info.meridionalVector = VecArray(tvx, tvy, tvz)
         else
             cell_info.zonalVector = VecArray(x = tux)

@@ -9,8 +9,9 @@ export CellInfo, Cells, VertexInfo, Vertices, EdgeInfo, Edges
 export VoronoiMesh, on_sphere, max_edges, integer_type, float_type
 export meshplot, meshplot!, diagramplot, diagramplot!
 
-const VecMaybe1DxArray{TX, TYZ, N} = TensorsLite.VecArray{Union{TX, TYZ}, N, Array{TX, N}, Array{TYZ, N}, Array{TYZ, N}}
-const VecMaybe1DyArray{TY, TXZ, N} = TensorsLite.VecArray{Union{TY, TXZ}, N, Array{TXZ, N}, Array{TY, N}, Array{TXZ, N}}
+const VecMaybe1DxArray{TX, TYZ, N} = TensorsLite.VecArray{Vec{Union{TX, TYZ}, 1, TX, TYZ, TYZ}, N, Array{TX, N}, Array{TYZ, N}, Array{TYZ, N}}
+const Vec1DxOr2DxyArray{TX, TXY, N} = TensorsLite.VecArray{Vec{Union{TX, Zero}, 1, TX, TXY, Zero}, N, Array{TX, N}, Array{TXY, N}, Array{Zero, N}}
+const VecMaybe1DyArray{TY, TXZ, N} = TensorsLite.VecArray{Vec{Union{TY, TXZ}, 1, TXZ, TY, TXZ}, N, Array{TXZ, N}, Array{TY, N}, Array{TXZ, N}}
 
 include("utils_pre.jl")
 

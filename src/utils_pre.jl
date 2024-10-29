@@ -14,6 +14,13 @@ macro parallel(ex)
     return esc(pex)
 end 
 
+function tmap!(output, func::F, var::Vararg) where F <: Function
+    @parallel for i in eachindex(output)
+        @inbounds output[i] = @inline func(map(x->@inbounds(x[i]), var)...)
+    end
+    return output
+end
+
 @inline function unsafe_drop_element(t::NTuple{3}, el)
     if t[1] == el
         return (t[2], t[3])
@@ -212,5 +219,58 @@ end
 function compute_latitude_spherical(cpos::Vec3DArray{T,1}) where {T}
     latitude = Vector{eltype(T)}(undef, length(cpos))
     return compute_latitude!(latitude, cpos)
+end
+
+function compute_zonalVector_periodic(cpos::Vec2DxyArray{T,1}) where {T}
+    return VecArray(x = ones(T, length(cpos)))
+end
+
+function compute_zonalVector!(zonalVector::VecArray, pos::VecArray)
+    px = pos.x
+    py = pos.y
+    @parallel for c in eachindex(pos)
+        @inbounds begin
+            ϕ = atan(py[c], px[c])
+            zonalVector[c] = cos(ϕ)*𝐣 - sin(ϕ)𝐢
+        end
+    end
+    return zonalVector
+end
+
+function compute_zonalVector_spherical(cpos::Vec3DArray{T,1}) where {T}
+    xv = Vector{eltype(T)}(undef, length(cpos))
+    yv = Vector{eltype(T)}(undef, length(cpos))
+    zonalVector = VecArray(x = xv, y = yv)
+    return compute_zonalVector!(zonalVector, cpos)
+end
+
+function compute_meridionalVector_periodic(cpos::Vec2DxyArray{T,1}) where {T}
+    return VecArray(y = ones(T, length(cpos)))
+end
+
+function compute_meridionalVector!(meridionalVector::VecArray, pos::VecArray)
+    px = pos.x
+    py = pos.y
+    pz = pos.z
+    @parallel for c in eachindex(pos)
+        @inbounds begin
+            x = px[c]
+            y = py[c]
+            z = pz[c]
+            ϕ = atan(y, x)
+            θ = atan(sqrt(x*x + y*y), z)
+            sinϕ = sin(ϕ)
+            cosϕ = cos(ϕ)
+            sinθ = sin(θ)
+            cosθ = cos(θ)
+            meridionalVector[c] = sinθ*𝐤 - (cosϕ*cosθ)*𝐢 - (sinϕ*cosθ)*𝐣
+        end
+    end
+    return meridionalVector
+end
+
+function compute_meridionalVector_spherical(cpos::Vec3DArray{T,1}) where {T}
+    meridionalVector = similar(cpos)
+    return compute_meridionalVector!(meridionalVector, cpos)
 end
 

@@ -21,6 +21,13 @@ fix_longitude(lonVec::Vector) = map(fix_longitude, lonVec)
         @test my_approx(cells.area, VoronoiMeshes.compute_cell_area(cells))
         @test my_approx(fix_longitude(cells.longitude), fix_longitude(VoronoiMeshes.compute_cell_longitude(cells)))
         @test my_approx(cells.latitude, VoronoiMeshes.compute_cell_latitude(cells))
+
+        zonal = mesh.cells.zonalVector
+        meridional = mesh.cells.meridionalVector
+        normal = mesh.cells.normal
+        @test my_approx(normal, zonal .× meridional)
+        @test my_approx(zonal, meridional .× normal)
+        @test my_approx(meridional, normal .× zonal)
     end
 end
 

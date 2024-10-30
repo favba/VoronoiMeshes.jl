@@ -1,6 +1,6 @@
 module DelaunayTriangulationExt
 
-using VoronoiMeshes, DelaunayTriangulation, TensorsLite, ImmutableVectors, TensorsLiteGeometry
+using Zeros, VoronoiMeshes, DelaunayTriangulation, TensorsLite, ImmutableVectors, TensorsLiteGeometry
 
 """
     probable_dc(N::Integer, lx::Number, ly::Number, [max_densitty=1]) -> dc::Real
@@ -295,5 +295,7 @@ end
 function VoronoiMeshes.VoronoiMesh(N::Integer, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = 20000, rtol::Real = 1.0e-4 / 100) where {F <: Function}
     VoronoiMesh(VoronoiDiagram(PlanarVoronoiDiagram(N, lx, ly, density = density, max_iter = max_iter, rtol = rtol)))
 end
+
+include("precompile_delaunay.jl")
 
 end # Module

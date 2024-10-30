@@ -25,7 +25,7 @@ compute_cell_zonalVector!(output, cells::Cells{true}) = compute_zonalVector!(out
 compute_cell_zonalVector(cells::Cells{false}) = compute_cell_zonalVector!(VecArray(x = similar(cells.position.x)), cells)
 compute_cell_zonalVector(cells::Cells{true}) = compute_cell_zonalVector!(VecArray(x = similar(cells.position.x), y = similar(cells.position.y)), cells)
 
-compute_cell_meridionalVector!(output, cells::Cells{false}) = fill!(output, 𝐣)
+compute_cell_meridionalVector!(output, ::Cells{false}) = fill!(output, 𝐣)
 compute_cell_meridionalVector(cells::Cells{false}) = compute_cell_meridionalVector!(VecArray(y = similar(cells.position.y)), cells)
 compute_cell_meridionalVector!(output, cells::Cells{true}) = compute_meridionalVector!(output, cells.position)
 compute_cell_meridionalVector(cells::Cells{true}) = compute_cell_meridionalVector!(similar(cells.position), cells)

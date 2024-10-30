@@ -66,3 +66,31 @@ end
     end
 end
 
+@testset "EdgeInfo creation" begin
+    mesh_iso = VoronoiMesh("mesh.nc")
+    mesh_dist = VoronoiMesh("mesh_distorted.nc")
+    mesh_spherical = VoronoiMesh("x1.4002.grid.nc")
+
+    for mesh in (mesh_iso, mesh_dist, mesh_spherical)
+        edges = mesh.edges
+        if mesh === mesh_iso
+            xp = mesh.x_period
+            yp = mesh.y_period
+            @test my_approx(periodic_to_base_point.(edges.position, xp, yp), periodic_to_base_point.(edges.midpoint, xp, yp))
+        end
+        @test my_approx(edges.length, VoronoiMeshes.compute_edge_length(edges))
+        @test my_approx(edges.cellsDistance, VoronoiMeshes.compute_edge_cellsDistance(edges))
+        @test my_approx(abs.(edges.angle), abs.(VoronoiMeshes.compute_edge_angle(edges)), 1.1*π/180)
+        @test my_approx(fix_longitude(edges.longitude), fix_longitude(VoronoiMeshes.compute_edge_longitude(edges)))
+        @test my_approx(edges.latitude, VoronoiMeshes.compute_edge_latitude(edges))
+        @test my_approx(edges.normal, VoronoiMeshes.compute_edge_normal(edges))
+
+        if mesh === mesh_spherical
+            @test my_approx(normalize.(edges.position), edges.normal .× edges.tangent)
+        else
+            @test all(𝐤 .≈ edges.normal .× edges.tangent)
+        end
+    end
+end
+
+

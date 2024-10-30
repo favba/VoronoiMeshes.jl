@@ -28,18 +28,30 @@ _getproperty(edge::Edges{false}, ::Val{:x_period}) = getfield(edge, :info).diagr
 _getproperty(edge::Edges{false}, ::Val{:y_period}) = getfield(edge, :info).diagram.y_period
 _getproperty(edge::Edges{true}, ::Val{:sphere_radius}) = getfield(edge, :info).diagram.sphere_radius
 
+include("edge_info_creation.jl")
+
 for s in fieldnames(EdgeInfo)
-    func = Symbol(string("compute_edge_",s))
-    @eval function _getproperty(edge::Edges, ::Val{$(QuoteNode(s))})
-        info = getfield(edge, :info)
-        if !isdefined(info, $(QuoteNode(s)))
-            setfield!(info, $(QuoteNode(s)), $func(edge))
+    if s !== :diagram
+        func = Symbol(string("compute_edge_",s))
+        @eval function _getproperty(edge::Edges, ::Val{$(QuoteNode(s))})
+            info = getfield(edge, :info)
+            if !isdefined(info, $(QuoteNode(s)))
+                setfield!(info, $(QuoteNode(s)), $func(edge))
+            end
+            return getfield(info, $(QuoteNode(s)))
         end
-        return getfield(info, $(QuoteNode(s)))
+        for nEdges in 6:10
+            for TI in (Int32, Int64)
+                for TF in (Float32, Float64)
+                    @eval precompile($func, (Edges{true, $nEdges, $TI, $TF, $TF},))
+                    @eval precompile($func, (Edges{false, $nEdges, $TI, $TF, Zero},))
+                end
+            end
+        end
+    else
+        _getproperty(edges::Edges, ::Val{:diagram}) = getfield(edges, :info).diagram
     end
 end
-
-include("edge_info_creation.jl")
 
 function Edges(diagram::VoronoiDiagram{false, NE, TI, TF}) where {NE, TI, TF}
 

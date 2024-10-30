@@ -92,3 +92,33 @@ end
         end
     end
 end
+
+@testset "VoronoiMesh creation" begin
+    mesh_dist = VoronoiMesh("mesh_distorted.nc")
+    m_dist = VoronoiMesh(mesh_dist.cells.info.diagram)
+
+    xp = m_dist.x_period
+    yp = m_dist.y_period
+    edges = m_dist.edges
+    @test my_approx(
+        periodic_to_base_point.(edges.position, xp, yp),
+        periodic_to_base_point.(
+            VoronoiMeshes.compute_edge_midpoint_periodic!(
+                similar(edges.position),
+                m_dist.cells.position, edges.cells, xp, yp
+            ),
+            xp, yp
+        )
+    )
+
+    mesh_spherical = VoronoiMesh("x1.4002.grid.nc")
+    m_spherical = VoronoiMesh(mesh_spherical.cells.info.diagram)
+    R = m_spherical.sphere_radius
+    cs = m_spherical.cells
+    es = m_spherical.edges
+
+    @test my_approx(
+        es.position,
+        VoronoiMeshes.compute_edge_midpoint_spherical!(similar(es.position), cs.position, es.cells, R)
+    )
+end

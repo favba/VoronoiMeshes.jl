@@ -30,18 +30,20 @@ struct VoronoiMesh{S, maxEdges, TI, TF, Tz}
 end
 
 Base.getproperty(mesh::VoronoiMesh, s::Symbol) = _getproperty(mesh, Val(s))
-_getproperty(mesh::VoronoiMesh, ::Val{s}) where s = getfield(mesh, s)
+_getproperty(mesh::VoronoiMesh, ::Val{s}) where {s} = getfield(mesh, s)
 _getproperty(mesh::VoronoiMesh{false}, ::Val{:x_period}) = getfield(mesh, :cells).x_period
 _getproperty(mesh::VoronoiMesh{false}, ::Val{:y_period}) = getfield(mesh, :cells).y_period
 _getproperty(mesh::VoronoiMesh{true}, ::Val{:sphere_radius}) = getfield(mesh, :cells).sphere_radius
 
-for T in (:VoronoiMesh,
-          :Cells, :CellInfo,
-          :Vertices, :VertexInfo,
-          :Edges, :EdgeInfo,
-          :VoronoiDiagram)
+for T in (
+        :VoronoiMesh,
+        :Cells, :CellInfo,
+        :Vertices, :VertexInfo,
+        :Edges, :EdgeInfo,
+        :VoronoiDiagram,
+    )
     @eval begin
-        on_sphere(::Type{<:$T{S}}) where S = S
+        on_sphere(::Type{<:$T{S}}) where {S} = S
         max_edges(::Type{<:$T{S, N}}) where {S, N} = N
         integer_type(::Type{<:$T{S, N, TI}}) where {S, N, TI} = TI
         float_type(::Type{<:$T{S, N, TI, TF}}) where {S, N, TI, TF} = TF

@@ -31,8 +31,8 @@ struct VoronoiDiagram{S, nEdges, TI, TF, Tz} <: AbstractVoronoiDiagram{S, nEdges
     end
 end
 
-get_diagram(v::VoronoiDiagram{true, nEdges, TI, TF, TF}) where {nEdges, TI, TF} = Base.getfield(v,:data)::SphericalVoronoiDiagram{nEdges, TI, TF}
-get_diagram(v::VoronoiDiagram{false, nEdges, TI, TF, Zero}) where {nEdges, TI, TF} = Base.getfield(v,:data)::PlanarVoronoiDiagram{nEdges, TI, TF}
+get_diagram(v::VoronoiDiagram{true, nEdges, TI, TF, TF}) where {nEdges, TI, TF} = Base.getfield(v, :data)::SphericalVoronoiDiagram{nEdges, TI, TF}
+get_diagram(v::VoronoiDiagram{false, nEdges, TI, TF, Zero}) where {nEdges, TI, TF} = Base.getfield(v, :data)::PlanarVoronoiDiagram{nEdges, TI, TF}
 
 Base.getproperty(v::VoronoiDiagram, s::Symbol) = _getproperty(v, Val{s}())
 _getproperty(v::VoronoiDiagram, ::Val{:data}) = get_diagram(v)
@@ -57,7 +57,7 @@ for s in fieldnames(PlanarVoronoiDiagram)
 
     for nEdges in 6:10
         let TF = Float64, TI = Int32
-            @eval precompile(_getproperty,(VoronoiDiagram{false, $nEdges, $TI, $TF, Zero}, Val{$(QuoteNode(s))}))
+            @eval precompile(_getproperty, (VoronoiDiagram{false, $nEdges, $TI, $TF, Zero}, Val{$(QuoteNode(s))}))
         end
     end
 end
@@ -67,8 +67,7 @@ for s in fieldnames(SphericalVoronoiDiagram)
 
     for nEdges in 6:10
         let TF = Float64, TI = Int32
-            @eval precompile(_getproperty,(VoronoiDiagram{true, $nEdges, $TI, $TF, $TF}, Val{$(QuoteNode(s))}))
+            @eval precompile(_getproperty, (VoronoiDiagram{true, $nEdges, $TI, $TF, $TF}, Val{$(QuoteNode(s))}))
         end
     end
 end
-

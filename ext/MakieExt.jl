@@ -29,8 +29,8 @@ function plt.plot!(plot::PeriodicMesh)
     y_ghost_edges = plt.lift(both_edges) do both_edges
         both_edges[2][2]
     end
-    plt.linesegments!(plot, x_edges, y_edges,color=plot.color,linestyle=plot.edgelinestyle)
-    plt.linesegments!(plot,x_ghost_edges,y_ghost_edges,color=plot.color,linestyle=plot.ghostedgelinestyle)
+    plt.linesegments!(plot, x_edges, y_edges, color = plot.color, linestyle = plot.edgelinestyle)
+    plt.linesegments!(plot, x_ghost_edges, y_ghost_edges, color = plot.color, linestyle = plot.ghostedgelinestyle)
     plot
 end
 
@@ -52,7 +52,7 @@ function plt.plot!(plot::PeriodicDiagram)
     y_edges = plt.lift(edges) do edges
         edges[2]
     end
-    plt.linesegments!(plot, x_edges, y_edges, color=plot.color, linestyle=plot.linestyle)
+    plt.linesegments!(plot, x_edges, y_edges, color = plot.color, linestyle = plot.linestyle)
     plot
 end
 

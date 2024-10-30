@@ -1,12 +1,12 @@
 using VoronoiMeshes, TensorsLite, ImmutableVectors, TensorsLiteGeometry, NCDatasets, LinearAlgebra
 using Test
 
-function my_approx(a, b, atol=1e-8)
+function my_approx(a, b, atol = 1.0e-8)
     all(x -> isapprox(x[1], x[2], atol = atol), zip(a, b))
 end
 
-function my_approx(a::AbstractVector{<:NTuple{N}}, b::AbstractVector{<:NTuple{N}}, atol=1e-8) where {N}
-    all(x -> mapreduce((y,z)->isapprox(y,z, atol = atol), &, x[1], x[2]), zip(a, b))
+function my_approx(a::AbstractVector{<:NTuple{N}}, b::AbstractVector{<:NTuple{N}}, atol = 1.0e-8) where {N}
+    all(x -> mapreduce((y, z) -> isapprox(y, z, atol = atol), &, x[1], x[2]), zip(a, b))
 end
 
 fix_longitude(lon::Number) = lon > π ? lon - 2π : lon
@@ -25,7 +25,7 @@ fix_longitude(lonVec::Vector) = map(fix_longitude, lonVec)
             @test my_approx(periodic_to_base_point.(cells.position, xp, yp), periodic_to_base_point.(cells.centroid, xp, yp))
         end
         if mesh === mesh_spherical
-            @test my_approx(cells.position, cells.centroid, 1e-5)
+            @test my_approx(cells.position, cells.centroid, 1.0e-5)
         end
         @test my_approx(cells.area, VoronoiMeshes.compute_cell_area(cells))
         @test my_approx(fix_longitude(cells.longitude), fix_longitude(VoronoiMeshes.compute_cell_longitude(cells)))
@@ -80,7 +80,7 @@ end
         end
         @test my_approx(edges.length, VoronoiMeshes.compute_edge_length(edges))
         @test my_approx(edges.cellsDistance, VoronoiMeshes.compute_edge_cellsDistance(edges))
-        @test my_approx(abs.(edges.angle), abs.(VoronoiMeshes.compute_edge_angle(edges)), 1.1*π/180)
+        @test my_approx(abs.(edges.angle), abs.(VoronoiMeshes.compute_edge_angle(edges)), 1.1 * π / 180)
         @test my_approx(fix_longitude(edges.longitude), fix_longitude(VoronoiMeshes.compute_edge_longitude(edges)))
         @test my_approx(edges.latitude, VoronoiMeshes.compute_edge_latitude(edges))
         @test my_approx(edges.normal, VoronoiMeshes.compute_edge_normal(edges))
@@ -92,5 +92,3 @@ end
         end
     end
 end
-
-

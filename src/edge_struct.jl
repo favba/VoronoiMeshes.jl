@@ -16,14 +16,14 @@ end
 
 struct Edges{S, NE, TI, TF, Tz}
     n::Int
-    position::TensorsLite.VecMaybe2DxyArray{TF,Tz, 1}
+    position::TensorsLite.VecMaybe2DxyArray{TF, Tz, 1}
     vertices::Vector{NTuple{2, TI}}
     cells::Vector{NTuple{2, TI}}
     info::EdgeInfo{S, NE, TI, TF, Tz}
 end
 
 Base.getproperty(edge::Edges, s::Symbol) = _getproperty(edge, Val(s))
-_getproperty(edge::Edges, ::Val{s}) where s = getfield(edge, s)
+_getproperty(edge::Edges, ::Val{s}) where {s} = getfield(edge, s)
 _getproperty(edge::Edges{false}, ::Val{:x_period}) = getfield(edge, :info).diagram.x_period
 _getproperty(edge::Edges{false}, ::Val{:y_period}) = getfield(edge, :info).diagram.y_period
 _getproperty(edge::Edges{true}, ::Val{:sphere_radius}) = getfield(edge, :info).diagram.sphere_radius
@@ -32,7 +32,7 @@ include("edge_info_creation.jl")
 
 for s in fieldnames(EdgeInfo)
     if s !== :diagram
-        func = Symbol(string("compute_edge_",s))
+        func = Symbol(string("compute_edge_", s))
         @eval function _getproperty(edge::Edges, ::Val{$(QuoteNode(s))})
             info = getfield(edge, :info)
             if !isdefined(info, $(QuoteNode(s)))
@@ -69,7 +69,7 @@ function Edges(diagram::VoronoiDiagram{false, NE, TI, TF}) where {NE, TI, TF}
     xp = diagram.x_period
     yp = diagram.y_period
 
-    touched_vertex_pair = Set{NTuple{2,TI}}()
+    touched_vertex_pair = Set{NTuple{2, TI}}()
     e = 0
     @inbounds for c in eachindex(cpos)
         cell_vertices = verticesOnCell[c]
@@ -79,25 +79,25 @@ function Edges(diagram::VoronoiDiagram{false, NE, TI, TF}) where {NE, TI, TF}
         for v in 2:length(cell_vertices)
             v1 = v2
             v2 = cell_vertices[v]
-            pair = ordered(v1,v2)
+            pair = ordered(v1, v2)
             if !(pair in touched_vertex_pair)
-                e+=one(TI)
+                e += one(TI)
                 push!(touched_vertex_pair, pair)
                 c2 = find_cellOnCell(c, v2, v1, cellsOnVertex)
                 position[e] = periodic_to_base_point(((cp + closest(cp, cpos[c2], xp, yp)) / 2), xp, yp)
-                vertices[e] =  (v1, v2)
+                vertices[e] = (v1, v2)
                 cells[e] = (c, c2)
             end
         end
         v1 = v2
         v2 = v_1
-        pair = ordered(v1,v2)
+        pair = ordered(v1, v2)
         if !(pair in touched_vertex_pair)
-            e+=one(TI)
+            e += one(TI)
             push!(touched_vertex_pair, pair)
             c2 = find_cellOnCell(c, v2, v1, cellsOnVertex)
             position[e] = periodic_to_base_point(((cp + closest(cp, cpos[c2], xp, yp)) / 2), xp, yp)
-            vertices[e] =  (v1, v2)
+            vertices[e] = (v1, v2)
             cells[e] = (c, c2)
         end
     end
@@ -122,7 +122,7 @@ function Edges(diagram::VoronoiDiagram{true, NE, TI, TF}) where {NE, TI, TF}
 
     R = diagram.sphere_radius
 
-    touched_vertex_pair = Set{NTuple{2,TI}}()
+    touched_vertex_pair = Set{NTuple{2, TI}}()
     e = 0
     @inbounds for c in eachindex(cpos)
         cell_vertices = verticesOnCell[c]
@@ -132,25 +132,25 @@ function Edges(diagram::VoronoiDiagram{true, NE, TI, TF}) where {NE, TI, TF}
         for v in 2:length(cell_vertices)
             v1 = v2
             v2 = cell_vertices[v]
-            pair = ordered(v1,v2)
+            pair = ordered(v1, v2)
             if !(pair in touched_vertex_pair)
-                e+=one(TI)
+                e += one(TI)
                 push!(touched_vertex_pair, pair)
                 c2 = find_cellOnCell(c, v2, v1, cellsOnVertex)
                 position[e] = arc_midpoint(R, cp, cpos[c2])
-                vertices[e] =  (v1, v2)
+                vertices[e] = (v1, v2)
                 cells[e] = (c, c2)
             end
         end
         v1 = v2
         v2 = v_1
-        pair = ordered(v1,v2)
+        pair = ordered(v1, v2)
         if !(pair in touched_vertex_pair)
-            e+=one(TI)
+            e += one(TI)
             push!(touched_vertex_pair, pair)
             c2 = find_cellOnCell(c, v2, v1, cellsOnVertex)
             position[e] = arc_midpoint(R, cp, cpos[c2])
-            vertices[e] =  (v1, v2)
+            vertices[e] = (v1, v2)
             cells[e] = (c, c2)
         end
     end

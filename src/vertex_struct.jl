@@ -13,14 +13,14 @@ end
 
 struct Vertices{S, NE, TI, TF, Tz}
     n::Int
-    position::TensorsLite.VecMaybe2DxyArray{TF,Tz, 1}
+    position::TensorsLite.VecMaybe2DxyArray{TF, Tz, 1}
     edges::Vector{NTuple{3, TI}}
     cells::Vector{NTuple{3, TI}}
     info::VertexInfo{S, NE, TI, TF, Tz}
 end
 
 Base.getproperty(cell::Vertices, s::Symbol) = _getproperty(cell, Val(s))
-_getproperty(cell::Vertices, ::Val{s}) where s = getfield(cell, s)
+_getproperty(cell::Vertices, ::Val{s}) where {s} = getfield(cell, s)
 _getproperty(cell::Vertices{false}, ::Val{:x_period}) = getfield(cell, :info).diagram.x_period
 _getproperty(cell::Vertices{false}, ::Val{:y_period}) = getfield(cell, :info).diagram.y_period
 _getproperty(cell::Vertices{true}, ::Val{:sphere_radius}) = getfield(cell, :info).diagram.sphere_radius
@@ -29,7 +29,7 @@ include("vertex_info_creation.jl")
 
 for s in fieldnames(VertexInfo)
     if s !== :diagram
-        func = Symbol(string("compute_vertex_",s))
+        func = Symbol(string("compute_vertex_", s))
         @eval function _getproperty(vertex::Vertices, ::Val{$(QuoteNode(s))})
             info = getfield(vertex, :info)
             if !isdefined(info, $(QuoteNode(s)))
@@ -49,4 +49,3 @@ for s in fieldnames(VertexInfo)
         _getproperty(vertex::Vertices, ::Val{:diagram}) = getfield(vertex, :info).diagram
     end
 end
-

@@ -293,3 +293,33 @@ function compute_meridionalVector!(meridionalVector::VecArray, pos::VecArray)
     return meridionalVector
 end
 precompile(compute_meridionalVector!, (Vec3DArray{Float64, 1}, Vec3DArray{Float64, 1}))
+
+"""
+    select_kite_area(kiteAreaOnVertex::Vector{NTuple{3}}, cellsOnVertex::Vector{NTuple{3,<:Integer}}, v_i::Integer, c_i::Integer)
+Returns the kite Area associated with cell `c_i` and vertex `v_i`.
+Throws an error if vertex `v_i` doens't belong to cell `c_i`.
+"""
+function select_kite_area(kiteAreaOnVertex,cellsOnVertex,v,c)
+    areas = kiteAreaOnVertex[v]
+    cells = cellsOnVertex[v]
+    if cells[1] == c
+        return areas[1]
+    elseif cells[2] == c
+        return areas[2]
+    elseif cells[3] == c
+        return areas[3]
+    else
+        error("Vertex $v doesn't belong to cell $c")
+    end
+end
+
+function sign_edge((c1,c2),c)
+    if c == c1
+        return 1
+    elseif c == c2
+        return -1
+    else
+        error("Edge doesn't belong to cell $c")
+    end
+end
+

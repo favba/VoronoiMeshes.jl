@@ -8,6 +8,7 @@ export VoronoiDiagram, PlanarVoronoiDiagram, SphericalVoronoiDiagram
 export CellInfo, Cells, VertexInfo, Vertices, EdgeInfo, Edges
 export VoronoiMesh, on_sphere, max_edges, integer_type, float_type
 export meshplot, meshplot!, diagramplot, diagramplot!
+export graph_partition, find_obtuse_triangles, periodic_edges_mask, periodic_vertices_mask
 
 const VecMaybe1DxArray{TX, TYZ, N} = TensorsLite.VecArray{Vec{Union{TX, TYZ}, 1, TX, TYZ, TYZ}, N, Array{TX, N}, Array{TYZ, N}, Array{TYZ, N}}
 const Vec1DxOr2DxyArray{TX, TXY, N} = TensorsLite.VecArray{Vec{Union{TX, Zero}, 1, TX, TXY, Zero}, N, Array{TX, N}, Array{TXY, N}, Array{Zero, N}}
@@ -72,6 +73,8 @@ function VoronoiMesh(voronoi::VoronoiDiagram)
 
     return VoronoiMesh(cells, vertices, edges)
 end
+
+include("utils_pos.jl")
 
 #functions to be used when Makie is loaded
 #Definitions are in ext/GeometryBasicsExt.jl

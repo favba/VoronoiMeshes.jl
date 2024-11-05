@@ -62,6 +62,9 @@ for s in fieldnames(PlanarVoronoiDiagram)
     end
 end
 
+const pvd_property_names = (fieldnames(VoronoiDiagram)..., fieldnames(PlanarVoronoiDiagram)...)
+Base.propertynames(::VoronoiDiagram{false}) = pvd_property_names
+
 for s in fieldnames(SphericalVoronoiDiagram)
     @eval _getproperty(v::VoronoiDiagram{true}, ::Val{$(QuoteNode(s))}) = getfield(get_diagram(v), $(QuoteNode(s)))
 
@@ -71,3 +74,7 @@ for s in fieldnames(SphericalVoronoiDiagram)
         end
     end
 end
+
+const svd_property_names = (fieldnames(VoronoiDiagram)..., fieldnames(SphericalVoronoiDiagram)...)
+Base.propertynames(::VoronoiDiagram{true}) = svd_property_names
+

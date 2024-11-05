@@ -14,6 +14,9 @@ mutable struct EdgeInfo{S, NE, TI, TF, Tz}
     end
 end
 
+const planar_edgeinfo_names = (:midpoint, :length, :cellsDistance, :angle, :normal, :tangent, :x_period, :y_period)
+const spherical_edgeinfo_names = (filter(!=(:diagram), fieldnames(EdgeInfo))..., :sphere_radius)
+
 struct Edges{S, NE, TI, TF, Tz}
     n::Int
     position::TensorsLite.VecMaybe2DxyArray{TF, Tz, 1}
@@ -22,11 +25,18 @@ struct Edges{S, NE, TI, TF, Tz}
     info::EdgeInfo{S, NE, TI, TF, Tz}
 end
 
+get_diagram(e::Edges) = getfield(e, :info).diagram
+
+const edge_names = (:n, :position, :vertices, :cells)
+
+Base.propertynames(::Edges{false}) = (edge_names..., planar_edgeinfo_names...)
+Base.propertynames(::Edges{true}) = (edge_names..., spherical_edgeinfo_names...)
+
 Base.getproperty(edge::Edges, s::Symbol) = _getproperty(edge, Val(s))
 _getproperty(edge::Edges, ::Val{s}) where {s} = getfield(edge, s)
-_getproperty(edge::Edges{false}, ::Val{:x_period}) = getfield(edge, :info).diagram.x_period
-_getproperty(edge::Edges{false}, ::Val{:y_period}) = getfield(edge, :info).diagram.y_period
-_getproperty(edge::Edges{true}, ::Val{:sphere_radius}) = getfield(edge, :info).diagram.sphere_radius
+_getproperty(edge::Edges{false}, ::Val{:x_period}) = get_diagram(edge).x_period
+_getproperty(edge::Edges{false}, ::Val{:y_period}) = get_diagram(edge).y_period
+_getproperty(edge::Edges{true}, ::Val{:sphere_radius}) = get_diagram(edge).sphere_radius
 
 include("edge_info_creation.jl")
 

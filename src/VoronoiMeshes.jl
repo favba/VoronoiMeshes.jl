@@ -6,7 +6,7 @@ export @parallel
 
 export VoronoiDiagram, PlanarVoronoiDiagram, SphericalVoronoiDiagram
 export CellInfo, Cells, VertexInfo, Vertices, EdgeInfo, Edges
-export VoronoiMesh, on_sphere, max_edges, integer_type, float_type
+export VoronoiMesh, on_sphere, max_edges, integer_type, float_type, get_diagram
 export meshplot, meshplot!, diagramplot, diagramplot!
 export graph_partition, find_obtuse_triangles, periodic_edges_mask, periodic_vertices_mask
 
@@ -28,13 +28,30 @@ struct VoronoiMesh{S, maxEdges, TI, TF, Tz}
     cells::Cells{S, maxEdges, TI, TF, Tz}
     vertices::Vertices{S, maxEdges, TI, TF, Tz}
     edges::Edges{S, maxEdges, TI, TF, Tz}
+
+    function VoronoiMesh(
+                c::Cells{S, NE, TI, TF, Tz},
+                v::Vertices{S, NE, TI, TF, Tz},
+                e::Edges{S, NE, TI, TF, Tz}
+            ) where {S, NE, TI, TF, Tz}
+
+        if !(get_diagram(c) === get_diagram(v) === get_diagram(e))
+            throw(DimensionMismatch("`Cell`, `Vertices` and `Edges` structs are not based on the same Voronoi diagram"))
+        end
+        return new{S, NE, TI, TF, Tz}(c, v, e)
+    end
 end
+
+get_diagram(mesh::VoronoiMesh) = get_diagram(mesh.cells)
+
+Base.propertynames(::VoronoiMesh{false}) = (fieldnames(VoronoiMesh)..., :x_period, :y_period)
+Base.propertynames(::VoronoiMesh{true}) = (fieldnames(VoronoiMesh)..., :sphere_radius)
 
 Base.getproperty(mesh::VoronoiMesh, s::Symbol) = _getproperty(mesh, Val(s))
 _getproperty(mesh::VoronoiMesh, ::Val{s}) where {s} = getfield(mesh, s)
-_getproperty(mesh::VoronoiMesh{false}, ::Val{:x_period}) = getfield(mesh, :cells).x_period
-_getproperty(mesh::VoronoiMesh{false}, ::Val{:y_period}) = getfield(mesh, :cells).y_period
-_getproperty(mesh::VoronoiMesh{true}, ::Val{:sphere_radius}) = getfield(mesh, :cells).sphere_radius
+_getproperty(mesh::VoronoiMesh{false}, ::Val{:x_period}) = get_diagram(mesh).x_period
+_getproperty(mesh::VoronoiMesh{false}, ::Val{:y_period}) = get_diagram(mesh).y_period
+_getproperty(mesh::VoronoiMesh{true}, ::Val{:sphere_radius}) = get_diagram(mesh).sphere_radius
 
 for T in (
         :VoronoiMesh,

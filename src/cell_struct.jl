@@ -1,5 +1,5 @@
-mutable struct CellInfo{S, nEdges, TI, TF, Tz}
-    const diagram::VoronoiDiagram{S, nEdges, TI, TF, Tz}
+mutable struct CellInfo{S, max_nEdges, TI, TF, Tz}
+    const diagram::VoronoiDiagram{S, max_nEdges, TI, TF, Tz}
     centroid::TensorsLite.VecMaybe2DxyArray{TF, Tz, 1}
     area::Vector{TF}
     longitude::Vector{TF}
@@ -8,25 +8,30 @@ mutable struct CellInfo{S, nEdges, TI, TF, Tz}
     zonalVector::Vec1DxOr2DxyArray{TF, Tz, 1}
     meridionalVector::VecMaybe1DyArray{TF, Tz, 1}
 
-    function CellInfo(diagram::VoronoiDiagram{S, nEdges, TI, TF, Tz}) where {S, nEdges, TI, TF, Tz}
-        return new{S, nEdges, TI, TF, Tz}(diagram)
+    function CellInfo(diagram::VoronoiDiagram{S, max_nEdges, TI, TF, Tz}) where {S, max_nEdges, TI, TF, Tz}
+        return new{S, max_nEdges, TI, TF, Tz}(diagram)
     end
 end
+
+const planar_cellinfo_names = (:centroid, :area, :x_period, :y_period)
+const spherical_cellinfo_names = (filter(!=(:diagram), fieldnames(CellInfo))..., :sphere_radius)
 
 for nEdges in 6:10
     precompile(CellInfo, (VoronoiDiagram{false, nEdges, Int32, Float64, Zero},))
     precompile(CellInfo, (VoronoiDiagram{true, nEdges, Int32, Float64, Float64},))
 end
 
-struct Cells{S, nEdges, TI, TF, Tz}
+struct Cells{S, max_nEdges, TI, TF, Tz}
     n::Int
     position::TensorsLite.VecMaybe2DxyArray{TF, Tz, 1}
     nEdges::Vector{UInt8}
-    vertices::ImVecArray{nEdges, TI, 1}
-    edges::ImVecArray{nEdges, TI, 1}
-    cells::ImVecArray{nEdges, TI, 1}
-    info::CellInfo{S, nEdges, TI, TF, Tz}
+    vertices::ImVecArray{max_nEdges, TI, 1}
+    edges::ImVecArray{max_nEdges, TI, 1}
+    cells::ImVecArray{max_nEdges, TI, 1}
+    info::CellInfo{S, max_nEdges, TI, TF, Tz}
 end
+
+get_diagram(c::Cells) = getfield(c, :info).diagram
 
 for nEdges in 6:10
     precompile(
@@ -45,11 +50,16 @@ for nEdges in 6:10
     )
 end
 
+const cell_names = (:n, :position, :nEdges, :vertices, :edges, :cells)
+
+Base.propertynames(::Cells{false}) = (cell_names..., planar_cellinfo_names...)
+Base.propertynames(::Cells{true}) = (cell_names..., spherical_cellinfo_names...)
+
 Base.getproperty(cell::Cells, s::Symbol) = _getproperty(cell, Val(s))
 _getproperty(cell::Cells, ::Val{s}) where {s} = getfield(cell, s)
-_getproperty(cell::Cells{false}, ::Val{:x_period}) = getfield(cell, :info).diagram.x_period
-_getproperty(cell::Cells{false}, ::Val{:y_period}) = getfield(cell, :info).diagram.y_period
-_getproperty(cell::Cells{true}, ::Val{:sphere_radius}) = getfield(cell, :info).diagram.sphere_radius
+_getproperty(cell::Cells{false}, ::Val{:x_period}) = get_diagram(cell).x_period
+_getproperty(cell::Cells{false}, ::Val{:y_period}) = get_diagram(cell).y_period
+_getproperty(cell::Cells{true}, ::Val{:sphere_radius}) = get_diagram(cell).sphere_radius
 
 include("cell_info_creation.jl")
 

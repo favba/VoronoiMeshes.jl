@@ -11,6 +11,9 @@ mutable struct VertexInfo{S, NE, TI, TF, Tz}
     end
 end
 
+const planar_vertexinfo_names = (:centroid, :area, :kiteAreas, :x_period, :y_period)
+const spherical_vertexinfo_names = (filter(!=(:diagram), fieldnames(VertexInfo))..., :sphere_radius)
+
 struct Vertices{S, NE, TI, TF, Tz}
     n::Int
     position::TensorsLite.VecMaybe2DxyArray{TF, Tz, 1}
@@ -19,11 +22,18 @@ struct Vertices{S, NE, TI, TF, Tz}
     info::VertexInfo{S, NE, TI, TF, Tz}
 end
 
-Base.getproperty(cell::Vertices, s::Symbol) = _getproperty(cell, Val(s))
-_getproperty(cell::Vertices, ::Val{s}) where {s} = getfield(cell, s)
-_getproperty(cell::Vertices{false}, ::Val{:x_period}) = getfield(cell, :info).diagram.x_period
-_getproperty(cell::Vertices{false}, ::Val{:y_period}) = getfield(cell, :info).diagram.y_period
-_getproperty(cell::Vertices{true}, ::Val{:sphere_radius}) = getfield(cell, :info).diagram.sphere_radius
+get_diagram(v::Vertices) = getfield(v, :info).diagram
+
+const vertex_names = (:n, :position, :edges, :cells)
+
+Base.propertynames(::Vertices{false}) = (vertex_names..., planar_vertexinfo_names...)
+Base.propertynames(::Vertices{true}) = (vertex_names..., spherical_vertexinfo_names...)
+
+Base.getproperty(vertex::Vertices, s::Symbol) = _getproperty(vertex, Val(s))
+_getproperty(vertex::Vertices, ::Val{s}) where {s} = getfield(vertex, s)
+_getproperty(vertex::Vertices{false}, ::Val{:x_period}) = get_diagram(vertex).x_period
+_getproperty(vertex::Vertices{false}, ::Val{:y_period}) = get_diagram(vertex).y_period
+_getproperty(vertex::Vertices{true}, ::Val{:sphere_radius}) = get_diagram(vertex).sphere_radius
 
 include("vertex_info_creation.jl")
 

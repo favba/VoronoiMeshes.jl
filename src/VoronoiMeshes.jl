@@ -77,14 +77,14 @@ function VoronoiMesh(voronoi::VoronoiDiagram)
     cpos = voronoi.generators
     vpos = voronoi.vertices
 
-    edges = Edges(voronoi)
+    edges, vertex_pair_to_edge, cell_pair_to_edge = build_edges(voronoi)
 
     cellsOnCell = compute_cellsOnCell(verticesOnCell, cellsOnVertex)
-    edgesOnCell = compute_edgesOnCell(cellsOnCell, edges.cells)
+    edgesOnCell = compute_edgesOnCell(cellsOnCell, cell_pair_to_edge)
 
     cells = Cells(length(cpos), cpos, verticesOnCell.length, verticesOnCell, edgesOnCell, cellsOnCell, CellInfo(voronoi))
 
-    edgesOnVertex = compute_edgesOnVertex(cellsOnVertex, edges.cells)
+    edgesOnVertex = compute_edgesOnVertex(cellsOnVertex, cell_pair_to_edge)
 
     vertices = Vertices(length(vpos), vpos, edgesOnVertex, cellsOnVertex, VertexInfo(voronoi))
 

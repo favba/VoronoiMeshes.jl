@@ -133,18 +133,18 @@ compute_edge_normal(edges::Edges) = compute_edge_normal!(similar(edges.position)
                                                      #yes this is correct
 compute_edge_tangent!(output, edges::Edges{false}) = compute_edge_normal_periodic!(output, edges.info.diagram.vertices, edges.vertices, edges.x_period, edges.y_period)
 
-function compute_edge_tangent_spherical!(t, epos, vpos, verticesOnEdge)
+function compute_edge_tangent_spherical!(t, R::Number,  epos, vpos, verticesOnEdge)
     @parallel for i in eachindex(verticesOnEdge)
         @inbounds begin
             _, iv2 = verticesOnEdge[i]
-            vp = vpos[iv2]
-            ep = epos[i]
-            t[i] = normalize(ep × (vp × ep))
+            vp = vpos[iv2] / R
+            ep = epos[i] / R
+            t[i] = normalize(ep × normalize(vp × ep))
         end
     end
 
     return t
 end
 
-compute_edge_tangent!(output, edges::Edges{true}) = compute_edge_tangent_spherical!(output, edges.position, edges.info.diagram.vertices, edges.vertices)
+compute_edge_tangent!(output, edges::Edges{true}) = compute_edge_tangent_spherical!(output, edges.sphere_radius, edges.position, edges.info.diagram.vertices, edges.vertices)
 compute_edge_tangent(edges::Edges) = compute_edge_tangent!(similar(edges.position), edges)

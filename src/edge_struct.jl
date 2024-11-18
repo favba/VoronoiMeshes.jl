@@ -63,7 +63,7 @@ for s in fieldnames(EdgeInfo)
     end
 end
 
-function Edges(diagram::VoronoiDiagram{false, NE, TI, TF}) where {NE, TI, TF}
+function build_edges(diagram::VoronoiDiagram{false, NE, TI, TF}) where {NE, TI, TF}
 
     cpos = diagram.generators
     verticesOnCell = diagram.verticesOnCell
@@ -79,7 +79,8 @@ function Edges(diagram::VoronoiDiagram{false, NE, TI, TF}) where {NE, TI, TF}
     xp = diagram.x_period
     yp = diagram.y_period
 
-    touched_vertex_pair = Set{NTuple{2, TI}}()
+    vertex_pair_to_edge = Dict{NTuple{2, TI}, TI}()
+    cell_pair_to_edge = Dict{NTuple{2, TI}, TI}()
     e = 0
     @inbounds for c in eachindex(cpos)
         cell_vertices = verticesOnCell[c]
@@ -90,34 +91,36 @@ function Edges(diagram::VoronoiDiagram{false, NE, TI, TF}) where {NE, TI, TF}
             v1 = v2
             v2 = cell_vertices[v]
             pair = ordered(v1, v2)
-            if !(pair in touched_vertex_pair)
+            if !(pair in keys(vertex_pair_to_edge))
                 e += one(TI)
-                push!(touched_vertex_pair, pair)
+                vertex_pair_to_edge[pair] = e
                 c2 = find_cellOnCell(c, v2, v1, cellsOnVertex)
                 position[e] = periodic_to_base_point(((cp + closest(cp, cpos[c2], xp, yp)) / 2), xp, yp)
                 vertices[e] = (v1, v2)
                 cells[e] = (c, c2)
+                cell_pair_to_edge[ordered(c,c2)] = e
             end
         end
         v1 = v2
         v2 = v_1
         pair = ordered(v1, v2)
-        if !(pair in touched_vertex_pair)
+        if !(pair in keys(vertex_pair_to_edge))
             e += one(TI)
-            push!(touched_vertex_pair, pair)
+            vertex_pair_to_edge[pair] = e
             c2 = find_cellOnCell(c, v2, v1, cellsOnVertex)
             position[e] = periodic_to_base_point(((cp + closest(cp, cpos[c2], xp, yp)) / 2), xp, yp)
             vertices[e] = (v1, v2)
             cells[e] = (c, c2)
+            cell_pair_to_edge[ordered(c,c2)] = e
         end
     end
 
     @assert e == nEdges
 
-    return Edges(e, position, vertices, cells, EdgeInfo(diagram))
+    return Edges(e, position, vertices, cells, EdgeInfo(diagram)), vertex_pair_to_edge, cell_pair_to_edge
 end
 
-function Edges(diagram::VoronoiDiagram{true, NE, TI, TF}) where {NE, TI, TF}
+function build_edges(diagram::VoronoiDiagram{true, NE, TI, TF}) where {NE, TI, TF}
 
     cpos = diagram.generators
     verticesOnCell = diagram.verticesOnCell
@@ -132,7 +135,8 @@ function Edges(diagram::VoronoiDiagram{true, NE, TI, TF}) where {NE, TI, TF}
 
     R = diagram.sphere_radius
 
-    touched_vertex_pair = Set{NTuple{2, TI}}()
+    vertex_pair_to_edge = Dict{NTuple{2, TI}, TI}()
+    cell_pair_to_edge = Dict{NTuple{2, TI}, TI}()
     e = 0
     @inbounds for c in eachindex(cpos)
         cell_vertices = verticesOnCell[c]
@@ -143,29 +147,36 @@ function Edges(diagram::VoronoiDiagram{true, NE, TI, TF}) where {NE, TI, TF}
             v1 = v2
             v2 = cell_vertices[v]
             pair = ordered(v1, v2)
-            if !(pair in touched_vertex_pair)
+            if !(pair in keys(vertex_pair_to_edge))
                 e += one(TI)
-                push!(touched_vertex_pair, pair)
+                vertex_pair_to_edge[pair] = e
                 c2 = find_cellOnCell(c, v2, v1, cellsOnVertex)
                 position[e] = arc_midpoint(R, cp, cpos[c2])
                 vertices[e] = (v1, v2)
                 cells[e] = (c, c2)
+                cell_pair_to_edge[ordered(c,c2)] = e
             end
         end
         v1 = v2
         v2 = v_1
         pair = ordered(v1, v2)
-        if !(pair in touched_vertex_pair)
+        if !(pair in keys(vertex_pair_to_edge))
             e += one(TI)
-            push!(touched_vertex_pair, pair)
+            vertex_pair_to_edge[pair] = e
             c2 = find_cellOnCell(c, v2, v1, cellsOnVertex)
             position[e] = arc_midpoint(R, cp, cpos[c2])
             vertices[e] = (v1, v2)
             cells[e] = (c, c2)
+            cell_pair_to_edge[ordered(c,c2)] = e
         end
     end
 
     @assert e == nEdges
 
-    return Edges(e, position, vertices, cells, EdgeInfo(diagram))
+    return Edges(e, position, vertices, cells, EdgeInfo(diagram)), vertex_pair_to_edge, cell_pair_to_edge
+end
+
+function Edges(diagram::VoronoiDiagram)
+    edges,_,_ = build_edges(diagram)
+    return edges
 end

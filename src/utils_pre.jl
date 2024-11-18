@@ -57,12 +57,7 @@ precompile(find_cellOnCell, (Int64, Int64, Int64, Vector{NTuple{3, Int64}}))
 @inline ordered(x, y) = y < x ? (y, x) : (x, y)
 
 function compute_cellsOnCell!(cellsOnCell::ImVecArray, verticesOnCell::AbstractVector, cellsOnVertex::AbstractVector)
-    # The ordering of the indices is the same as seen in the meshes provided by NCAR
-    # They DO NOT follow what is described in their Mesh Specification document
-    # It seems the document (at least v1.0) specification is not correct.
-    # The ordering here is that cellsOncell[n] is between verticesOnCell[n+1] and verticesOnCell[n]
-    # Their document says cellsOnCell[n] should be between verticesOnCell[n] and verticesOnCell[n-1]
-    # but their own meshes don't follow this rule and uses the ordering used by the code below
+    # cellsOnCell[n] should be between verticesOnCell[n] and verticesOnCell[n-1]
 
     cellsOnCellTuple = cellsOnCell.data
     @parallel for c in eachindex(verticesOnCell)
@@ -72,15 +67,12 @@ function compute_cellsOnCell!(cellsOnCell::ImVecArray, verticesOnCell::AbstractV
             vertices = verticesOnCell[c]
             lv = length(vertices)
 
-            vlead = vertices[1]
-            for i in 2:lv
+            vlead = vertices[lv]
+            for i in Base.OneTo(lv)
                 vprev = vlead
                 vlead = vertices[i]
                 cells = push(cells, find_cellOnCell(c, vlead, vprev, cellsOnVertex))
             end
-            vprev = vlead
-            vlead = vertices[1]
-            cells = push(cells, find_cellOnCell(c, vlead, vprev, cellsOnVertex))
 
             cellsOnCellTuple[c] = cells.data
         end
@@ -103,7 +95,40 @@ for nEdges in 6:10
     precompile(compute_cellsOnCell, (ImVecArray{nEdges, Int64, 1}, Vector{NTuple{3, Int64}}))
 end
 
-function compute_edgesOnCell!(edgesOnCell, cellsOnCell, cellsOnEdge::Vector{NTuple{2, TI}}) where {TI}
+#function compute_edgesOnCell!(edgesOnCell, cellsOnCell, cellsOnEdge::Vector{<:NTuple{2}})
+#
+#    edgesOnCellTuple = edgesOnCell.data
+#    @parallel for c in eachindex(cellsOnCell)
+#        @inbounds begin
+#            cells = cellsOnCell[c]
+#            edges = eltype(cellsOnCell)()
+#            for e in eachindex(cells)
+#                pair = ordered(TI(c), cells[e])
+#                e_i = findfirst(x -> (ordered(x[1], x[2]) === pair), cellsOnEdge)
+#                edges = push(edges, e_i)
+#            end
+#            edgesOnCellTuple[c] = edges.data
+#        end
+#    end
+#    return edgesOnCell
+#end
+
+#for nEdges in 6:10
+#    precompile(compute_edgesOnCell!, (ImVecArray{nEdges, Int32, 1}, ImVecArray{nEdges, Int32, 1}, Vector{NTuple{2, Int32}}))
+#    precompile(compute_edgesOnCell!, (ImVecArray{nEdges, Int64, 1}, ImVecArray{nEdges, Int64, 1}, Vector{NTuple{2, Int64}}))
+#end
+
+#function compute_edgesOnCell(cellsOnCell::ImVecArray, cellsOnEdge::AbstractVector)
+    #edgesOnCell = ImmutableVectorArray(similar(cellsOnCell.data), cellsOnCell.length)
+    #return compute_edgesOnCell!(edgesOnCell, cellsOnCell, cellsOnEdge)
+#end
+
+#for nEdges in 6:10
+    #precompile(compute_edgesOnCell, (ImVecArray{nEdges, Int32, 1}, Vector{NTuple{2, Int32}}))
+    #precompile(compute_edgesOnCell, (ImVecArray{nEdges, Int64, 1}, Vector{NTuple{2, Int64}}))
+#end
+
+function compute_edgesOnCell!(edgesOnCell, cellsOnCell, cells_pair_to_edge::Dict{NTuple{2,TI}, TI}) where {TI}
 
     edgesOnCellTuple = edgesOnCell.data
     @parallel for c in eachindex(cellsOnCell)
@@ -112,7 +137,7 @@ function compute_edgesOnCell!(edgesOnCell, cellsOnCell, cellsOnEdge::Vector{NTup
             edges = eltype(cellsOnCell)()
             for e in eachindex(cells)
                 pair = ordered(TI(c), cells[e])
-                e_i = findfirst(x -> (ordered(x[1], x[2]) === pair), cellsOnEdge)
+                e_i = cells_pair_to_edge[pair]
                 edges = push(edges, e_i)
             end
             edgesOnCellTuple[c] = edges.data
@@ -122,47 +147,75 @@ function compute_edgesOnCell!(edgesOnCell, cellsOnCell, cellsOnEdge::Vector{NTup
 end
 
 for nEdges in 6:10
-    precompile(compute_edgesOnCell!, (ImVecArray{nEdges, Int32, 1}, ImVecArray{nEdges, Int32, 1}, Vector{NTuple{2, Int32}}))
-    precompile(compute_edgesOnCell!, (ImVecArray{nEdges, Int64, 1}, ImVecArray{nEdges, Int64, 1}, Vector{NTuple{2, Int64}}))
+    precompile(compute_edgesOnCell!, (ImVecArray{nEdges, Int32, 1}, ImVecArray{nEdges, Int32, 1}, Dict{NTuple{2, Int32}, Int32}))
+    precompile(compute_edgesOnCell!, (ImVecArray{nEdges, Int64, 1}, ImVecArray{nEdges, Int64, 1}, Dict{NTuple{2, Int64}, Int64}))
 end
 
-function compute_edgesOnCell(cellsOnCell::ImVecArray, cellsOnEdge)
+function compute_edgesOnCell(cellsOnCell::ImVecArray, cells_pair_to_edge::Dict)
     edgesOnCell = ImmutableVectorArray(similar(cellsOnCell.data), cellsOnCell.length)
-    return compute_edgesOnCell!(edgesOnCell, cellsOnCell, cellsOnEdge)
+    return compute_edgesOnCell!(edgesOnCell, cellsOnCell, cells_pair_to_edge)
 end
 
 for nEdges in 6:10
-    precompile(compute_edgesOnCell, (ImVecArray{nEdges, Int32, 1}, Vector{NTuple{2, Int32}}))
-    precompile(compute_edgesOnCell, (ImVecArray{nEdges, Int64, 1}, Vector{NTuple{2, Int64}}))
+    precompile(compute_edgesOnCell, (ImVecArray{nEdges, Int32, 1}, Dict{NTuple{2, Int32}, Int32}))
+    precompile(compute_edgesOnCell, (ImVecArray{nEdges, Int64, 1}, Dict{NTuple{2, Int64}, Int32}))
 end
 
-function compute_edgesOnVertex!(edgesOnVertex::AbstractVector, cellsOnVertex::AbstractVector, cellsOnEdge::Vector{NTuple{2, TI}}) where {TI}
+#function compute_edgesOnVertex!(edgesOnVertex::AbstractVector, cellsOnVertex::AbstractVector, cellsOnEdge::Vector{NTuple{2, TI}}) where {TI}
+#
+#    @parallel for v in eachindex(edgesOnVertex)
+#        @inbounds begin
+#            c1, c2, c3 = cellsOnVertex[v]
+#            pair1 = ordered(c3, c1)
+#            e1 = findfirst(x -> (ordered(x[1], x[2]) === pair1), cellsOnEdge)
+#            pair2 = ordered(c1, c2)
+#            e2 = findfirst(x -> (ordered(x[1], x[2]) === pair2), cellsOnEdge)
+#            pair3 = ordered(c2, c3)
+#            e3 = findfirst(x -> (ordered(x[1], x[2]) === pair3), cellsOnEdge)
+#            edgesOnVertex[v] = (e1, e2, e3)
+#        end
+#    end
+#    return edgesOnVertex
+#end
+
+#precompile(compute_edgesOnVertex!, (Vector{NTuple{3, Int32}}, Vector{NTuple{3, Int32}}, Vector{NTuple{2, Int32}}))
+#precompile(compute_edgesOnVertex!, (Vector{NTuple{3, Int64}}, Vector{NTuple{3, Int64}}, Vector{NTuple{2, Int64}}))
+
+#function compute_edgesOnVertex(cellsOnVertex::Vector{NTuple{3, TI}}, cellsOnEdge) where {TI}
+#    edgesOnVertex = Vector{NTuple{3, TI}}(undef, length(cellsOnVertex))
+#    return compute_edgesOnVertex!(edgesOnVertex, cellsOnVertex, cellsOnEdge)
+#end
+
+#precompile(compute_edgesOnVertex, (Vector{NTuple{3, Int32}}, Vector{NTuple{2, Int32}}))
+#precompile(compute_edgesOnVertex, (Vector{NTuple{3, Int64}}, Vector{NTuple{2, Int64}}))
+
+function compute_edgesOnVertex!(edgesOnVertex::AbstractVector, cellsOnVertex::AbstractVector, cells_pair_to_edge::Dict{NTuple{2, TI}, TI}) where {TI}
 
     @parallel for v in eachindex(edgesOnVertex)
         @inbounds begin
             c1, c2, c3 = cellsOnVertex[v]
             pair1 = ordered(c3, c1)
-            e1 = findfirst(x -> (ordered(x[1], x[2]) === pair1), cellsOnEdge)
+            e1 = cells_pair_to_edge[pair1]
             pair2 = ordered(c1, c2)
-            e2 = findfirst(x -> (ordered(x[1], x[2]) === pair2), cellsOnEdge)
+            e2 = cells_pair_to_edge[pair2]
             pair3 = ordered(c2, c3)
-            e3 = findfirst(x -> (ordered(x[1], x[2]) === pair3), cellsOnEdge)
+            e3 = cells_pair_to_edge[pair3]
             edgesOnVertex[v] = (e1, e2, e3)
         end
     end
     return edgesOnVertex
 end
 
-precompile(compute_edgesOnVertex!, (Vector{NTuple{3, Int32}}, Vector{NTuple{3, Int32}}, Vector{NTuple{2, Int32}}))
-precompile(compute_edgesOnVertex!, (Vector{NTuple{3, Int64}}, Vector{NTuple{3, Int64}}, Vector{NTuple{2, Int64}}))
+precompile(compute_edgesOnVertex!, (Vector{NTuple{3, Int32}}, Vector{NTuple{3, Int32}}, Dict{NTuple{2, Int32}, Int32}))
+precompile(compute_edgesOnVertex!, (Vector{NTuple{3, Int64}}, Vector{NTuple{3, Int64}}, Dict{NTuple{2, Int64}, Int64}))
 
-function compute_edgesOnVertex(cellsOnVertex::Vector{NTuple{3, TI}}, cellsOnEdge) where {TI}
+function compute_edgesOnVertex(cellsOnVertex::Vector{NTuple{3, TI}}, cells_pair_to_edge::Dict) where {TI}
     edgesOnVertex = Vector{NTuple{3, TI}}(undef, length(cellsOnVertex))
-    return compute_edgesOnVertex!(edgesOnVertex, cellsOnVertex, cellsOnEdge)
+    return compute_edgesOnVertex!(edgesOnVertex, cellsOnVertex, cells_pair_to_edge)
 end
 
-precompile(compute_edgesOnVertex, (Vector{NTuple{3, Int32}}, Vector{NTuple{2, Int32}}))
-precompile(compute_edgesOnVertex, (Vector{NTuple{3, Int64}}, Vector{NTuple{2, Int64}}))
+precompile(compute_edgesOnVertex, (Vector{NTuple{3, Int32}}, Dict{NTuple{2, Int32}, Int32}))
+precompile(compute_edgesOnVertex, (Vector{NTuple{3, Int64}}, Dict{NTuple{2, Int64}, Int64}))
 
 function compute_polygon_area_periodic!(output, vpos, verticesOnPolygon, xp::Number, yp::Number)
     @parallel for c in eachindex(verticesOnPolygon)

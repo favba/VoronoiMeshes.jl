@@ -358,7 +358,7 @@ for S in (true, false)
     end
 end
 
-function VoronoiMeshes.VoronoiMesh(ncfile::NCDatasets.NCDataset)
+function _VoronoiMesh(ncfile::NCDatasets.NCDataset)
     maxEdges = Int(maximum(ncfile["nEdgesOnCell"][:]::Vector{Int32}))
     S = on_a_sphere(ncfile)
     if S
@@ -406,15 +406,27 @@ function VoronoiMeshes.VoronoiMesh(ncfile::NCDatasets.NCDataset)
     end
 end
 
-function VoronoiMeshes.VoronoiMesh(v::Val{NE}, ncfile::NCDatasets.NCDataset) where {NE}
+function VoronoiMeshes.VoronoiMesh(ncfile::NCDatasets.NCDataset, warn_issues::Bool=true)
+    mesh = _VoronoiMesh(ncfile)
+    if warn_issues
+        Threads.@spawn VoronoiMeshes.warn_mesh_issues(VoronoiMeshes.check_mesh($mesh), $mesh)
+    end
+    return mesh
+end
+
+function VoronoiMeshes.VoronoiMesh(v::Val{NE}, ncfile::NCDatasets.NCDataset, warn_issues::Bool = true) where {NE}
     diag = VoronoiDiagram(v, ncfile)
-    return VoronoiMesh(Cells(diag, ncfile), Vertices(diag, ncfile), Edges(diag, ncfile))
+    mesh = VoronoiMesh(Cells(diag, ncfile), Vertices(diag, ncfile), Edges(diag, ncfile))
+    if warn_issues
+        Threads.@spawn VoronoiMeshes.warn_mesh_issues(VoronoiMeshes.check_mesh($mesh), $mesh)
+    end
+    return mesh
 end
 
 for func in (
         :PlanarVoronoiDiagram, :SphericalVoronoiDiagram, :VoronoiDiagram,
         :CellInfo, :Cells, :VertexInfo, :Vertices, :EdgeInfo, :Edges,
-        :VoronoiMesh,
+       # :VoronoiMesh,
     )
     @eval begin
         function VoronoiMeshes.$func(file_name::String)
@@ -440,6 +452,35 @@ for func in (
         @eval precompile(VoronoiMeshes.$func, (Val{$N}, NCDatasets.NCDataset{Nothing, Missing}))
         @eval precompile(VoronoiMeshes.$func, (Val{$N}, String))
     end
+end
+
+function VoronoiMeshes.VoronoiMesh(file_name::String, warn_issues::Bool = true)
+    f = NCDataset(file_name)
+    try
+        VoronoiMeshes.VoronoiMesh(f, warn_issues)
+    finally
+        close(f)
+    end
+end
+function VoronoiMeshes.VoronoiMesh(v::Val, file_name::String, warn_issues::Bool = true)
+    f = NCDataset(file_name)
+    try
+        VoronoiMeshes.VoronoiMesh(v, f, warn_issues)
+    finally
+        close(f)
+    end
+end
+
+precompile(VoronoiMeshes.VoronoiMesh, (NCDatasets.NCDataset{Nothing, Missing}, Bool))
+precompile(VoronoiMeshes.VoronoiMesh, (String, Bool))
+precompile(VoronoiMeshes.VoronoiMesh, (NCDatasets.NCDataset{Nothing, Missing},))
+precompile(VoronoiMeshes.VoronoiMesh, (String,))
+
+for N in 6:10
+    @eval precompile(VoronoiMeshes.VoronoiMesh, (Val{$N}, NCDatasets.NCDataset{Nothing, Missing}, Bool))
+    @eval precompile(VoronoiMeshes.VoronoiMesh, (Val{$N}, String, Bool))
+    @eval precompile(VoronoiMeshes.VoronoiMesh, (Val{$N}, NCDatasets.NCDataset{Nothing, Missing}))
+    @eval precompile(VoronoiMeshes.VoronoiMesh, (Val{$N}, String))
 end
 
 include("precompile_NCDataset.jl")

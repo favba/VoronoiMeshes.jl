@@ -9,6 +9,7 @@ export CellInfo, Cells, VertexInfo, Vertices, EdgeInfo, Edges
 export VoronoiMesh, on_sphere, max_edges, integer_type, float_type, get_diagram
 export meshplot, meshplot!, diagramplot, diagramplot!
 export graph_partition, find_obtuse_triangles, periodic_edges_mask, periodic_vertices_mask
+export check_mesh, check_edge_normal_and_tangent, check_vertex_indexing, check_cell_indexing
 
 const VecMaybe1DxArray{TX, TYZ, N} = TensorsLite.VecArray{Vec{Union{TX, TYZ}, 1, TX, TYZ, TYZ}, N, Array{TX, N}, Array{TYZ, N}, Array{TYZ, N}}
 const Vec1DxOr2DxyArray{TX, TXY, N} = TensorsLite.VecArray{Vec{Union{TX, Zero}, 1, TX, TXY, Zero}, N, Array{TX, N}, Array{TXY, N}, Array{Zero, N}}
@@ -44,11 +45,12 @@ end
 
 get_diagram(mesh::VoronoiMesh) = get_diagram(mesh.cells)
 
-Base.propertynames(::VoronoiMesh{false}) = (fieldnames(VoronoiMesh)..., :x_period, :y_period)
-Base.propertynames(::VoronoiMesh{true}) = (fieldnames(VoronoiMesh)..., :sphere_radius)
+Base.propertynames(::VoronoiMesh{false}) = (fieldnames(VoronoiMesh)..., :diagram, :x_period, :y_period)
+Base.propertynames(::VoronoiMesh{true}) = (fieldnames(VoronoiMesh)..., :diagram, :sphere_radius)
 
 Base.getproperty(mesh::VoronoiMesh, s::Symbol) = _getproperty(mesh, Val(s))
 _getproperty(mesh::VoronoiMesh, ::Val{s}) where {s} = getfield(mesh, s)
+_getproperty(mesh::VoronoiMesh, ::Val{:diagram}) = get_diagram(mesh)
 _getproperty(mesh::VoronoiMesh{false}, ::Val{:x_period}) = get_diagram(mesh).x_period
 _getproperty(mesh::VoronoiMesh{false}, ::Val{:y_period}) = get_diagram(mesh).y_period
 _getproperty(mesh::VoronoiMesh{true}, ::Val{:sphere_radius}) = get_diagram(mesh).sphere_radius

@@ -145,3 +145,34 @@ end
     @test my_approx(mesh.edges.cellsDistance, mesh_iso.edges.cellsDistance, rtol=1e-4)
 end
 
+@testset "Save to NetCDF" begin
+    mesh_dist = VoronoiMesh("mesh_distorted.nc")
+    mesh_spherical = VoronoiMesh("spherical_grid_500km.nc")
+    for mesh in (mesh_dist, mesh_spherical)
+        for p in Base.propertynames(mesh.cells)
+            getproperty(mesh.cells, p);
+        end
+        for p in Base.propertynames(mesh.vertices)
+            getproperty(mesh.vertices, p);
+        end
+        for p in Base.propertynames(mesh.edges)
+            getproperty(mesh.edges, p);
+        end
+
+        save("test_save.nc", mesh; force3D=true, write_computed=true)
+        test_mesh = VoronoiMesh("test_save.nc");
+
+        for p in Base.propertynames(mesh.cells)
+            @test getproperty(mesh.cells, p) == getproperty(test_mesh.cells, p)
+        end
+        for p in Base.propertynames(mesh.vertices)
+            @test getproperty(mesh.vertices, p) == getproperty(test_mesh.vertices, p)
+        end
+        for p in Base.propertynames(mesh.edges)
+            @test getproperty(mesh.edges, p) == getproperty(test_mesh.edges, p)
+        end
+ 
+        Base.Filesystem.rm("test_save.nc")
+    end
+end
+

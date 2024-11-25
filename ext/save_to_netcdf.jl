@@ -209,7 +209,7 @@ function write_computed_cell_data!(ds::NCDataset, cells::Cells{S, mE, TI, TF}, f
             cellTangent[2, 2, c] = mv.y
             cellTangent[3, 2, c] = mv.z
         end
-        defVar(ds, "cellTangentPlane", ("R3", "TWO", "nCells"); attrib = [
+        defVar(ds, "cellTangentPlane", cellTangent, ("R3", "TWO", "nCells"); attrib = [
             "units" => "unitless",
             "long_name" => "Components of a pair of vectors defining the tangent plane at a cell"
         ])
@@ -248,7 +248,8 @@ function write_computed_vertex_data!(ds::NCDataset, vertices::Vertices{S, mE, TI
             "long_name" => "Cartesian y-coordinate of triangles centroid"
         ])
         if (S | force3D)
-            defVar(ds, "zVertexCentroid", vinfo.centroid.z, ("nVertices",); attrib = [
+            cz = S ? vinfo.centroid.z : zeros(TF, nvertices)
+            defVar(ds, "zVertexCentroid", cz, ("nVertices",); attrib = [
                 "units" => "m",
                 "long_name" => "Cartesian z-coordinate of triangles centroid"
             ])

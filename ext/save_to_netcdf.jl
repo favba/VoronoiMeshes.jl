@@ -115,7 +115,7 @@ end
 
 save_to_netcdf!(ds::NCDataset, diag::VoronoiDiagram, force3D::Bool = false) = save_to_netcdf!(ds, get_diagram(diag), force3D)
 
-function save_to_netcdf(filename, diag::AbstractVoronoiDiagram; format = :netcdf4)
+function save_to_netcdf(filename, diag::AbstractVoronoiDiagram; format = :netcdf5_64bit_data)
     NCDataset(filename, "c", format = format) do ds
         save_to_netcdf!(ds, diag)
     end
@@ -436,7 +436,7 @@ function save_to_netcdf!(ds::NCDataset, mesh::VoronoiMesh; force3D::Bool = false
     write_edge_data!(ds, mesh.edges; force3D = force3D, write_computed = write_computed)
 end
 
-function save_to_netcdf(filename, mesh::VoronoiMesh; force3D::Bool=false, write_computed::Bool=false, format = :netcdf4)
+function save_to_netcdf(filename, mesh::VoronoiMesh; force3D::Bool=false, write_computed::Bool=false, format = :netcdf5_64bit_data)
     NCDataset(filename, "c", format = format) do ds
         save_to_netcdf!(ds, mesh; force3D = force3D, write_computed = write_computed)
     end

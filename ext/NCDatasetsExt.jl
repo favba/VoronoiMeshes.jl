@@ -1,6 +1,7 @@
 module NCDatasetsExt
 
 using VoronoiMeshes, NCDatasets, TensorsLite, TensorsLite.Zeros, ImmutableVectors
+import VoronoiMeshes: save_to_netcdf
 
 function on_a_sphere(ncfile::NCDatasets.NCDataset)
     oas = lowercase(strip(ncfile.attrib["on_a_sphere"]::String))
@@ -482,6 +483,8 @@ for N in 6:10
     @eval precompile(VoronoiMeshes.VoronoiMesh, (Val{$N}, NCDatasets.NCDataset{Nothing, Missing}))
     @eval precompile(VoronoiMeshes.VoronoiMesh, (Val{$N}, String))
 end
+
+include("save_to_netcdf.jl")
 
 include("precompile_NCDataset.jl")
 

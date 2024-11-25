@@ -4,12 +4,13 @@ using Zeros, TensorsLite, ImmutableVectors, TensorsLiteGeometry
 
 export @parallel
 
-export VoronoiDiagram, PlanarVoronoiDiagram, SphericalVoronoiDiagram
+export AbstractVoronoiDiagram, VoronoiDiagram, PlanarVoronoiDiagram, SphericalVoronoiDiagram
 export CellInfo, Cells, VertexInfo, Vertices, EdgeInfo, Edges
 export VoronoiMesh, on_sphere, max_edges, integer_type, float_type, get_diagram
 export meshplot, meshplot!, diagramplot, diagramplot!
 export graph_partition, find_obtuse_triangles, periodic_edges_mask, periodic_vertices_mask
 export check_mesh, check_edge_normal_and_tangent, check_vertex_indexing, check_cell_indexing
+export save
 
 const VecMaybe1DxArray{TX, TYZ, N} = TensorsLite.VecArray{Vec{Union{TX, TYZ}, 1, TX, TYZ, TYZ}, N, Array{TX, N}, Array{TYZ, N}, Array{TYZ, N}}
 const Vec1DxOr2DxyArray{TX, TXY, N} = TensorsLite.VecArray{Vec{Union{TX, Zero}, 1, TX, TXY, Zero}, N, Array{TX, N}, Array{TXY, N}, Array{Zero, N}}
@@ -94,6 +95,11 @@ function VoronoiMesh(voronoi::VoronoiDiagram)
 end
 
 include("utils_pos.jl")
+
+include("save_func.jl")
+
+#Definitions are in ext/NCDatasetsExt.jl
+function save_to_netcdf end
 
 #functions to be used when Makie is loaded
 #Definitions are in ext/GeometryBasicsExt.jl

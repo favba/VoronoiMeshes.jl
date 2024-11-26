@@ -21,6 +21,44 @@ for nEdges in 6:10
     precompile(CellInfo, (VoronoiDiagram{true, nEdges, Int32, Float64, Float64},))
 end
 
+"""
+    Cells{OnSphere, max_nEdges, <:Integer, <:Float, <:Union{Float, Zeros.Zero}} 
+
+Struct that holds all Voronoi Cells information in a struct of arrays (SoA) layout, that is,
+each field is usually an array with the requested data for each cell.
+
+Data should be accessed using the `getproperty` function, preferably through the "dot" syntax.
+For example, to fetch an array with each cells area, use `cells.area`.
+
+When the struct is initialized only part of its data is actually existent. We refer to
+those fields as the "Base Data". Other fields are only computed and stored if they are called at least once.
+We refer to those as the "Computed Data".
+
+# Base Data
+- `n::Int`: The total number of Voronoi Cells.
+- `position::VecArray`: An array with each cells position vector, that is, the position of the Voronoi
+   Cell generator point. An array with a particular coordinate can also be extracted throught the dot
+   syntax. For example, an array with `x` coordinates of the cells is given by `cells.position.x`.
+- `nEdges::Vector{UInt8}`: The number of edges on each cell (which is equal to the number of vertices).
+- `vertices::ImmutableVectorArray`: A Vector of vectors with the index ID of the vertices forming the cell.
+- `edges::ImmutableVectorArray`: A Vector of vectors with the index ID of the edges forming the cell.
+- `cells::ImmutableVectorArray`: A Vector of vectors with the index ID of the cells neighboring a given cell.
+- `sphere_radius::Real` (Spherical meshes only): The sphere radius.
+- `x_period::Real` (Planar meshes only): The domain `x` direction period.
+- `y_period::Real` (Planar meshes only): The domain `y` direction period.
+
+# Computed Data
+- `area::Vector`: An array with the area of each Voronoi cell.
+- `centroid::VecArray`: An array with each cells centroid position vector. For Centroidal Voronoi
+  meshes with constant density function this should virtually be the same as the `position` vector.
+- `longitude::Vector`(Spherical meshes only): The longitude in radians of the cell `position` vector.
+- `latitude::Vector`(Spherical meshes only): The latitude in radians of the cell `position` vector.
+- `normal::VecArray`(Spherical meshes only): The unit vector perpendicular to the plane tangent to the
+  sphere at the cell `position`.
+- `zonalVector::VecArray`(Spherical meshes only): The unit vector tangent to the sphere and pointing eastward.
+- `meridionalVector::VecArray`(Spherical meshes only): The unit vector tangent to the sphere and pointing northward.
+
+"""
 struct Cells{S, max_nEdges, TI, TF, Tz}
     n::Int
     position::TensorsLite.VecMaybe2DxyArray{TF, Tz, 1}

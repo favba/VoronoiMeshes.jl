@@ -117,7 +117,7 @@ function centroidal_voronoi_loyd(::TT, vor::TV, initial_generator_points, N::Int
     new_tri::TT = triangulate(reinterpret(NTuple{2, Float64}, p_new))
     new_vor::TV = voronoi(new_tri, clip = true)
 
-    println("Performing Loyd's iteration with relative tolerance = $rtol and maximum number of iterations: $max_iter")
+    println("Performing Lloyd's iteration with relative tolerance = $rtol and maximum number of iterations: $max_iter")
     iter = 0
     while !(
             mapreduce(
@@ -130,7 +130,7 @@ function centroidal_voronoi_loyd(::TT, vor::TV, initial_generator_points, N::Int
         ) &&
             iter < max_iter
         iter += 1
-        mod(iter, 10) == 0 && print("Loyd iteration number $iter \u001b[1000D")
+        mod(iter, 10) == 0 && print("Lloyd iteration number $iter \u001b[1000D")
 
         initial_generator_points .= initial_new
         vor::TV = new_vor
@@ -143,7 +143,7 @@ function centroidal_voronoi_loyd(::TT, vor::TV, initial_generator_points, N::Int
         new_vor = voronoi(new_tri, clip = true)
     end
 
-    println("Stopped Loyd's algorithm at iteration $iter")
+    println("Stopped Lloyd's algorithm at iteration $iter")
 
     return initial_new, p_new, inds_new, new_vor, iter
 end

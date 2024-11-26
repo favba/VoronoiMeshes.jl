@@ -77,7 +77,7 @@ end
             @test my_approx_periodic(edges.position, edges.midpoint, xp, yp)
         end
         @test my_approx(edges.length, VoronoiMeshes.compute_edge_length(edges), atol = 1e-8)
-        @test my_approx(edges.cellsDistance, VoronoiMeshes.compute_edge_cellsDistance(edges), atol = 1e-8)
+        @test my_approx(edges.lengthDual, VoronoiMeshes.compute_edge_lengthDual(edges), atol = 1e-8)
         @test my_approx(fix_longitude(edges.longitude), fix_longitude(VoronoiMeshes.compute_edge_longitude(edges)))
         @test my_approx(edges.latitude, VoronoiMeshes.compute_edge_latitude(edges))
         @test my_approx(edges.normal, VoronoiMeshes.compute_edge_normal(edges))
@@ -142,7 +142,7 @@ end
     @test my_approx(mesh.cells.area, mesh_iso.cells.area, rtol=1e-6)
     @test my_approx(mesh.vertices.area, mesh_iso.vertices.area, rtol=1e-4)
     @test my_approx(mesh.edges.length, mesh_iso.edges.length, rtol=1e-4)
-    @test my_approx(mesh.edges.cellsDistance, mesh_iso.edges.cellsDistance, rtol=1e-4)
+    @test my_approx(mesh.edges.lengthDual, mesh_iso.edges.lengthDual, rtol=1e-4)
 end
 
 @testset "Save to NetCDF" begin

@@ -56,7 +56,7 @@ function periodic_edges_mask(dc,cellsOnEdge,c_pos)
     return mask
 end
 
-periodic_edges_mask(mesh::VoronoiMesh{false}) = periodic_edges_mask(mesh.edges.cellsDistance, mesh.edges.cells, mesh.cells.position)
+periodic_edges_mask(mesh::VoronoiMesh{false}) = periodic_edges_mask(mesh.edges.lengthDual, mesh.edges.cells, mesh.cells.position)
 
 function periodic_edges_mask(mesh::VoronoiMesh{true})
     a = BitArray(mesh.edges.n)

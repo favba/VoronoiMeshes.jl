@@ -52,9 +52,9 @@ end
 compute_edge_length!(output, edges::Edges{true}) = compute_edge_length_spherical!(output, edges.info.diagram.vertices, edges.vertices, edges.sphere_radius)
 compute_edge_length(edges::Edges) = compute_edge_length!(similar(edges.position.x), edges)
 
-compute_edge_cellsDistance!(output, edges::Edges{false}) = compute_edge_length_periodic!(output, edges.info.diagram.generators, edges.cells, edges.x_period, edges.y_period)
-compute_edge_cellsDistance!(output, edges::Edges{true}) = compute_edge_length_spherical!(output, edges.info.diagram.generators, edges.cells, edges.sphere_radius)
-compute_edge_cellsDistance(edges::Edges) = compute_edge_cellsDistance!(similar(edges.position.x), edges)
+compute_edge_lengthDual!(output, edges::Edges{false}) = compute_edge_length_periodic!(output, edges.info.diagram.generators, edges.cells, edges.x_period, edges.y_period)
+compute_edge_lengthDual!(output, edges::Edges{true}) = compute_edge_length_spherical!(output, edges.info.diagram.generators, edges.cells, edges.sphere_radius)
+compute_edge_lengthDual(edges::Edges) = compute_edge_lengthDual!(similar(edges.position.x), edges)
 
 function compute_edge_angle_periodic!(output, cpos, cellsOnEdge, xp::Number, yp::Number)
     @parallel for i in eachindex(cellsOnEdge)

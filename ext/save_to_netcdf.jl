@@ -363,8 +363,8 @@ function write_computed_edge_data!(ds::NCDataset, edges::Edges{S, mE, TI, TF}, f
         ])
     end
 
-    if isdefined(einfo, :cellsDistance)
-        defVar(ds, "dcEdge", einfo.cellsDistance, ("nEdges",); attrib = [
+    if isdefined(einfo, :lengthDual)
+        defVar(ds, "dcEdge", einfo.lengthDual, ("nEdges",); attrib = [
             "units" => "m",
             "long_name" => (S ? "Spherical distance between cells separated by an edge" : "Distance between cells separated by an edge")
         ])

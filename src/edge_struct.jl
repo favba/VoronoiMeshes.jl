@@ -17,6 +17,44 @@ end
 const planar_edgeinfo_names = (:midpoint, :length, :cellsDistance, :angle, :normal, :tangent, :x_period, :y_period)
 const spherical_edgeinfo_names = (filter(!=(:diagram), fieldnames(EdgeInfo))..., :sphere_radius)
 
+"""
+    Edges{OnSphere, max_nEdges, <:Integer, <:Float, <:Union{Float, Zeros.Zero}} 
+
+Struct that holds all edges (both primal (of the Voronoi cell) and dual
+(of the Delaunay triangle) edges) information in a struct of arrays (SoA) layout, that is,
+each field is usually an array with the requested data for each edge.
+
+Data should be accessed using the `getproperty` function, preferably through the "dot" syntax.
+For example, to fetch an array with each edges length, use `edge.length`.
+
+When the struct is initialized only part of its data is actually existent. We refer to
+those fields as the "Base Data". Other fields are only computed and stored if they are called at least once.
+We refer to those as the "Computed Data".
+
+## Base Data
+- `n::Int`: The total number of edges.
+- `position::VecArray`: An array with each edge position vector, that is, the position of the intersection
+  between the Delaunay triangle and Voronoi cell edges.
+  This always lies in the midpoint of the Delaunay triangle edge.
+An array with a particular coordinate can also be extracted throught the dot
+   syntax. For example, an array with `x` coordinates of the edge is given by `edges.position.x`.
+- `vertices::Vector`: A Vector of tuples with the index ID of the vertices that form the edge.
+- `cells::Vector`: A Vector of tuples with the index ID of the cells divided by the edge.
+- `sphere_radius::Real` (Spherical meshes only): The sphere radius.
+- `x_period::Real` (Planar meshes only): The domain `x` direction period.
+- `y_period::Real` (Planar meshes only): The domain `y` direction period.
+
+## Computed Data
+- `length::Vector`: An array with the length of each edge (the Voronoi cell edge).
+- `cellsDistance::Vector`: An array with the length of the dual edge (the Delaunay triangle edge) that crosses the Voronoi cell edge.
+- `midpoint::VecArray`: An array with the position vector of the Voronoi cell edge midpoint.
+- `normal::VecArray`: An array with unit vectors that are normal to the edge and tangent to the mesh, at the edge `position`.
+- `tangent::VecArray`: An array with unit vectors that are tangent both to the the edge and to the mesh, at the edge `position`.
+- `angle::Vector`: Angle in radians between local north and the positive tangential direction of an edge.
+  Which is the same as the angle between the edge normal and the eastward direction.
+- `longitude::Vector`(Spherical meshes only): The longitude in radians of the edge `position` vector.
+- `latitude::Vector`(Spherical meshes only): The latitude in radians of the edge `position` vector.
+"""
 struct Edges{S, NE, TI, TF, Tz}
     n::Int
     position::TensorsLite.VecMaybe2DxyArray{TF, Tz, 1}

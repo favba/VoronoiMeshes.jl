@@ -34,7 +34,7 @@ When the struct is initialized only part of its data is actually existent. We re
 those fields as the "Base Data". Other fields are only computed and stored if they are called at least once.
 We refer to those as the "Computed Data".
 
-# Base Data
+## Base Data
 - `n::Int`: The total number of Voronoi Cells.
 - `position::VecArray`: An array with each cells position vector, that is, the position of the Voronoi
    Cell generator point. An array with a particular coordinate can also be extracted throught the dot
@@ -47,7 +47,7 @@ We refer to those as the "Computed Data".
 - `x_period::Real` (Planar meshes only): The domain `x` direction period.
 - `y_period::Real` (Planar meshes only): The domain `y` direction period.
 
-# Computed Data
+## Computed Data
 - `area::Vector`: An array with the area of each Voronoi cell.
 - `centroid::VecArray`: An array with each cells centroid position vector. For Centroidal Voronoi
   meshes with constant density function this should virtually be the same as the `position` vector.

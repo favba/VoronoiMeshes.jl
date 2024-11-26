@@ -14,6 +14,37 @@ end
 const planar_vertexinfo_names = (:centroid, :area, :kiteAreas, :x_period, :y_period)
 const spherical_vertexinfo_names = (filter(!=(:diagram), fieldnames(VertexInfo))..., :sphere_radius)
 
+"""
+    Vertices{OnSphere, max_nEdges, <:Integer, <:Float, <:Union{Float, Zeros.Zero}} 
+
+Struct that holds all vertices (and dual cells (triangles)) information in a struct of arrays (SoA) layout, that is,
+each field is usually an array with the requested data for each vertex.
+
+Data should be accessed using the `getproperty` function, preferably through the "dot" syntax.
+For example, to fetch an array with each vertex position, use `vertices.position`.
+
+When the struct is initialized only part of its data is actually existent. We refer to
+those fields as the "Base Data". Other fields are only computed and stored if they are called at least once.
+We refer to those as the "Computed Data".
+
+## Base Data
+- `n::Int`: The total number of vertices (and dual cells (triangles)).
+- `position::VecArray`: An array with each vertex position vector, that is, the position of the Delaunay
+  triangle circumcenter. An array with a particular coordinate can also be extracted throught the dot
+   syntax. For example, an array with `x` coordinates of the vertex is given by `vertices.position.x`.
+- `edges::Vector`: A Vector of tuples with the index ID of the edges that meet at the vertex.
+- `cells::Vector`: A Vector of tuples with the index ID of the cells sharing the vertex.
+- `sphere_radius::Real` (Spherical meshes only): The sphere radius.
+- `x_period::Real` (Planar meshes only): The domain `x` direction period.
+- `y_period::Real` (Planar meshes only): The domain `y` direction period.
+
+## Computed Data
+- `area::Vector`: An array with the area of each Delaunay triangle.
+- `kiteAreas::Vector`: An array with a tuple containing the intersection areas between primal (Voronoi) and dual (triangular) cells.
+- `centroid::VecArray`: An array with each Delaunay triangle centroid position vector.
+- `longitude::Vector`(Spherical meshes only): The longitude in radians of the vertex `position` vector.
+- `latitude::Vector`(Spherical meshes only): The latitude in radians of the vertex `position` vector.
+"""
 struct Vertices{S, NE, TI, TF, Tz}
     n::Int
     position::TensorsLite.VecMaybe2DxyArray{TF, Tz, 1}

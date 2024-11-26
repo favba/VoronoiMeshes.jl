@@ -26,6 +26,67 @@ include("vertex_struct.jl")
 
 include("edge_struct.jl")
 
+"""
+    VoronoiMesh{OnSphere?, max_nEdges, <:Integer, <:Float, <:Union{<:Float, Zeros.Zero}}
+
+Struct that holds all information of a mesh which is constructed on top of
+either a spherical or a planar biperiodic Voronoi diagram.
+The `OnSphere?` type parameter is a `Bool` that is `true` if the mesh is on the sphere,
+and `false` otherwise.
+The `max_nEdges` type parameters is an integer that specifies the largest number of sides
+present in the Voronoi cells of the mesh.
+
+## Fields
+- `cells::Cells`: a `Cell` struct that holds all Voronoi cells information.
+  see available cell data with ?[`Cells`](@ref).
+- `vertices::Vertices`: a `Vertices` struct that holds all vertices (and Delaunay triangle cells) information.
+  see available vertex data with ?[`Vertices`](@ref).
+- `edges::Edges`: a `Edges` struct that holds all edges (both primal (Voronoi) and dual (Delaunay) cells edges) information.
+  see available edge data with ?[`Edges`](@ref).
+
+## Other properties
+- `diagram::VoronoiDiagram`: the Voronoi diagram from which the mesh is constructed.
+- `sphere_radius::Float`(Spherical meshes only): the sphere radius in meters.
+- `x_period::Float`(Planar meshes only): the `x` direction domain period.
+- `y_period::Float`(Planar meshes only): the `y` direction domain period.
+
+# Constructors
+
+    VoronoiMesh(filename::String)
+
+The `NCDatasets` package must be loaded to use this constructor.
+Read the mesh from a NetCDF file.
+
+---
+
+    VoronoiMesh(N::Integer, x_period::Real, y_perid::Real; density=(x -> 1), rtol=1e-6, max_iter=20000)
+
+The `DelaunayTriangulation` package must be loaded in order to use this method.
+Construct a biperiodic planar Voronoi mesh with `N` cells in the `[0, x_period] × [0, y_period]` domain.
+The `N` generators points are randomly generated and Lloyd's iteration are performed util the `max_iter`
+number of iterations or the `rtol` relative tolerance is reached.
+Optionally, a `density` function can be specified, to generate a mesh with variable resolution.
+The `density` function should accept a `TensorsLite.Vec` and return a scalar.
+
+---
+
+    VoronoiMesh(points::VecArray, x_period::Real, y_perid::Real; density=(x -> 1), rtol=1e-6, max_iter=20000)
+
+The `DelaunayTriangulation` package must be loaded in order to use this method.
+Construct a biperiodic planar Voronoi mesh with in the `[0, x_period] × [0, y_period]` domain using `points`
+as starting voronoi generator points.
+Lloyd's iteration are performed util the `max_iter` number of iterations
+or the `rtol` relative tolerance is reached.
+Optionally, a `density` function can be specified, to generate a mesh with variable resolution.
+The `density` function should accept a `TensorsLite.Vec` and return a scalar.
+
+---
+
+    VoronoiMesh(diagram::VoronoiDiagram)
+
+Construct a `VoronoiMesh` based on the Voronoi `diagram`.
+
+"""
 struct VoronoiMesh{S, maxEdges, TI, TF, Tz}
     cells::Cells{S, maxEdges, TI, TF, Tz}
     vertices::Vertices{S, maxEdges, TI, TF, Tz}

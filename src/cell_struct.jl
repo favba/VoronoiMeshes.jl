@@ -69,6 +69,12 @@ struct Cells{S, max_nEdges, TI, TF, Tz}
     info::CellInfo{S, max_nEdges, TI, TF, Tz}
 end
 
+function Base.show(io::IO, cells::Cells{S, N}) where {S, N}
+    s = """$(typeof(cells))
+    $(cells.n) $(S ? "Spherical" : "Planar") Cells with a maximum number of $N edges"""
+    print(io, s)
+end
+
 get_diagram(c::Cells) = getfield(c, :info).diagram
 
 for nEdges in 6:10

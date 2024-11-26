@@ -53,6 +53,12 @@ struct Vertices{S, NE, TI, TF, Tz}
     info::VertexInfo{S, NE, TI, TF, Tz}
 end
 
+function Base.show(io::IO, vertices::Vertices{S}) where {S}
+    s = """$(typeof(vertices))
+    $(vertices.n) $(S ? "Spherical" : "Planar") Vertices"""
+    print(io, s)
+end
+
 get_diagram(v::Vertices) = getfield(v, :info).diagram
 
 const vertex_names = (:n, :position, :edges, :cells)

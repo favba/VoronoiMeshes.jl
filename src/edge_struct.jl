@@ -63,6 +63,12 @@ struct Edges{S, NE, TI, TF, Tz}
     info::EdgeInfo{S, NE, TI, TF, Tz}
 end
 
+function Base.show(io::IO, edges::Edges{S}) where {S}
+    s = """$(typeof(edges))
+    $(edges.n) $(S ? "Spherical" : "Planar") Edges"""
+    print(io, s)
+end
+
 get_diagram(e::Edges) = getfield(e, :info).diagram
 
 const edge_names = (:n, :position, :vertices, :cells)

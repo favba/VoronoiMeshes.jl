@@ -105,6 +105,24 @@ struct VoronoiMesh{S, maxEdges, TI, TF, Tz}
     end
 end
 
+function Base.show(io::IO, mesh::VoronoiMesh{false})
+    s = """$(typeof(mesh))
+    - Domain: Periodic in [0, $(mesh.x_period)] × [0, $(mesh.y_period)]
+    - Number of Cells: $(mesh.cells.n)
+    - Number of Vertices: $(mesh.vertices.n)
+    - Number of Edges: $(mesh.edges.n)"""
+    print(io, s)
+end
+
+function Base.show(io::IO, mesh::VoronoiMesh{true})
+    s = """$(typeof(mesh))
+    - Domain: Spherical with sphere radius $(mesh.sphere_radius)m
+    - Number of Cells: $(mesh.cells.n)
+    - Number of Vertices: $(mesh.vertices.n)
+    - Number of Edges: $(mesh.edges.n)"""
+    print(io, s)
+end
+
 get_diagram(mesh::VoronoiMesh) = get_diagram(mesh.cells)
 
 Base.propertynames(::VoronoiMesh{false}) = (fieldnames(VoronoiMesh)..., :diagram, :x_period, :y_period)

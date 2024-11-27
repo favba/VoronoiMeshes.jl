@@ -12,7 +12,7 @@ plt.@recipe(MeshPlot, mesh) do scene
     )
 end
 
-const PeriodicMesh = MeshPlot{<:Tuple{<:VoronoiMesh{false}}}
+const PeriodicMesh = MeshPlot{<:Tuple{<:AbstractVoronoiMesh{false}}}
 
 function plt.plot!(plot::PeriodicMesh)
     mesh = plot.mesh

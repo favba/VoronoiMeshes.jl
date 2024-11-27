@@ -6,7 +6,7 @@ export @parallel
 
 export AbstractVoronoiDiagram, VoronoiDiagram, PlanarVoronoiDiagram, SphericalVoronoiDiagram
 export CellInfo, Cells, VertexInfo, Vertices, EdgeInfo, Edges
-export VoronoiMesh, on_sphere, max_edges, integer_type, float_type, get_diagram
+export AbstractVoronoiMesh, VoronoiMesh, on_sphere, max_edges, integer_type, float_type, get_diagram
 export meshplot, meshplot!, diagramplot, diagramplot!
 export graph_partition, find_obtuse_triangles, periodic_edges_mask, periodic_vertices_mask
 export check_mesh, check_edge_normal_and_tangent, check_vertex_indexing, check_cell_indexing
@@ -25,6 +25,8 @@ include("cell_struct.jl")
 include("vertex_struct.jl")
 
 include("edge_struct.jl")
+
+abstract type AbstractVoronoiMesh{S, max_nEdges, TI, TF, TZ} end
 
 """
     VoronoiMesh{OnSphere?, max_nEdges, <:Integer, <:Float, <:Union{<:Float, Zeros.Zero}}
@@ -87,7 +89,7 @@ The `density` function should accept a `TensorsLite.Vec` and return a scalar.
 Construct a `VoronoiMesh` based on the Voronoi `diagram`.
 
 """
-struct VoronoiMesh{S, maxEdges, TI, TF, Tz}
+struct VoronoiMesh{S, maxEdges, TI, TF, Tz} <: AbstractVoronoiMesh{S, maxEdges, TI, TF, Tz}
     cells::Cells{S, maxEdges, TI, TF, Tz}
     vertices::Vertices{S, maxEdges, TI, TF, Tz}
     edges::Edges{S, maxEdges, TI, TF, Tz}
@@ -105,7 +107,7 @@ struct VoronoiMesh{S, maxEdges, TI, TF, Tz}
     end
 end
 
-function Base.show(io::IO, mesh::VoronoiMesh{false})
+function Base.show(io::IO, mesh::AbstractVoronoiMesh{false})
     s = """$(typeof(mesh))
     - Domain: Periodic in [0, $(mesh.x_period)] × [0, $(mesh.y_period)]
     - Number of Cells: $(mesh.cells.n)
@@ -114,7 +116,7 @@ function Base.show(io::IO, mesh::VoronoiMesh{false})
     print(io, s)
 end
 
-function Base.show(io::IO, mesh::VoronoiMesh{true})
+function Base.show(io::IO, mesh::AbstractVoronoiMesh{true})
     s = """$(typeof(mesh))
     - Domain: Spherical with sphere radius $(mesh.sphere_radius)m
     - Number of Cells: $(mesh.cells.n)
@@ -123,20 +125,20 @@ function Base.show(io::IO, mesh::VoronoiMesh{true})
     print(io, s)
 end
 
-get_diagram(mesh::VoronoiMesh) = get_diagram(mesh.cells)
+get_diagram(mesh::AbstractVoronoiMesh) = get_diagram(mesh.cells)
 
-Base.propertynames(::VoronoiMesh{false}) = (fieldnames(VoronoiMesh)..., :diagram, :x_period, :y_period)
-Base.propertynames(::VoronoiMesh{true}) = (fieldnames(VoronoiMesh)..., :diagram, :sphere_radius)
+Base.propertynames(m::AbstractVoronoiMesh{false}) = (fieldnames(typeof(m))..., :diagram, :x_period, :y_period)
+Base.propertynames(m::AbstractVoronoiMesh{true}) = (fieldnames(typeof(m))..., :diagram, :sphere_radius)
 
-Base.getproperty(mesh::VoronoiMesh, s::Symbol) = _getproperty(mesh, Val(s))
-_getproperty(mesh::VoronoiMesh, ::Val{s}) where {s} = getfield(mesh, s)
-_getproperty(mesh::VoronoiMesh, ::Val{:diagram}) = get_diagram(mesh)
-_getproperty(mesh::VoronoiMesh{false}, ::Val{:x_period}) = get_diagram(mesh).x_period
-_getproperty(mesh::VoronoiMesh{false}, ::Val{:y_period}) = get_diagram(mesh).y_period
-_getproperty(mesh::VoronoiMesh{true}, ::Val{:sphere_radius}) = get_diagram(mesh).sphere_radius
+Base.getproperty(mesh::AbstractVoronoiMesh, s::Symbol) = _getproperty(mesh, Val(s))
+_getproperty(mesh::AbstractVoronoiMesh, ::Val{s}) where {s} = getfield(mesh, s)
+_getproperty(mesh::AbstractVoronoiMesh, ::Val{:diagram}) = get_diagram(mesh)
+_getproperty(mesh::AbstractVoronoiMesh{false}, ::Val{:x_period}) = get_diagram(mesh).x_period
+_getproperty(mesh::AbstractVoronoiMesh{false}, ::Val{:y_period}) = get_diagram(mesh).y_period
+_getproperty(mesh::AbstractVoronoiMesh{true}, ::Val{:sphere_radius}) = get_diagram(mesh).sphere_radius
 
 for T in (
-        :VoronoiMesh,
+        :AbstractVoronoiMesh,
         :Cells, :CellInfo,
         :Vertices, :VertexInfo,
         :Edges, :EdgeInfo,

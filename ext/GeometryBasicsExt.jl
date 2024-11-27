@@ -26,7 +26,7 @@ function VoronoiMeshes.create_cells_polygons_periodic(vert_pos, cell_pos, vertic
     return cell_polygons
 end
 
-function VoronoiMeshes.create_cells_polygons(mesh::VoronoiMesh{false})
+function VoronoiMeshes.create_cells_polygons(mesh::AbstractVoronoiMesh{false})
     return VoronoiMeshes.create_cells_polygons_periodic(mesh.vertices.position, mesh.cells.position, mesh.cells.vertices, mesh.x_period, mesh.y_period)
 end
 
@@ -54,7 +54,7 @@ function VoronoiMeshes.create_dual_triangles_periodic(vert_pos, cell_pos, cellsO
     return vert_triangles
 end
 
-function VoronoiMeshes.create_dual_triangles(mesh::VoronoiMesh{false})
+function VoronoiMeshes.create_dual_triangles(mesh::AbstractVoronoiMesh{false})
     return VoronoiMeshes.create_dual_triangles_periodic(mesh.vertices.position, mesh.cells.position, mesh.vertices.cells, mesh.x_period, mesh.y_period)
 end
 
@@ -83,7 +83,7 @@ function VoronoiMeshes.create_edge_quadrilaterals_periodic(edge_pos, vert_pos, c
     return edge_quadrilaterals
 end
 
-function VoronoiMeshes.create_edge_quadrilaterals(mesh::VoronoiMesh{false})
+function VoronoiMeshes.create_edge_quadrilaterals(mesh::AbstractVoronoiMesh{false})
     return VoronoiMeshes.create_edge_quadrilaterals_periodic(mesh.edges.position, mesh.vertices.position, mesh.cells.position, mesh.edges.vertices, mesh.edges.cells, mesh.x_period, mesh.y_period)
 end
 
@@ -133,7 +133,7 @@ function VoronoiMeshes.create_cell_linesegments_periodic(vert_pos, edge_pos, cel
     return ((x, y), (x_periodic, y_periodic))
 end
 
-function VoronoiMeshes.create_cell_linesegments(mesh::VoronoiMesh{false})
+function VoronoiMeshes.create_cell_linesegments(mesh::AbstractVoronoiMesh{false})
     return VoronoiMeshes.create_cell_linesegments_periodic(mesh.vertices.position, mesh.edges.position, mesh.cells.position, mesh.cells.edges, mesh.edges.vertices, mesh.x_period, mesh.y_period)
 end
 

@@ -429,14 +429,14 @@ function write_edge_data!(ds::NCDataset, edges::Edges; force3D::Bool = false, wr
     return ds
 end
 
-function save_to_netcdf!(ds::NCDataset, mesh::VoronoiMesh; force3D::Bool = false, write_computed::Bool= false)
+function save_to_netcdf!(ds::NCDataset, mesh::AbstractVoronoiMesh; force3D::Bool = false, write_computed::Bool= false)
     save_to_netcdf!(ds, mesh.diagram, force3D)
     write_cell_data!(ds, mesh.cells; force3D = force3D, write_computed = write_computed)
     write_vertex_data!(ds, mesh.vertices; force3D = force3D, write_computed = write_computed)
     write_edge_data!(ds, mesh.edges; force3D = force3D, write_computed = write_computed)
 end
 
-function save_to_netcdf(filename, mesh::VoronoiMesh; force3D::Bool=false, write_computed::Bool=false, format = :netcdf5_64bit_data)
+function save_to_netcdf(filename, mesh::AbstractVoronoiMesh; force3D::Bool=false, write_computed::Bool=false, format = :netcdf5_64bit_data)
     NCDataset(filename, "c", format = format) do ds
         save_to_netcdf!(ds, mesh; force3D = force3D, write_computed = write_computed)
     end

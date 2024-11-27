@@ -14,7 +14,7 @@ end
 
 graph_partition(cells::Cells,edges::Edges) = graph_partition(cells.cells,edges.n)
 
-graph_partition(mesh::VoronoiMesh) = graph_partition(mesh.cells,mesh.edges)
+graph_partition(mesh::AbstractVoronoiMesh) = graph_partition(mesh.cells,mesh.edges)
 
 function find_obtuse_triangles_periodic(cpos,cellsOnVertex,xp::Number,yp::Number)
     r = Int[]
@@ -37,11 +37,11 @@ end
 
 find_obtuse_triangles(vertices::Vertices{false},cells::Cells{false},xp::Number,yp::Number) = find_obtuse_triangles_periodic(cells.position,vertices.cells,xp,yp)
 
-find_obtuse_triangles(mesh::VoronoiMesh{false}) = find_obtuse_triangles(mesh.vertices,mesh.cells,mesh.x_period, mesh.y_period)
+find_obtuse_triangles(mesh::AbstractVoronoiMesh{false}) = find_obtuse_triangles(mesh.vertices,mesh.cells,mesh.x_period, mesh.y_period)
 
 """
     periodic_edges_mask(dcEdge::Vector,cellsOnEdge,cell_positions)
-    periodic_edges_mask(mesh::VoronoiMesh)
+    periodic_edges_mask(mesh::AbstractVoronoiMesh)
 
 Returns a BitArray that masks periodic edges (interior edges = true, boundary edges = false).
 """
@@ -56,16 +56,16 @@ function periodic_edges_mask(dc,cellsOnEdge,c_pos)
     return mask
 end
 
-periodic_edges_mask(mesh::VoronoiMesh{false}) = periodic_edges_mask(mesh.edges.lengthDual, mesh.edges.cells, mesh.cells.position)
+periodic_edges_mask(mesh::AbstractVoronoiMesh{false}) = periodic_edges_mask(mesh.edges.lengthDual, mesh.edges.cells, mesh.cells.position)
 
-function periodic_edges_mask(mesh::VoronoiMesh{true})
+function periodic_edges_mask(mesh::AbstractVoronoiMesh{true})
     a = BitArray(mesh.edges.n)
     a .= true
     return a
 end
 
 """
-    periodic_vertices_mask(mesh::VoronoiMesh)
+    periodic_vertices_mask(mesh::AbstractVoronoiMesh)
 
 Returns a BitArray that masks vertices that belong to a periodic edge (interior vertices = true, boundary vertices = false).
 """
@@ -78,9 +78,9 @@ function periodic_vertices_mask(edgesOnVertex, mask_edges)
     return mask
 end
 
-periodic_vertices_mask(mesh::VoronoiMesh{false}) = periodic_vertices_mask(mesh.vertices.edges, periodic_edges_mask(mesh))
+periodic_vertices_mask(mesh::AbstractVoronoiMesh{false}) = periodic_vertices_mask(mesh.vertices.edges, periodic_edges_mask(mesh))
 
-function periodic_vertices_mask(mesh::VoronoiMesh{true})
+function periodic_vertices_mask(mesh::AbstractVoronoiMesh{true})
     a = BitArray(mesh.vertices.n)
     a .= true
     return a
@@ -126,12 +126,12 @@ check_edge_normal_and_tangent(edges::Edges{true}) = check_edge_normal_and_tangen
 check_edge_normal_and_tangent(edges::Edges{false}) = check_edge_normal_and_tangent_periodic(edges.normal, edges.tangent)
 
 """
-    check_edge_normal_and_tangent(mesh::VoronoiMesh) -> result::Union{Nothing, Vector{<:Integer}}
+    check_edge_normal_and_tangent(mesh::AbstractVoronoiMesh) -> result::Union{Nothing, Vector{<:Integer}}
 
 Check if `(mesh.edges.normal[e] × mesh.edges.tanget[e]) ≈ surface_normal[e])` for all edges `e`.
 If `true` for all edges, return `nothing`, otherwise return a vector of indices where the requirement doesn't hold.
 """
-check_edge_normal_and_tangent(mesh::VoronoiMesh) = check_edge_normal_and_tangent(mesh.edges)
+check_edge_normal_and_tangent(mesh::AbstractVoronoiMesh) = check_edge_normal_and_tangent(mesh.edges)
 
 function check_edge_indexing_spherical(R::Number, edge_pos, cellsOnEdge, cell_pos, verticesOnEdge, vert_pos)
     r = Int[]
@@ -181,7 +181,7 @@ function check_edge_indexing_periodic(cellsOnEdge::AbstractVector, cell_pos, ver
 end
 
 """
-    check_edge_indexing(mesh::VoronoiMesh)
+    check_edge_indexing(mesh::AbstractVoronoiMesh)
 
 Check if the vector formed by
 `(edges.cells[e][2] - edges.cells[e][1]) × (edges.vertices[e][2] - edges.vertices[e][1]))`
@@ -189,14 +189,14 @@ points at the same direction as the surface normal for every edge `e`.
 """
 function check_edge_indexing end
 
-function check_edge_indexing(mesh::VoronoiMesh{false})
+function check_edge_indexing(mesh::AbstractVoronoiMesh{false})
     ordering = check_edge_indexing_periodic(mesh.edges.cells, mesh.cells.position,
                                             mesh.edges.vertices, mesh.vertices.position,
                                             mesh.x_period, mesh.y_period)
     isnothing(ordering) ? nothing : (;ordering)
 end
 
-function check_edge_indexing(mesh::VoronoiMesh{true})
+function check_edge_indexing(mesh::AbstractVoronoiMesh{true})
     ordering = check_edge_indexing_spherical(mesh.sphere_radius, mesh.edges.position,
                                             mesh.edges.cells, mesh.cells.position,
                                             mesh.edges.vertices, mesh.vertices.position)
@@ -214,7 +214,7 @@ function check_vertex_indexing_periodic(vpos, cellsOnVertex, cpos, edgesOnVertex
 end
 
 """
-    check_vertex_indexing(mesh::VoronoiMesh)
+    check_vertex_indexing(mesh::AbstractVoronoiMesh)
 
 Check if `cells` and `edges` indexing arrays in `mesh.vertices` follow
 counter-clockwise ordering.
@@ -223,7 +223,7 @@ Also check if `vertices.cells[v][n]` is between `vertices.edges[v][n]` and
 """
 function check_vertex_indexing end
 
-function check_vertex_indexing(mesh::VoronoiMesh{false})
+function check_vertex_indexing(mesh::AbstractVoronoiMesh{false})
     ordering = check_vertex_indexing_periodic(mesh.vertices.position,
                                    mesh.vertices.cells,
                                    mesh.cells.position,
@@ -242,7 +242,7 @@ function check_vertex_indexing(mesh::VoronoiMesh{false})
         (ordering = ordering, counter_clockwise = (edges = cc_e, cells = cc_c))
 end
 
-function check_vertex_indexing(mesh::VoronoiMesh{true})
+function check_vertex_indexing(mesh::AbstractVoronoiMesh{true})
     R = mesh.sphere_radius
     ordering = check_vertex_indexing_spherical(R, mesh.vertices.position,
                                     mesh.vertices.cells,
@@ -272,7 +272,7 @@ function check_cell_indexing_periodic(cpos, cellsOnCell, verticesOnCell, vpos, e
 end
 
 """
-    check_cell_indexing(mesh::VoronoiMesh)
+    check_cell_indexing(mesh::AbstractVoronoiMesh)
 
 Check if `cells`, `edges` and `vertices` indexing arrays in `mesh.cells` follow
 counter-clockwise ordering.
@@ -281,7 +281,7 @@ Also check if `cell.vertices[c][n]` is between `cell.{edges|cells}[c][n]` and
 """
 function check_cell_indexing end
 
-function check_cell_indexing(mesh::VoronoiMesh{true})
+function check_cell_indexing(mesh::AbstractVoronoiMesh{true})
     ordering  = check_cell_indexing_spherical(mesh.sphere_radius, mesh.cells.position,
         mesh.cells.cells,
         mesh.cells.vertices,
@@ -301,7 +301,7 @@ function check_cell_indexing(mesh::VoronoiMesh{true})
         (ordering = ordering, counter_clockwise = (vertices = cc_vert, edges = cc_edg, cells = cc_cells))
 end
 
-function check_cell_indexing(mesh::VoronoiMesh{false})
+function check_cell_indexing(mesh::AbstractVoronoiMesh{false})
     ordering = check_cell_indexing_periodic(mesh.cells.position,
         mesh.cells.cells,
         mesh.cells.vertices,
@@ -326,32 +326,32 @@ function check_cell_indexing(mesh::VoronoiMesh{false})
         (ordering = ordering, counter_clockwise = (vertices = cc_vert, edges = cc_edg, cells = cc_cells))
 end
 
-function check_mesh(mesh::VoronoiMesh)
+function check_mesh(mesh::AbstractVoronoiMesh)
     edges = check_edge_indexing(mesh)
     vertices = check_vertex_indexing(mesh)
     cells = check_cell_indexing(mesh)
     return all(isnothing, (edges, vertices, cells)) ? nothing : (;edges, vertices, cells)
 end
 
-warn_mesh_issues(::Nothing, ::VoronoiMesh) = nothing
+warn_mesh_issues(::Nothing, ::AbstractVoronoiMesh) = nothing
 
-function warn_mesh_issues(nt::NamedTuple, mesh::VoronoiMesh)
+function warn_mesh_issues(nt::NamedTuple, mesh::AbstractVoronoiMesh)
     warn_edge_issues(nt.edges, mesh)
     warn_vertex_issues(nt.vertices, mesh)
     warn_cell_issues(nt.cells, mesh)
 end
 
-warn_edge_issues(::Nothing, ::VoronoiMesh) = nothing
+warn_edge_issues(::Nothing, ::AbstractVoronoiMesh) = nothing
 
-function warn_edge_issues(nt, mesh::VoronoiMesh)
+function warn_edge_issues(nt, mesh::AbstractVoronoiMesh)
     if !isnothing(nt)
         @warn "The edges indexing arrays from this mesh do not follow the mesh specification."
     end
 end
 
-warn_vertex_issues(::Nothing, ::VoronoiMesh) = nothing
+warn_vertex_issues(::Nothing, ::AbstractVoronoiMesh) = nothing
 
-function warn_vertex_issues(nt, mesh::VoronoiMesh)
+function warn_vertex_issues(nt, mesh::AbstractVoronoiMesh)
     if !isnothing(nt)
        if !isnothing(nt.counter_clockwise)
             if !isnothing(nt.counter_clockwise.cells)
@@ -367,9 +367,9 @@ function warn_vertex_issues(nt, mesh::VoronoiMesh)
     end
 end
 
-warn_cell_issues(::Nothing, ::VoronoiMesh) = nothing
+warn_cell_issues(::Nothing, ::AbstractVoronoiMesh) = nothing
 
-function warn_cell_issues(nt, mesh::VoronoiMesh)
+function warn_cell_issues(nt, mesh::AbstractVoronoiMesh)
     if !isnothing(nt)
        if !isnothing(nt.counter_clockwise)
             if !isnothing(nt.counter_clockwise.cells)

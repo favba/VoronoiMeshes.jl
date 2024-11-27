@@ -117,13 +117,15 @@ function centroidal_voronoi_loyd(::TT, vor::TV, initial_generator_points, N::Int
     new_tri::TT = triangulate(reinterpret(NTuple{2, Float64}, p_new))
     new_vor::TV = voronoi(new_tri, clip = true)
 
+    expected_dc = probable_dc(N, lx, ly, maximum(density, initial_new))
+
     println("Performing Lloyd's iteration with relative tolerance = $rtol and maximum number of iterations: $max_iter")
     iter = 0
     while !(
             mapreduce(
                 (x, y) -> isapprox(
                     x, y;
-                    atol = rtol * probable_dc(N, lx, ly, maximum(density, initial_new))
+                    atol = rtol * expected_dc
                 ),
                 &, initial_generator_points, initial_new
             )

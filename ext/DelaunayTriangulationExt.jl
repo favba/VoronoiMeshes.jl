@@ -106,7 +106,7 @@ function fill_with_polygon_mass_centroids!(new_points, N::Integer, lx::Number, l
     return new_points
 end
 
-function centroidal_voronoi_loyd(::TT, vor::TV, initial_generator_points, N::Integer, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = 20000, rtol::Real = 1.0e-4 / 100) where {TT <: Triangulation, TV <: VoronoiTessellation, F <: Function}
+function centroidal_voronoi_loyd(::TT, vor::TV, initial_generator_points, N::Integer, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = 20000, rtol::Real = 1.0e-8 / 100) where {TT <: Triangulation, TV <: VoronoiTessellation, F <: Function}
 
     initial_new = similar(initial_generator_points)
 
@@ -123,8 +123,8 @@ function centroidal_voronoi_loyd(::TT, vor::TV, initial_generator_points, N::Int
     iter = 0
     while !(
             mapreduce(
-                (x, y) -> isapprox(
-                    x, y;
+                (x, y) -> isapprox_periodic(
+                    x, y, lx, ly;
                     atol = rtol * expected_dc
                 ),
                 &, initial_generator_points, initial_new
@@ -175,7 +175,7 @@ function check_and_fix_periodicity_points(points, lx::Number, ly::Number)
     return points_periodic
 end
 
-function generate_periodic_centroidal_voronoi(points::AbstractVector, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = 20000, rtol::Real = 1.0e-4 / 100) where {F <: Function}
+function generate_periodic_centroidal_voronoi(points::AbstractVector, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = 20000, rtol::Real = 1.0e-8 / 100) where {F <: Function}
 
     initial_generator_points = check_and_fix_periodicity_points(points, lx, ly)
 
@@ -234,7 +234,7 @@ function extract_periodic_vertices_and_cells(N::Integer, lx::Number, ly::Number,
     return interior_cell_pos, interior_vertex_pos, verticesOnCell, cellsOnVertex
 end
 
-function VoronoiMeshes.PlanarVoronoiDiagram(initial_generator_points::AbstractVector{<:Vec2Dxy}, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = 20000, rtol::Real = 1.0e-4 / 100) where {F <: Function}
+function VoronoiMeshes.PlanarVoronoiDiagram(initial_generator_points::AbstractVector{<:Vec2Dxy}, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = 20000, rtol::Real = 1.0e-8 / 100) where {F <: Function}
 
     N = length(initial_generator_points)
 
@@ -277,24 +277,24 @@ function VoronoiMeshes.PlanarVoronoiDiagram(initial_generator_points::AbstractVe
     end
 end
 
-function VoronoiMeshes.VoronoiDiagram(initial_generator_points::AbstractVector{<:Vec2Dxy}, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = 20000, rtol::Real = 1.0e-4 / 100) where {F <: Function}
+function VoronoiMeshes.VoronoiDiagram(initial_generator_points::AbstractVector{<:Vec2Dxy}, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = 20000, rtol::Real = 1.0e-8 / 100) where {F <: Function}
     VoronoiDiagram(PlanarVoronoiDiagram(initial_generator_points, lx, ly, density = density, max_iter = max_iter, rtol = rtol))
 end
 
-function VoronoiMeshes.PlanarVoronoiDiagram(N::Integer, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = 20000, rtol::Real = 1.0e-4 / 100) where {F <: Function}
+function VoronoiMeshes.PlanarVoronoiDiagram(N::Integer, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = 20000, rtol::Real = 1.0e-8 / 100) where {F <: Function}
     points = generate_inital_points(N, lx, ly)
     return VoronoiMeshes.PlanarVoronoiDiagram(points, lx, ly, density = density, max_iter = max_iter, rtol = rtol)
 end
 
-function VoronoiMeshes.VoronoiDiagram(N::Integer, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = 20000, rtol::Real = 1.0e-4 / 100) where {F <: Function}
+function VoronoiMeshes.VoronoiDiagram(N::Integer, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = 20000, rtol::Real = 1.0e-8 / 100) where {F <: Function}
     VoronoiDiagram(PlanarVoronoiDiagram(N, lx, ly, density = density, max_iter = max_iter, rtol = rtol))
 end
 
-function VoronoiMeshes.VoronoiMesh(initial_generator_points::AbstractVector{<:Vec2Dxy}, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = 20000, rtol::Real = 1.0e-4 / 100) where {F <: Function}
+function VoronoiMeshes.VoronoiMesh(initial_generator_points::AbstractVector{<:Vec2Dxy}, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = 20000, rtol::Real = 1.0e-8 / 100) where {F <: Function}
     VoronoiMesh(VoronoiDiagram(PlanarVoronoiDiagram(initial_generator_points, lx, ly, density = density, max_iter = max_iter, rtol = rtol)))
 end
 
-function VoronoiMeshes.VoronoiMesh(N::Integer, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = 20000, rtol::Real = 1.0e-4 / 100) where {F <: Function}
+function VoronoiMeshes.VoronoiMesh(N::Integer, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = 20000, rtol::Real = 1.0e-8 / 100) where {F}
     VoronoiMesh(VoronoiDiagram(PlanarVoronoiDiagram(N, lx, ly, density = density, max_iter = max_iter, rtol = rtol)))
 end
 

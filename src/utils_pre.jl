@@ -21,6 +21,20 @@ function tmap!(output, func::F, var::Vararg) where {F <: Function}
     return output
 end
 
+function copy_matrix_to_tuple_vector!(tuple_vector::AbstractVector{NTuple{N, T}}, matrix::AbstractMatrix{T2}) where {N, T, T2}
+    n = Val{N}()
+    @parallel for k in axes(matrix, 2)
+        @inbounds tuple_vector[k] = ntuple(i -> (convert(T, @inbounds(matrix[i, k]))), n)
+    end
+    return tuple_vector
+end
+
+for T in (Int32, Int64, Float32, Float64)
+    for N in 2:12
+        precompile(copy_matrix_to_tuple_vector!, (Vector{NTuple{N, T}}, Matrix{T}))
+    end
+end
+
 @inline function unsafe_drop_element(t::NTuple{3}, el::Integer)
     if t[1] == el
         return (t[2], t[3])

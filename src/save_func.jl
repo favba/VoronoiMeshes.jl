@@ -25,3 +25,8 @@ function save(filename, obj::T; kwds...) where {T<:Union{<:AbstractVoronoiDiagra
     return nothing
 end
 
+for N in 6:9
+    precompile(Tuple{typeof(save), String, VoronoiMesh{false, N, Int32, Float64, Zeros.Zero}})
+    precompile(Tuple{typeof(save), String, VoronoiMesh{true, N, Int32, Float64, Float64}})
+end
+

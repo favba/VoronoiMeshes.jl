@@ -436,6 +436,11 @@ function check_if_counter_clockwise(reference_position, indicesOnReference, refe
     return n_problems == 0 ? nothing : r
 end
 
+for N in 6:9
+    precompile(Tuple{typeof(check_if_counter_clockwise), VecArray{Vec{Union{Zeros.Zero, Float64}, 1, Float64, Float64, Zeros.Zero}, 1, Array{Float64, 1}, Array{Float64, 1}, Array{Zeros.Zero, 1}}, ImmutableVectorArray{N, Int32, 1, Array{NTuple{N, Int32}, 1}}, VecArray{Vec{Union{Zeros.Zero, Float64}, 1, Float64, Float64, Zeros.Zero}, 1, Array{Float64, 1}, Array{Float64, 1}, Array{Zeros.Zero, 1}}, Float64, Float64})
+end
+precompile(Tuple{typeof(check_if_counter_clockwise), VecArray{Vec{Union{Zeros.Zero, Float64}, 1, Float64, Float64, Zeros.Zero}, 1, Array{Float64, 1}, Array{Float64, 1}, Array{Zeros.Zero, 1}}, Array{Tuple{Int32, Int32, Int32}, 1}, VecArray{Vec{Union{Zeros.Zero, Float64}, 1, Float64, Float64, Zeros.Zero}, 1, Array{Float64, 1}, Array{Float64, 1}, Array{Zeros.Zero, 1}}, Float64, Float64})
+
 function check_indices_ordering(R::Number, ref_position, indOnRef1, rferee_pos1, indOnRef2, rferee_pos2)
     r = Int[]
     lk = ReentrantLock()

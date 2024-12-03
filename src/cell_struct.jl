@@ -78,6 +78,8 @@ end
 get_diagram(c::Cells) = getfield(c, :info).diagram
 
 for nEdges in 6:10
+    precompile(Tuple{typeof(get_diagram), VoronoiMeshes.Cells{false, nEdges, Int32, Float64, Zeros.Zero}})
+
     precompile(
         Cells, (
             Int, Vec2DxyArray{Float64, 1}, Vector{UInt8}, ImVecArray{nEdges, Int32, 1},
@@ -85,6 +87,9 @@ for nEdges in 6:10
             CellInfo{false, nEdges, Int32, Float64, Zero},
         )
     )
+
+    precompile(Tuple{typeof(get_diagram), VoronoiMeshes.Cells{true, nEdges, Int32, Float64, Float64}})
+
     precompile(
         Cells, (
             Int, Vec3DArray{Float64, 1}, Vector{UInt8}, ImVecArray{nEdges, Int32, 1},

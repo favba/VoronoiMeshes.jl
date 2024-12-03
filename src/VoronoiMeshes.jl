@@ -137,6 +137,11 @@ _getproperty(mesh::AbstractVoronoiMesh{false}, ::Val{:x_period}) = get_diagram(m
 _getproperty(mesh::AbstractVoronoiMesh{false}, ::Val{:y_period}) = get_diagram(mesh).y_period
 _getproperty(mesh::AbstractVoronoiMesh{true}, ::Val{:sphere_radius}) = get_diagram(mesh).sphere_radius
 
+for N in 6:9
+    precompile(Tuple{typeof(_getproperty), VoronoiMeshes.VoronoiMesh{false, N, Int32, Float64, Zeros.Zero}, Val{:cells}})
+    precompile(Tuple{typeof(_getproperty), VoronoiMeshes.VoronoiMesh{true, N, Int32, Float64, Float64}, Val{:cells}})
+end
+
 for T in (
         :AbstractVoronoiMesh,
         :Cells, :CellInfo,

@@ -181,6 +181,7 @@ include("save_func.jl")
 
 #Definitions are in ext/NCDatasetsExt.jl
 function save_to_netcdf end
+function save_to_netcdf! end
 
 #functions to be used when Makie is loaded
 #Definitions are in ext/GeometryBasicsExt.jl

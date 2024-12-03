@@ -1,7 +1,7 @@
 module NCDatasetsExt
 
 using VoronoiMeshes, NCDatasets, TensorsLite, TensorsLite.Zeros, ImmutableVectors
-import VoronoiMeshes: save_to_netcdf, copy_matrix_to_tuple_vector!
+import VoronoiMeshes: save_to_netcdf, save_to_netcdf!, copy_matrix_to_tuple_vector!
 
 function on_a_sphere(ncfile::NCDatasets.NCDataset)
     oas = lowercase(strip(ncfile.attrib["on_a_sphere"]::String))

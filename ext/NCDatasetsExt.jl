@@ -396,7 +396,7 @@ end
 function VoronoiMeshes.VoronoiMesh(ncfile::NCDatasets.NCDataset, warn_issues::Bool=true)
     mesh = _VoronoiMesh(ncfile)
     if warn_issues
-        Threads.@spawn VoronoiMeshes.warn_mesh_issues(VoronoiMeshes.check_mesh($mesh), $mesh)
+        Threads.@spawn VoronoiMeshes.warn_mesh_issues($mesh)
     end
     return mesh
 end
@@ -405,7 +405,7 @@ function VoronoiMeshes.VoronoiMesh(v::Val{NE}, ncfile::NCDatasets.NCDataset, war
     diag = VoronoiDiagram(v, ncfile)
     mesh = VoronoiMesh(Cells(diag, ncfile), Vertices(diag, ncfile), Edges(diag, ncfile))
     if warn_issues
-        Threads.@spawn VoronoiMeshes.warn_mesh_issues(VoronoiMeshes.check_mesh($mesh), $mesh)
+        Threads.@spawn VoronoiMeshes.warn_mesh_issues($mesh)
     end
     return mesh
 end

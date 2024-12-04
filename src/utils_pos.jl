@@ -347,11 +347,13 @@ function warn_mesh_issues(nt::NamedTuple, mesh::AbstractVoronoiMesh)
     warn_cell_issues(nt.cells, mesh)
 end
 
+warn_mesh_issues(mesh::AbstractVoronoiMesh) = warn_mesh_issues(check_mesh(mesh), mesh)
+
 warn_edge_issues(::Nothing, ::AbstractVoronoiMesh) = nothing
 
 function warn_edge_issues(nt, mesh::AbstractVoronoiMesh)
     if !isnothing(nt)
-        @warn "The edges indexing arrays from this mesh do not follow the mesh specification."
+        @warn "The edges indexing arrays from this mesh do not follow the mesh specification on $(length(nt.ordering)) edges. The indices of the offending edges can be given by running `check_edge_indexing(mesh).ordering`."
     end
 end
 
@@ -361,14 +363,14 @@ function warn_vertex_issues(nt, mesh::AbstractVoronoiMesh)
     if !isnothing(nt)
        if !isnothing(nt.counter_clockwise)
             if !isnothing(nt.counter_clockwise.cells)
-                @warn "The `vertices.cells` indexing array from this mesh is not in counter-clockwise order"
+                @warn "The `vertices.cells` indexing array from this mesh is not in counter-clockwise order on $(length(nt.counter_clockwise.cells)) vertices. The indices of the offending vertices can be given by running `check_vertex_indexing(mesh).counter_clockwise.cells`."
             end
             if !isnothing(nt.counter_clockwise.edges)
-                @warn "The `vertices.edges` indexing array from this mesh is not in counter-clockwise order"
+                @warn "The `vertices.edges` indexing array from this mesh is not in counter-clockwise order on $(length(nt.counter_clockwise.edges)) vertices. The indices of the offending vertices can be given by running `check_vertex_indexing(mesh).counter_clockwise.edges`."
             end
         end
         if !isnothing(nt.ordering)
-            @warn "The `edges.vertices` and edges.cells` indexing arrays for this mesh do not follow the mesh specification"
+            @warn "The `edges.vertices` and edges.cells` indexing arrays for this mesh do not follow the mesh specification on $(length(nt.ordering)) vertices. The indices of the offending vertices can be given by running `check_vertex_indexing(mesh).ordering`."
         end
     end
 end
@@ -379,17 +381,18 @@ function warn_cell_issues(nt, mesh::AbstractVoronoiMesh)
     if !isnothing(nt)
        if !isnothing(nt.counter_clockwise)
             if !isnothing(nt.counter_clockwise.cells)
-                @warn "The `cells.cells` indexing array from this mesh is not in counter-clockwise order"
+                @warn "The `cells.cells` indexing array from this mesh is not in counter-clockwise order on $(length(nt.counter_clockwise.cells)) cells. The indices of the offending cells can be given by running `check_cell_indexing(mesh).counter_clockwise.cells`."
             end
             if !isnothing(nt.counter_clockwise.edges)
-                @warn "The `cells.edges` indexing array from this mesh is not in counter-clockwise order"
+                @warn "The `cells.edges` indexing array from this mesh is not in counter-clockwise order on $(length(nt.counter_clockwise.edges)) cells. The indices of the offending cells can be given by running `check_cell_indexing(mesh).counter_clockwise.edges`."
             end
             if !isnothing(nt.counter_clockwise.vertices)
-                @warn "The `cells.vertices` indexing array from this mesh is not in counter-clockwise order"
+                @warn "The `cells.vertices` indexing array from this mesh is not in counter-clockwise order on $(length(nt.counter_clockwise.vertices)) cells. The indices of the offending cells can be given by running `check_cell_indexing(mesh).counter_clockwise.vertices`."
             end
         end
         if !isnothing(nt.ordering)
-            @warn "The `cells.edges` and `cells.cells` indexing arrays for this mesh do not follow the mesh specification"
+            @warn "The `cells.edges` and `cells.cells` indexing arrays for this mesh do not follow the mesh specification on $(length(nt.ordering)) cells. The indices of the offending cells can be given by running `check_cell_indexing(mesh).ordering`."
         end
     end
 end
+

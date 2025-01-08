@@ -11,6 +11,7 @@ export meshplot, meshplot!, diagramplot, diagramplot!
 export graph_partition, find_obtuse_triangles, periodic_edges_mask, periodic_vertices_mask
 export check_mesh, check_edge_normal_and_tangent, check_vertex_indexing, check_cell_indexing
 export save
+export circular_refinement_function, y_refinement_function, x_refinement_function
 
 const VecMaybe1DxArray{TX, TYZ, N} = TensorsLite.VecArray{Vec{Union{TX, TYZ}, 1, TX, TYZ, TYZ}, N, Array{TX, N}, Array{TYZ, N}, Array{TYZ, N}}
 const Vec1DxOr2DxyArray{TX, TXY, N} = TensorsLite.VecArray{Vec{Union{TX, Zero}, 1, TX, TXY, Zero}, N, Array{TX, N}, Array{TXY, N}, Array{Zero, N}}
@@ -183,6 +184,8 @@ end
 include("utils_pos.jl")
 
 include("save_func.jl")
+
+include("refinement_functions.jl")
 
 #Definitions are in ext/NCDatasetsExt.jl
 function save_to_netcdf end

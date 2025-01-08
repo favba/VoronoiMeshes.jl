@@ -110,7 +110,7 @@ function centroidal_voronoi_loyd(::TT, vor::TV, initial_generator_points, N::Int
 
     initial_new = similar(initial_generator_points)
 
-    fill_with_polygon_mass_centroids!(initial_new, N, lx, ly, vor)
+    fill_with_polygon_mass_centroids!(initial_new, N, lx, ly, vor, density)
 
     p_new, inds_new = expand_periodic_points(initial_new, lx, ly)
 

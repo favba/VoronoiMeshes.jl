@@ -370,7 +370,7 @@ function warn_vertex_issues(nt, mesh::AbstractVoronoiMesh)
             end
         end
         if !isnothing(nt.ordering)
-            @warn "The `edges.vertices` and edges.cells` indexing arrays for this mesh do not follow the mesh specification on $(length(nt.ordering)) vertices. The indices of the offending vertices can be given by running `check_vertex_indexing(mesh).ordering`."
+            @warn "The `vertices.edges` and vertices.cells` indexing arrays for this mesh do not follow the mesh specification on $(length(nt.ordering)) vertices. The indices of the offending vertices can be given by running `check_vertex_indexing(mesh).ordering`."
         end
     end
 end

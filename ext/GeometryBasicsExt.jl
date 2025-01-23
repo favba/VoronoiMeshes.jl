@@ -5,11 +5,15 @@ using TensorsLite: Vec, norm
 using TensorsLiteGeometry, ImmutableVectors
 using GeometryBasics: GeometryBasics, Polygon, Point2f, LineString, Line, TupleView
 
-const PolTypeIm{N} = Polygon{2, Float32, Point2f, LineString{2, Float32, Point2f, Base.ReinterpretArray{GeometryBasics.Ngon{2, Float32, 2, Point2f}, 1, Tuple{Point2f, Point2f}, TupleView{Tuple{Point2f, Point2f}, 2, 1, ImmutableVector{N, Point2f}}, false}}, Array{LineString{2, Float32, Point2f, Base.ReinterpretArray{GeometryBasics.Ngon{2, Float32, 2, Point2f}, 1, Tuple{Point2f, Point2f}, TupleView{Tuple{Point2f, Point2f}, 2, 1, ImmutableVector{N, Point2f}}, false}}, 1}}
+@static if pkgversion(GeometryBasics) < v"0.5"
+    const PolType = Polygon{2, Float32, Point2f, LineString{2, Float32, Point2f, Base.ReinterpretArray{Line{2, Float32}, 1, Tuple{Point2f, Point2f}, TupleView{Tuple{Point2f, Point2f}, 2, 1, Vector{Point2f}}, false}}, Vector{LineString{2, Float32, Point2f, Base.ReinterpretArray{Line{2, Float32}, 1, Tuple{Point2f, Point2f}, TupleView{Tuple{Point2f, Point2f}, 2, 1, Vector{Point2f}}, false}}}}
+else
+    const PolType = Polygon{2, Float32}
+end
 
 function VoronoiMeshes.create_cells_polygons_periodic(vert_pos, cell_pos, verticesOnCell, x_period, y_period)
 
-    cell_polygons = Vector{PolTypeIm{max_length(eltype(verticesOnCell))}}(undef, length(cell_pos))
+    cell_polygons = Vector{PolType}(undef, length(cell_pos))
     NE = max_length(eltype(verticesOnCell))
     @parallel for i in eachindex(cell_pos)
         @inbounds begin
@@ -19,7 +23,7 @@ function VoronoiMeshes.create_cells_polygons_periodic(vert_pos, cell_pos, vertic
                 vpos = closest(cpos, vert_pos[i_v], x_period, y_period)
                 local_vertices = @inbounds push(local_vertices, Point2f(vpos.x, vpos.y))
             end
-            cell_polygons[i] = Polygon(local_vertices)
+            cell_polygons[i] = Polygon(Array(local_vertices))
         end
     end
 
@@ -30,11 +34,9 @@ function VoronoiMeshes.create_cells_polygons(mesh::AbstractVoronoiMesh{false})
     return VoronoiMeshes.create_cells_polygons_periodic(mesh.vertices.position, mesh.cells.position, mesh.cells.vertices, mesh.x_period, mesh.y_period)
 end
 
-const PolTypeTriangle = PolTypeIm{3}
-
 function VoronoiMeshes.create_dual_triangles_periodic(vert_pos, cell_pos, cellsOnVertex, x_period, y_period)
 
-    vert_triangles = Vector{PolTypeTriangle}(undef, length(vert_pos))
+    vert_triangles = Vector{PolType}(undef, length(vert_pos))
 
     @parallel for i in eachindex(vert_pos)
         @inbounds begin
@@ -47,7 +49,7 @@ function VoronoiMeshes.create_dual_triangles_periodic(vert_pos, cell_pos, cellsO
 
             cpos3 = closest(vpos, cell_pos[ic3], x_period, y_period)
 
-            vert_triangles[i] = Polygon(ImmutableVector{3}(Point2f(cpos1.x, cpos1.y), Point2f(cpos2.x, cpos2.y), Point2f(cpos3.x, cpos3.y)))
+            vert_triangles[i] = Polygon([Point2f(cpos1.x, cpos1.y), Point2f(cpos2.x, cpos2.y), Point2f(cpos3.x, cpos3.y)])
         end
     end
 
@@ -60,7 +62,7 @@ end
 
 function VoronoiMeshes.create_edge_quadrilaterals_periodic(edge_pos, vert_pos, cell_pos, verticesOnEdge, cellsOnEdge, x_period, y_period)
 
-    edge_quadrilaterals = Vector{PolTypeIm{4}}(undef, length(edge_pos))
+    edge_quadrilaterals = Vector{PolType}(undef, length(edge_pos))
 
     @parallel for i in eachindex(edge_pos)
         @inbounds begin
@@ -76,7 +78,7 @@ function VoronoiMeshes.create_edge_quadrilaterals_periodic(edge_pos, vert_pos, c
 
             vpos2 = closest(epos, vert_pos[iv2], x_period, y_period)
 
-            edge_quadrilaterals[i] = Polygon(ImmutableVector{4}(Point2f(cpos1.x, cpos1.y), Point2f(vpos1.x, vpos1.y), Point2f(cpos2.x, cpos2.y), Point2f(vpos2.x, vpos2.y)))
+            edge_quadrilaterals[i] = Polygon([Point2f(cpos1.x, cpos1.y), Point2f(vpos1.x, vpos1.y), Point2f(cpos2.x, cpos2.y), Point2f(vpos2.x, vpos2.y)])
         end
     end
 

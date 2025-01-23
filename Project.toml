@@ -24,13 +24,12 @@ MakieExt = "Makie"
 [compat]
 DelaunayTriangulation = "1.6.0"
 ImmutableVectors = "1.0.0"
-Makie = "0.21.14"
 NCDatasets = "0.14.5"
 TensorsLite = "1.0.0"
 TensorsLiteGeometry = "1.0.0"
 Zeros = "0.3.0"
 julia = "1.10"
-GeometryBasics = "0.4"
+GeometryBasics = "0.4, 0.5"
 
 [extras]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"

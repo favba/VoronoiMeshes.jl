@@ -3,20 +3,30 @@ module DelaunayTriangulationExt
 using Zeros, VoronoiMeshes, DelaunayTriangulation, TensorsLite, ImmutableVectors, TensorsLiteGeometry
 
 """
-    probable_dc(N::Integer, lx::Number, ly::Number, [max_densitty=1]) -> dc::Real
+    probable_max_dc(N::Integer, lx::Number, ly::Number, [density_extrema=(1,1)]) -> dc::Real
 
-Given a mesh with `N` cells, (`lx`, `ly`) periods, and maximum density `max_density`, returns an educated guess at what the minimum cell distance `dc` will be.
+Given a mesh with `N` cells, (`lx`, `ly`) periods, and density extremas `density_extrema`, returns an educated guess at what the maximum cell distance `dc` will be.
 """
-function probable_dc(N::Integer, lx::Real, ly::Real, max_den = true)
-    0.95231281 * sqrt(4 * (lx * ly / N) / pi) / max_den
+function probable_max_dc(N::Integer, lx::Real, ly::Real, (min_den, max_den) = (1, 1))
+    0.95231281 * sqrt(4 * (lx * ly / N) / pi) * ((max_den / min_den)^(1/3))
 end
 
-function expand_periodic_points(points::AbstractVector{<:Vec2Dxy}, xp::Number, yp::Number)
+"""
+    probable_min_dc(N::Integer, lx::Number, ly::Number, [density_extrema=(1,1)]) -> dc::Real
+
+Given a mesh with `N` cells, (`lx`, `ly`) periods, and density extremas `density_extrema`, returns an educated guess at what the minimum cell distance `dc` will be.
+"""
+function probable_min_dc(N::Integer, lx::Real, ly::Real, (min_den, max_den) = (1, 1))
+    0.95231281 * sqrt(4 * (lx * ly / N) / pi) / ((max_den / min_den)^(1/3))
+end
+
+
+function expand_periodic_points(points::AbstractVector{<:Vec2Dxy}, xp::Number, yp::Number, density_extrema = (1, 1))
     points_indices = eachindex(points)
 
     N = length(points)
     #N_div = 2
-    N_div = Int(floor(xp / (5 * probable_dc(N, xp, yp))))
+    N_div = max(1, Int(floor(xp / (5 * probable_max_dc(N, xp, yp, density_extrema)))))
 
     pxi = filter(i -> (points[i].x < xp / N_div), eachindex(points))
     px = @view(points[pxi]) .+ (xp * 𝐢)
@@ -112,12 +122,13 @@ function centroidal_voronoi_loyd(::TT, vor::TV, initial_generator_points, N::Int
 
     fill_with_polygon_mass_centroids!(initial_new, N, lx, ly, vor, density)
 
-    p_new, inds_new = expand_periodic_points(initial_new, lx, ly)
+    den_extrema = extrema(density, initial_new)
+    p_new, inds_new = expand_periodic_points(initial_new, lx, ly, den_extrema)
 
     new_tri::TT = triangulate(reinterpret(NTuple{2, Float64}, p_new))
     new_vor::TV = voronoi(new_tri, clip = true)
 
-    expected_dc = probable_dc(N, lx, ly, maximum(density, initial_new))
+    expected_dc = probable_min_dc(N, lx, ly, den_extrema)
 
     println("Performing Lloyd's iteration with relative tolerance = $rtol and maximum number of iterations: $max_iter")
     iter = 0
@@ -139,7 +150,7 @@ function centroidal_voronoi_loyd(::TT, vor::TV, initial_generator_points, N::Int
 
         fill_with_polygon_mass_centroids!(initial_new, N, lx, ly, vor, density)
 
-        p_new, inds_new = expand_periodic_points(initial_new, lx, ly)
+        p_new, inds_new = expand_periodic_points(initial_new, lx, ly, den_extrema)
 
         new_tri = triangulate(reinterpret(NTuple{2, Float64}, p_new))
         new_vor = voronoi(new_tri, clip = true)
@@ -180,7 +191,7 @@ function generate_periodic_centroidal_voronoi(points::AbstractVector, lx::Real, 
     initial_generator_points = check_and_fix_periodicity_points(points, lx, ly)
 
     N = length(initial_generator_points)
-    p, inds = expand_periodic_points(initial_generator_points, lx, ly)
+    p, inds = expand_periodic_points(initial_generator_points, lx, ly, extrema(density, initial_generator_points))
     p_tuple = reinterpret(NTuple{2, Float64}, p)
     tri = triangulate(p_tuple)
     vor = voronoi(tri, clip = true)

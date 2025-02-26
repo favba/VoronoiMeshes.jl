@@ -52,13 +52,26 @@ end
 precompile(Tuple{typeof(Core.kwcall), NamedTuple{(:format,), Tuple{Symbol}}, Type{NCDatasets.NCDataset{TDS, Tmaskingvalue} where Tmaskingvalue where TDS}, String, String})
 precompile(Tuple{typeof(NCDatasets.nc_create), String, UInt16})
 precompile(Tuple{typeof(Base.setindex!), NCDatasets.CommonDataModel.Attributes{NCDatasets.Variable{Float64, 1, NCDatasets.NCDataset{Nothing, Base.Missing}}}, String, String})
-precompile(Tuple{typeof(Base.argtail), NCDatasets.DiskArrays.MRArray{Any, 0, Tuple{}}})
-precompile(Tuple{typeof(Base.getproperty), NCDatasets.DiskArrays.MRArray{Any, 0, Tuple{}}, Symbol})
+@static if pkgversion(NCDatasets.DiskArrays) < v"0.4.10"
+    precompile(Tuple{typeof(Base.argtail), NCDatasets.DiskArrays.MRArray{Any, 0, Tuple{}}})
+    precompile(Tuple{typeof(Base.getproperty), NCDatasets.DiskArrays.MRArray{Any, 0, Tuple{}}, Symbol})
+else
+    precompile(Tuple{typeof(Base.argtail), NCDatasets.DiskArrays.MultiReadArray{Any, 0, Tuple{}}})
+    precompile(Tuple{typeof(Base.getproperty), NCDatasets.DiskArrays.MultiReadArray{Any, 0, Tuple{}}, Symbol})
+end
 precompile(Tuple{typeof(Base.setindex!), NCDatasets.CommonDataModel.CFVariable{Float64, 1, NCDatasets.Variable{Float64, 1, NCDatasets.NCDataset{Nothing, Base.Missing}}, NCDatasets.CommonDataModel.Attributes{NCDatasets.Variable{Float64, 1, NCDatasets.NCDataset{Nothing, Base.Missing}}}, NamedTuple{(:fillvalue, :missing_values, :scale_factor, :add_offset, :calendar, :time_origin, :time_factor, :maskingvalue), Tuple{Nothing, Tuple{}, Nothing, Nothing, Nothing, Nothing, Nothing, Base.Missing}}}, Array{Float64, 1}, Base.OneTo{Int64}})
-precompile(Tuple{typeof(NCDatasets.DiskArrays.writeblock_sizecheck!), NCDatasets.Variable{Float64, 1, NCDatasets.NCDataset{Nothing, Base.Missing}}, Array{Float64, 1}, Base.OneTo{Int64}})
+@static if pkgversion(NCDatasets.DiskArrays) < v"0.4.10"
+    precompile(Tuple{typeof(NCDatasets.DiskArrays.writeblock_sizecheck!), NCDatasets.Variable{Float64, 1, NCDatasets.NCDataset{Nothing, Base.Missing}}, Array{Float64, 1}, Base.OneTo{Int64}})
+else
+    precompile(Tuple{typeof(NCDatasets.DiskArrays.writeblock_checked!), NCDatasets.Variable{Float64, 1, NCDatasets.NCDataset{Nothing, Base.Missing}}, Array{Float64, 1}, Base.OneTo{Int64}})
+end
 precompile(Tuple{typeof(Base.setindex!), NCDatasets.CommonDataModel.Attributes{NCDatasets.Variable{Int32, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}}, String, String})
 precompile(Tuple{typeof(Base.setindex!), NCDatasets.CommonDataModel.CFVariable{Int32, 2, NCDatasets.Variable{Int32, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}, NCDatasets.CommonDataModel.Attributes{NCDatasets.Variable{Int32, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}}, NamedTuple{(:fillvalue, :missing_values, :scale_factor, :add_offset, :calendar, :time_origin, :time_factor, :maskingvalue), Tuple{Nothing, Tuple{}, Nothing, Nothing, Nothing, Nothing, Nothing, Base.Missing}}}, Base.ReinterpretArray{Int32, 2, Tuple{Int32, Int32, Int32}, Array{Tuple{Int32, Int32, Int32}, 1}, true}, Base.OneTo{Int64}, Base.OneTo{Int64}})
-precompile(Tuple{typeof(NCDatasets.DiskArrays.writeblock_sizecheck!), NCDatasets.Variable{Int32, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}, Base.ReinterpretArray{Int32, 2, Tuple{Int32, Int32, Int32}, Array{Tuple{Int32, Int32, Int32}, 1}, true}, Base.OneTo{Int64}, Vararg{Base.OneTo{Int64}}})
+@static if pkgversion(NCDatasets.DiskArrays) < v"0.4.10"
+    precompile(Tuple{typeof(NCDatasets.DiskArrays.writeblock_sizecheck!), NCDatasets.Variable{Int32, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}, Base.ReinterpretArray{Int32, 2, Tuple{Int32, Int32, Int32}, Array{Tuple{Int32, Int32, Int32}, 1}, true}, Base.OneTo{Int64}, Vararg{Base.OneTo{Int64}}})
+else
+    precompile(Tuple{typeof(NCDatasets.DiskArrays.writeblock_checked!), NCDatasets.Variable{Int32, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}, Base.ReinterpretArray{Int32, 2, Tuple{Int32, Int32, Int32}, Array{Tuple{Int32, Int32, Int32}, 1}, true}, Base.OneTo{Int64}, Vararg{Base.OneTo{Int64}}})
+end
 precompile(Tuple{typeof(NCDatasets.DiskArrays.writeblock!), NCDatasets.Variable{Int32, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}, Base.ReinterpretArray{Int32, 2, Tuple{Int32, Int32, Int32}, Array{Tuple{Int32, Int32, Int32}, 1}, true}, Base.OneTo{Int64}, Vararg{Base.OneTo{Int64}}})
 precompile(Tuple{typeof(NCDatasets._write_data_to_nc), NCDatasets.Variable{Int32, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}, Base.ReinterpretArray{Int32, 2, Tuple{Int32, Int32, Int32}, Array{Tuple{Int32, Int32, Int32}, 1}, true}, Base.OneTo{Int64}, Vararg{Base.OneTo{Int64}}})
 precompile(Tuple{typeof(Base.to_indices), NCDatasets.Variable{Int32, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}, Tuple{Base.OneTo{Int64}, Base.OneTo{Int64}}, Tuple{Base.OneTo{Int64}, Base.OneTo{Int64}}})
@@ -66,23 +79,39 @@ precompile(Tuple{typeof(NCDatasets.size_getindex), NCDatasets.Variable{Int32, 2,
 precompile(Tuple{typeof(NCDatasets._size_getindex), NCDatasets.Variable{Int32, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}, Tuple{}, Int64, Base.OneTo{Int64}, Base.OneTo{Int64}})
 for N in 6:9
     precompile(Tuple{typeof(Base.setindex!), NCDatasets.CommonDataModel.CFVariable{Int32, 2, NCDatasets.Variable{Int32, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}, NCDatasets.CommonDataModel.Attributes{NCDatasets.Variable{Int32, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}}, NamedTuple{(:fillvalue, :missing_values, :scale_factor, :add_offset, :calendar, :time_origin, :time_factor, :maskingvalue), Tuple{Nothing, Tuple{}, Nothing, Nothing, Nothing, Nothing, Nothing, Base.Missing}}}, Base.ReinterpretArray{Int32, 2, NTuple{N, Int32}, Array{NTuple{N, Int32}, 1}, true}, Base.OneTo{Int64}, Base.OneTo{Int64}})
-    precompile(Tuple{typeof(NCDatasets.DiskArrays.writeblock_sizecheck!), NCDatasets.Variable{Int32, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}, Base.ReinterpretArray{Int32, 2, NTuple{N, Int32}, Array{NTuple{N, Int32}, 1}, true}, Base.OneTo{Int64}, Vararg{Base.OneTo{Int64}}})
+    @static if pkgversion(NCDatasets.DiskArrays) < v"0.4.10"
+        precompile(Tuple{typeof(NCDatasets.DiskArrays.writeblock_sizecheck!), NCDatasets.Variable{Int32, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}, Base.ReinterpretArray{Int32, 2, NTuple{N, Int32}, Array{NTuple{N, Int32}, 1}, true}, Base.OneTo{Int64}, Vararg{Base.OneTo{Int64}}})
+    else
+        precompile(Tuple{typeof(NCDatasets.DiskArrays.writeblock_checked!), NCDatasets.Variable{Int32, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}, Base.ReinterpretArray{Int32, 2, NTuple{N, Int32}, Array{NTuple{N, Int32}, 1}, true}, Base.OneTo{Int64}, Vararg{Base.OneTo{Int64}}})
+    end
     precompile(Tuple{typeof(NCDatasets.DiskArrays.writeblock!), NCDatasets.Variable{Int32, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}, Base.ReinterpretArray{Int32, 2, NTuple{N, Int32}, Array{NTuple{N, Int32}, 1}, true}, Base.OneTo{Int64}, Vararg{Base.OneTo{Int64}}})
     precompile(Tuple{typeof(NCDatasets._write_data_to_nc), NCDatasets.Variable{Int32, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}, Base.ReinterpretArray{Int32, 2, NTuple{N, Int32}, Array{NTuple{N, Int32}, 1}, true}, Base.OneTo{Int64}, Vararg{Base.OneTo{Int64}}})
 end
 precompile(Tuple{typeof(Base.setindex!), NCDatasets.CommonDataModel.Attributes{NCDatasets.Variable{Int32, 1, NCDatasets.NCDataset{Nothing, Base.Missing}}}, String, String})
 precompile(Tuple{typeof(Base.setindex!), NCDatasets.CommonDataModel.CFVariable{Int32, 1, NCDatasets.Variable{Int32, 1, NCDatasets.NCDataset{Nothing, Base.Missing}}, NCDatasets.CommonDataModel.Attributes{NCDatasets.Variable{Int32, 1, NCDatasets.NCDataset{Nothing, Base.Missing}}}, NamedTuple{(:fillvalue, :missing_values, :scale_factor, :add_offset, :calendar, :time_origin, :time_factor, :maskingvalue), Tuple{Nothing, Tuple{}, Nothing, Nothing, Nothing, Nothing, Nothing, Base.Missing}}}, Array{Int32, 1}, Base.OneTo{Int64}})
-precompile(Tuple{typeof(NCDatasets.DiskArrays.writeblock_sizecheck!), NCDatasets.Variable{Int32, 1, NCDatasets.NCDataset{Nothing, Base.Missing}}, Array{Int32, 1}, Base.OneTo{Int64}})
+@static if pkgversion(NCDatasets.DiskArrays) < v"0.4.10"
+    precompile(Tuple{typeof(NCDatasets.DiskArrays.writeblock_sizecheck!), NCDatasets.Variable{Int32, 1, NCDatasets.NCDataset{Nothing, Base.Missing}}, Array{Int32, 1}, Base.OneTo{Int64}})
+else
+    precompile(Tuple{typeof(NCDatasets.DiskArrays.writeblock_checked!), NCDatasets.Variable{Int32, 1, NCDatasets.NCDataset{Nothing, Base.Missing}}, Array{Int32, 1}, Base.OneTo{Int64}})
+end
 precompile(Tuple{typeof(Base.setindex!), NCDatasets.CommonDataModel.Attributes{NCDatasets.Variable{Float64, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}}, String, String})
 precompile(Tuple{typeof(Base.setindex!), NCDatasets.CommonDataModel.CFVariable{Float64, 2, NCDatasets.Variable{Float64, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}, NCDatasets.CommonDataModel.Attributes{NCDatasets.Variable{Float64, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}}, NamedTuple{(:fillvalue, :missing_values, :scale_factor, :add_offset, :calendar, :time_origin, :time_factor, :maskingvalue), Tuple{Nothing, Tuple{}, Nothing, Nothing, Nothing, Nothing, Nothing, Base.Missing}}}, Base.ReinterpretArray{Float64, 2, Tuple{Float64, Float64, Float64}, Array{Tuple{Float64, Float64, Float64}, 1}, true}, Base.OneTo{Int64}, Base.OneTo{Int64}})
-precompile(Tuple{typeof(NCDatasets.DiskArrays.writeblock_sizecheck!), NCDatasets.Variable{Float64, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}, Base.ReinterpretArray{Float64, 2, Tuple{Float64, Float64, Float64}, Array{Tuple{Float64, Float64, Float64}, 1}, true}, Base.OneTo{Int64}, Vararg{Base.OneTo{Int64}}})
+@static if pkgversion(NCDatasets.DiskArrays) < v"0.4.10"
+    precompile(Tuple{typeof(NCDatasets.DiskArrays.writeblock_sizecheck!), NCDatasets.Variable{Float64, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}, Base.ReinterpretArray{Float64, 2, Tuple{Float64, Float64, Float64}, Array{Tuple{Float64, Float64, Float64}, 1}, true}, Base.OneTo{Int64}, Vararg{Base.OneTo{Int64}}})
+else
+    precompile(Tuple{typeof(NCDatasets.DiskArrays.writeblock_checked!), NCDatasets.Variable{Float64, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}, Base.ReinterpretArray{Float64, 2, Tuple{Float64, Float64, Float64}, Array{Tuple{Float64, Float64, Float64}, 1}, true}, Base.OneTo{Int64}, Vararg{Base.OneTo{Int64}}})
+end
 precompile(Tuple{typeof(NCDatasets.DiskArrays.writeblock!), NCDatasets.Variable{Float64, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}, Base.ReinterpretArray{Float64, 2, Tuple{Float64, Float64, Float64}, Array{Tuple{Float64, Float64, Float64}, 1}, true}, Base.OneTo{Int64}, Vararg{Base.OneTo{Int64}}})
 precompile(Tuple{typeof(NCDatasets._write_data_to_nc), NCDatasets.Variable{Float64, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}, Base.ReinterpretArray{Float64, 2, Tuple{Float64, Float64, Float64}, Array{Tuple{Float64, Float64, Float64}, 1}, true}, Base.OneTo{Int64}, Vararg{Base.OneTo{Int64}}})
 precompile(Tuple{typeof(Base.to_indices), NCDatasets.Variable{Float64, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}, Tuple{Base.OneTo{Int64}, Base.OneTo{Int64}}, Tuple{Base.OneTo{Int64}, Base.OneTo{Int64}}})
 precompile(Tuple{typeof(NCDatasets.size_getindex), NCDatasets.Variable{Float64, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}, Base.OneTo{Int64}, Vararg{Base.OneTo{Int64}}})
 precompile(Tuple{typeof(NCDatasets._size_getindex), NCDatasets.Variable{Float64, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}, Tuple{}, Int64, Base.OneTo{Int64}, Base.OneTo{Int64}})
 precompile(Tuple{typeof(Base.setindex!), NCDatasets.CommonDataModel.CFVariable{Int32, 2, NCDatasets.Variable{Int32, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}, NCDatasets.CommonDataModel.Attributes{NCDatasets.Variable{Int32, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}}, NamedTuple{(:fillvalue, :missing_values, :scale_factor, :add_offset, :calendar, :time_origin, :time_factor, :maskingvalue), Tuple{Nothing, Tuple{}, Nothing, Nothing, Nothing, Nothing, Nothing, Base.Missing}}}, Base.ReinterpretArray{Int32, 2, Tuple{Int32, Int32}, Array{Tuple{Int32, Int32}, 1}, true}, Base.OneTo{Int64}, Base.OneTo{Int64}})
-precompile(Tuple{typeof(NCDatasets.DiskArrays.writeblock_sizecheck!), NCDatasets.Variable{Int32, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}, Base.ReinterpretArray{Int32, 2, Tuple{Int32, Int32}, Array{Tuple{Int32, Int32}, 1}, true}, Base.OneTo{Int64}, Vararg{Base.OneTo{Int64}}})
+@static if pkgversion(NCDatasets.DiskArrays) < v"0.4.10"
+    precompile(Tuple{typeof(NCDatasets.DiskArrays.writeblock_sizecheck!), NCDatasets.Variable{Int32, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}, Base.ReinterpretArray{Int32, 2, Tuple{Int32, Int32}, Array{Tuple{Int32, Int32}, 1}, true}, Base.OneTo{Int64}, Vararg{Base.OneTo{Int64}}})
+else
+    precompile(Tuple{typeof(NCDatasets.DiskArrays.writeblock_checked!), NCDatasets.Variable{Int32, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}, Base.ReinterpretArray{Int32, 2, Tuple{Int32, Int32}, Array{Tuple{Int32, Int32}, 1}, true}, Base.OneTo{Int64}, Vararg{Base.OneTo{Int64}}})
+end
 precompile(Tuple{typeof(NCDatasets.DiskArrays.writeblock!), NCDatasets.Variable{Int32, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}, Base.ReinterpretArray{Int32, 2, Tuple{Int32, Int32}, Array{Tuple{Int32, Int32}, 1}, true}, Base.OneTo{Int64}, Vararg{Base.OneTo{Int64}}})
 precompile(Tuple{typeof(NCDatasets._write_data_to_nc), NCDatasets.Variable{Int32, 2, NCDatasets.NCDataset{Nothing, Base.Missing}}, Base.ReinterpretArray{Int32, 2, Tuple{Int32, Int32}, Array{Tuple{Int32, Int32}, 1}, true}, Base.OneTo{Int64}, Vararg{Base.OneTo{Int64}}})
 for N in 6:10

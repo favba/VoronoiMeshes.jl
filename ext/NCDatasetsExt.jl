@@ -472,6 +472,10 @@ end
 
 include("save_to_netcdf.jl")
 
-include("precompile_NCDataset.jl")
+if pkgversion(NCDatasets.DiskArrays) >= v"0.4.10"
+    include("precompile_NCDataset.jl")
+else
+    include("precompile_NCDataset_DiskArray_before_v0.4.10.jl")
+end
 
 end # module

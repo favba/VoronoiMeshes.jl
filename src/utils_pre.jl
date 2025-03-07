@@ -309,7 +309,7 @@ function compute_latitude!(latitude::Vector, pos::VecArray)
             x = px[c]
             y = py[c]
             z = pz[c]
-            latitude[c] = atan(z / sqrt(x * x + y * y))
+            latitude[c] = atan(z / hypot(x, y))
         end
     end
     return latitude
@@ -349,7 +349,7 @@ function compute_meridionalVector!(meridionalVector::VecArray, pos::VecArray)
             y = py[c]
             z = pz[c]
             ϕ = atan(y, x)
-            θ = atan(sqrt(x * x + y * y), z)
+            θ = atan(hypot(x, y), z)
             sinϕ = sin(ϕ)
             cosϕ = cos(ϕ)
             sinθ = sin(θ)

@@ -7,7 +7,8 @@ export @parallel
 export AbstractVoronoiDiagram, VoronoiDiagram, PlanarVoronoiDiagram, SphericalVoronoiDiagram
 export CellInfo, Cells, VertexInfo, Vertices, EdgeInfo, Edges
 export AbstractVoronoiMesh, VoronoiMesh, on_sphere, max_edges, integer_type, float_type, get_diagram
-export meshplot, meshplot!, diagramplot, diagramplot!
+export plotmesh, plotmesh!, plotdiagram, plotdiagram!, plotdualmesh, plotdualmesh!
+export create_cell_polygons, create_dual_triangles, create_edge_quadrilaterals
 export graph_partition, find_obtuse_triangles, periodic_edges_mask, periodic_vertices_mask
 export check_mesh, check_edge_normal_and_tangent, check_vertex_indexing, check_cell_indexing
 export save
@@ -193,22 +194,20 @@ function save_to_netcdf! end
 
 #functions to be used when Makie is loaded
 #Definitions are in ext/GeometryBasicsExt.jl
-function create_cells_polygons_periodic end
-function create_cells_polygons end
-function create_dual_triangles_periodic end
+function create_cell_polygons end
 function create_dual_triangles end
-function create_edge_quadrilaterals_periodic end
 function create_edge_quadrilaterals end
-function create_cell_linesegments_periodic end
 function create_cell_linesegments end
-function create_diagram_linesegments_periodic end
+function create_dual_triangles_linesegments end
 function create_diagram_linesegments end
 
 # Defined in ext/MakieExt.jl
-function meshplot end
-function meshplot! end
+function plotmesh end
+function plotmesh! end
+function plotdualmesh end
+function plotdualmesh! end
 
-function diagramplot end
-function diagramplot! end
+function plotdiagram end
+function plotdiagram! end
 
 end # Module

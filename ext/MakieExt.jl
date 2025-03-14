@@ -1,10 +1,10 @@
 module MakieExt
 
 using VoronoiMeshes
-import VoronoiMeshes: meshplot, meshplot!, diagramplot, diagramplot!
+import VoronoiMeshes: plotmesh, plotmesh!, plotdiagram, plotdiagram!, plotdualmesh, plotdualmesh!
 import Makie as plt
 
-plt.@recipe(MeshPlot, mesh) do scene
+plt.@recipe(PlotMesh, mesh) do scene
     plt.Theme(
         color = :deepskyblue3,
         edgelinestyle = :solid,
@@ -13,7 +13,7 @@ plt.@recipe(MeshPlot, mesh) do scene
     )
 end
 
-const PeriodicMesh = MeshPlot{<:Tuple{<:AbstractVoronoiMesh{false}}}
+const PeriodicMesh = PlotMesh{<:Tuple{<:AbstractVoronoiMesh{false}}}
 
 function plt.plot!(plot::PeriodicMesh)
     mesh = plot.mesh
@@ -35,7 +35,7 @@ function plt.plot!(plot::PeriodicMesh)
     plot
 end
 
-plt.@recipe(DiagramPlot, diagram) do scene
+plt.@recipe(PlotDiagram, diagram) do scene
     plt.Theme(
         color = :deepskyblue3,
         linestyle = :solid,
@@ -43,7 +43,7 @@ plt.@recipe(DiagramPlot, diagram) do scene
     )
 end
 
-const PeriodicDiagram = DiagramPlot{<:Tuple{<:VoronoiDiagram{false}}}
+const PeriodicDiagram = PlotDiagram{<:Tuple{<:VoronoiDiagram{false}}}
 
 function plt.plot!(plot::PeriodicDiagram)
     diagram = plot.diagram
@@ -55,6 +55,37 @@ function plt.plot!(plot::PeriodicDiagram)
         edges[2]
     end
     plt.linesegments!(plot, x_edges, y_edges, color = plot.color, linestyle = plot.linestyle, linewidth = plot.linewidth)
+    plot
+end
+
+plt.@recipe(PlotDualMesh, mesh) do scene
+    plt.Theme(
+        color = :darkorange2,
+        edgelinestyle = :solid,
+        ghostedgelinestyle = :dash,
+        linewidth = 1,
+    )
+end
+
+const PeriodicDualMesh = PlotDualMesh{<:Tuple{<:AbstractVoronoiMesh{false}}}
+
+function plt.plot!(plot::PeriodicDualMesh)
+    mesh = plot.mesh
+    both_edges = plt.lift(VoronoiMeshes.create_dual_triangles_linesegments, mesh)
+    x_edges = plt.lift(both_edges) do both_edges
+        both_edges[1][1]
+    end
+    y_edges = plt.lift(both_edges) do both_edges
+        both_edges[1][2]
+    end
+    x_ghost_edges = plt.lift(both_edges) do both_edges
+        both_edges[2][1]
+    end
+    y_ghost_edges = plt.lift(both_edges) do both_edges
+        both_edges[2][2]
+    end
+    plt.linesegments!(plot, x_edges, y_edges, color = plot.color, linestyle = plot.edgelinestyle, linewidth = plot.linewidth)
+    plt.linesegments!(plot, x_ghost_edges, y_ghost_edges, color = plot.color, linestyle = plot.ghostedgelinestyle, linewidth = plot.linewidth)
     plot
 end
 

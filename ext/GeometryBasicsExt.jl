@@ -11,7 +11,7 @@ else
     const PolType = Polygon{2, Float32}
 end
 
-function VoronoiMeshes.create_cells_polygons_periodic(vert_pos, cell_pos, verticesOnCell, x_period, y_period)
+function create_cell_polygons_periodic(vert_pos, cell_pos, verticesOnCell, x_period, y_period)
 
     cell_polygons = Vector{PolType}(undef, length(cell_pos))
     NE = max_length(eltype(verticesOnCell))
@@ -30,11 +30,11 @@ function VoronoiMeshes.create_cells_polygons_periodic(vert_pos, cell_pos, vertic
     return cell_polygons
 end
 
-function VoronoiMeshes.create_cells_polygons(mesh::AbstractVoronoiMesh{false})
-    return VoronoiMeshes.create_cells_polygons_periodic(mesh.vertices.position, mesh.cells.position, mesh.cells.vertices, mesh.x_period, mesh.y_period)
+function VoronoiMeshes.create_cell_polygons(mesh::AbstractVoronoiMesh{false})
+    return create_cells_polygons_periodic(mesh.vertices.position, mesh.cells.position, mesh.cells.vertices, mesh.x_period, mesh.y_period)
 end
 
-function VoronoiMeshes.create_dual_triangles_periodic(vert_pos, cell_pos, cellsOnVertex, x_period, y_period)
+function create_dual_triangles_periodic(vert_pos, cell_pos, cellsOnVertex, x_period, y_period)
 
     vert_triangles = Vector{PolType}(undef, length(vert_pos))
 
@@ -57,10 +57,10 @@ function VoronoiMeshes.create_dual_triangles_periodic(vert_pos, cell_pos, cellsO
 end
 
 function VoronoiMeshes.create_dual_triangles(mesh::AbstractVoronoiMesh{false})
-    return VoronoiMeshes.create_dual_triangles_periodic(mesh.vertices.position, mesh.cells.position, mesh.vertices.cells, mesh.x_period, mesh.y_period)
+    return create_dual_triangles_periodic(mesh.vertices.position, mesh.cells.position, mesh.vertices.cells, mesh.x_period, mesh.y_period)
 end
 
-function VoronoiMeshes.create_edge_quadrilaterals_periodic(edge_pos, vert_pos, cell_pos, verticesOnEdge, cellsOnEdge, x_period, y_period)
+function create_edge_quadrilaterals_periodic(edge_pos, vert_pos, cell_pos, verticesOnEdge, cellsOnEdge, x_period, y_period)
 
     edge_quadrilaterals = Vector{PolType}(undef, length(edge_pos))
 
@@ -86,10 +86,10 @@ function VoronoiMeshes.create_edge_quadrilaterals_periodic(edge_pos, vert_pos, c
 end
 
 function VoronoiMeshes.create_edge_quadrilaterals(mesh::AbstractVoronoiMesh{false})
-    return VoronoiMeshes.create_edge_quadrilaterals_periodic(mesh.edges.position, mesh.vertices.position, mesh.cells.position, mesh.edges.vertices, mesh.edges.cells, mesh.x_period, mesh.y_period)
+    return create_edge_quadrilaterals_periodic(mesh.edges.position, mesh.vertices.position, mesh.cells.position, mesh.edges.vertices, mesh.edges.cells, mesh.x_period, mesh.y_period)
 end
 
-function VoronoiMeshes.create_cell_linesegments_periodic(vert_pos, edge_pos, cell_pos, edgesOnCell, verticesOnEdge, x_period, y_period)
+function create_cell_linesegments_periodic(vert_pos, edge_pos, cell_pos, edgesOnCell, verticesOnEdge, x_period, y_period)
     x = eltype(edge_pos.x)[]
     y = eltype(edge_pos.y)[]
     nEdges = length(verticesOnEdge)
@@ -136,10 +136,10 @@ function VoronoiMeshes.create_cell_linesegments_periodic(vert_pos, edge_pos, cel
 end
 
 function VoronoiMeshes.create_cell_linesegments(mesh::AbstractVoronoiMesh{false})
-    return VoronoiMeshes.create_cell_linesegments_periodic(mesh.vertices.position, mesh.edges.position, mesh.cells.position, mesh.cells.edges, mesh.edges.vertices, mesh.x_period, mesh.y_period)
+    return create_cell_linesegments_periodic(mesh.vertices.position, mesh.edges.position, mesh.cells.position, mesh.cells.edges, mesh.edges.vertices, mesh.x_period, mesh.y_period)
 end
 
-function VoronoiMeshes.create_diagram_linesegments_periodic(vert_pos, cell_pos, verticesOnCell, cellsOnVertex, x_period, y_period)
+function create_diagram_linesegments_periodic(vert_pos, cell_pos, verticesOnCell, cellsOnVertex, x_period, y_period)
     x = eltype(vert_pos.x)[]
     y = eltype(vert_pos.y)[]
     nEdges = length(verticesOnCell) + length(cellsOnVertex)
@@ -175,7 +175,58 @@ function VoronoiMeshes.create_diagram_linesegments_periodic(vert_pos, cell_pos, 
 end
 
 function VoronoiMeshes.create_diagram_linesegments(diagram::VoronoiDiagram{false})
-    return VoronoiMeshes.create_diagram_linesegments_periodic(diagram.vertices, diagram.generators, diagram.verticesOnCell, diagram.cellsOnVertex, diagram.x_period, diagram.y_period)
+    return create_diagram_linesegments_periodic(diagram.vertices, diagram.generators, diagram.verticesOnCell, diagram.cellsOnVertex, diagram.x_period, diagram.y_period)
+end
+
+function create_dual_triangles_linesegments_periodic(vert_pos, edge_pos, cell_pos, edgesOnVertex, cellsOnEdge, x_period, y_period)
+    x = eltype(edge_pos.x)[]
+    y = eltype(edge_pos.y)[]
+    nEdges = length(cellsOnEdge)
+    sizehint!(x, 2 * nEdges)
+    sizehint!(y, 2 * nEdges)
+    x_periodic = eltype(edge_pos.x)[]
+    y_periodic = eltype(edge_pos.y)[]
+    sizehint!(x_periodic, nEdges ÷ 2)
+    sizehint!(y_periodic, nEdges ÷ 2)
+
+    touched_edges_pos = Set{eltype(edge_pos)}()
+
+    @inbounds for i in eachindex(edgesOnVertex)
+        v_pos = vert_pos[i]
+        edges_ind = edgesOnVertex[i]
+
+        for j in edges_ind
+            e_pos = edge_pos[j]
+            closest_e_pos = closest(v_pos, e_pos, x_period, y_period)
+            if !(closest_e_pos in touched_edges_pos)
+                p = cellsOnEdge[j]
+
+                is_interior = closest_e_pos == e_pos
+                for k in p
+                    c_pos = cell_pos[k]
+                    closest_c_pos = closest(closest_e_pos, c_pos, x_period, y_period)
+                    if (is_interior)
+                        push!(x, closest_c_pos.x)
+                        push!(y, closest_c_pos.y)
+                    else
+                        push!(x_periodic, closest_c_pos.x)
+                        push!(y_periodic, closest_c_pos.y)
+                    end
+                end
+
+                push!(touched_edges_pos, closest_e_pos)
+            end
+
+        end
+
+    end
+
+    return ((x, y), (x_periodic, y_periodic))
+end
+
+function VoronoiMeshes.create_dual_triangles_linesegments(mesh::AbstractVoronoiMesh{false})
+    return create_dual_triangles_linesegments_periodic(mesh.vertices.position, mesh.edges.position, mesh.cells.position, mesh.vertices.edges, mesh.edges.cells, mesh.x_period, mesh.y_period)
 end
 
 end
+

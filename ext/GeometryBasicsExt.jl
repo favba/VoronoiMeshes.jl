@@ -31,7 +31,45 @@ function create_cell_polygons_periodic(vert_pos, cell_pos, verticesOnCell, x_per
 end
 
 function VoronoiMeshes.create_cell_polygons(mesh::AbstractVoronoiMesh{false})
-    return create_cells_polygons_periodic(mesh.vertices.position, mesh.cells.position, mesh.cells.vertices, mesh.x_period, mesh.y_period)
+    return create_cell_polygons_periodic(mesh.vertices.position, mesh.cells.position, mesh.cells.vertices, mesh.x_period, mesh.y_period)
+end
+
+function create_cell_polygons_sphere(vert_lon::Vector{T}, vert_lat, cell_lon, verticesOnCell) where {T<:Number}
+    lon_min = minimum(cell_lon)
+
+    if lon_min < zero(T)
+        lon_factor = zero(T)
+    else
+        lon_factor = T(-180)
+    end
+
+    x_period = T(360)
+
+    cell_polygons = Vector{PolType}(undef, length(cell_lon))
+    NE = max_length(eltype(verticesOnCell))
+
+    @parallel for i in eachindex(cell_lon)
+        @inbounds begin
+            c_lon = rad2deg(cell_lon[i]) + lon_factor
+            local_vertices = ImmutableVector{NE, Point2f}()
+            for i_v in verticesOnCell[i]
+                vlon_aux = rad2deg(vert_lon[i_v]) + lon_factor
+                vlat = rad2deg(vert_lat[i_v])
+                vlons = (vlon_aux - x_period, vlon_aux, vlon_aux + x_period)
+                _, j = findmin(abs, vlons .- c_lon)
+                vlon = vlons[j]
+                
+                local_vertices = @inbounds push(local_vertices, Point2f(vlon, vlat))
+            end
+            cell_polygons[i] = Polygon(Array(local_vertices))
+        end
+    end
+
+    return cell_polygons
+end
+
+function VoronoiMeshes.create_cell_polygons(mesh::AbstractVoronoiMesh{true})
+    return create_cell_polygons_sphere(mesh.vertices.longitude, mesh.vertices.latitude, mesh.cells.longitude, mesh.cells.vertices)
 end
 
 function create_dual_triangles_periodic(vert_pos, cell_pos, cellsOnVertex, x_period, y_period)

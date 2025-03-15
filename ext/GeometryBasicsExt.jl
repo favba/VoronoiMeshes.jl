@@ -34,15 +34,7 @@ function VoronoiMeshes.create_cell_polygons(mesh::AbstractVoronoiMesh{false})
     return create_cell_polygons_periodic(mesh.vertices.position, mesh.cells.position, mesh.cells.vertices, mesh.x_period, mesh.y_period)
 end
 
-function create_cell_polygons_sphere(vert_lon::Vector{T}, vert_lat, cell_lon, verticesOnCell) where {T<:Number}
-    lon_min = minimum(cell_lon)
-
-    if lon_min < zero(T)
-        lon_factor = zero(T)
-    else
-        lon_factor = T(-180)
-    end
-
+function create_cell_polygons_sphere(vert_lon::Vector{T}, vert_lat, cell_lon, verticesOnCell, clip::Bool = false) where {T<:Number}
     x_period = T(360)
 
     cell_polygons = Vector{PolType}(undef, length(cell_lon))
@@ -50,15 +42,36 @@ function create_cell_polygons_sphere(vert_lon::Vector{T}, vert_lat, cell_lon, ve
 
     @parallel for i in eachindex(cell_lon)
         @inbounds begin
-            c_lon = rad2deg(cell_lon[i]) + lon_factor
+            c_lon_aux = rad2deg(cell_lon[i])
+            c_lon = c_lon_aux > 180 ? c_lon_aux - x_period : c_lon_aux
             local_vertices = ImmutableVector{NE, Point2f}()
+
             for i_v in verticesOnCell[i]
-                vlon_aux = rad2deg(vert_lon[i_v]) + lon_factor
+                vlon_aux_1 = rad2deg(vert_lon[i_v])
+                vlon_aux = vlon_aux_1 > 180 ? vlon_aux_1 - x_period : vlon_aux_1
                 vlat = rad2deg(vert_lat[i_v])
                 vlons = (vlon_aux - x_period, vlon_aux, vlon_aux + x_period)
-                _, j = findmin(abs, vlons .- c_lon)
-                vlon = vlons[j]
-                
+
+                min_diff = abs(vlons[1] - c_lon)
+                vlon = vlons[1]
+                diff = abs(vlons[2] - c_lon)
+
+                if diff < min_diff
+                    vlon = vlons[2]
+                    min_diff = diff
+                end
+
+                if abs(vlons[3] - c_lon) < min_diff
+                    vlon = vlons[3]
+                end
+
+                # Move vertices that are outside the (-180, 180) longitude domain so we
+                # don't have issues when plotting with GeoMakie projections, which doesn't
+                # handle well polygons that crosses the -180 and 180 longitude lines.
+                # If no projection is used and we are plotting in a plain lon × lat domain
+                # we should set clip=false.
+                vlon = clip ? max(T(-180), min(vlon, T(180))) : vlon
+
                 local_vertices = @inbounds push(local_vertices, Point2f(vlon, vlat))
             end
             cell_polygons[i] = Polygon(Array(local_vertices))
@@ -68,8 +81,8 @@ function create_cell_polygons_sphere(vert_lon::Vector{T}, vert_lat, cell_lon, ve
     return cell_polygons
 end
 
-function VoronoiMeshes.create_cell_polygons(mesh::AbstractVoronoiMesh{true})
-    return create_cell_polygons_sphere(mesh.vertices.longitude, mesh.vertices.latitude, mesh.cells.longitude, mesh.cells.vertices)
+function VoronoiMeshes.create_cell_polygons(mesh::AbstractVoronoiMesh{true}, clip::Bool = false)
+    return create_cell_polygons_sphere(mesh.vertices.longitude, mesh.vertices.latitude, mesh.cells.longitude, mesh.cells.vertices, clip)
 end
 
 function create_dual_triangles_periodic(vert_pos, cell_pos, cellsOnVertex, x_period, y_period)

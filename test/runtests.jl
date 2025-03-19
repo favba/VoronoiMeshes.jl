@@ -131,8 +131,10 @@ end
 end
 
 @testset "Mesh checks" begin
-    @test !isnothing(VoronoiMesh("x1.4002.grid.nc"))
-    @test !isnothing(VoronoiMesh("mesh_issues.nc"))
+    @test !isnothing(check_mesh(VoronoiMesh("x1.4002.grid.nc")))
+    @test !isnothing(check_mesh(VoronoiMesh("mesh_issues.nc")))
+    @test isnothing(check_mesh(VoronoiMesh(fix_diagram!(VoronoiDiagram("x1.4002.grid.nc")))))
+    @test isnothing(check_mesh(VoronoiMesh(fix_diagram!(VoronoiDiagram("mesh_issues.nc")))))
 end
 
 @testset "DelaunayTriangulation.jl VoronoiMesh creation" begin

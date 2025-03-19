@@ -396,3 +396,57 @@ function warn_cell_issues(nt, mesh::AbstractVoronoiMesh)
     end
 end
 
+function fix_diagram!(d::PlanarVoronoiDiagram)
+    verticesOnCell = d.verticesOnCell
+    verticesOnCell_inverted = check_if_counter_clockwise(d.generators, verticesOnCell, d.vertices, d.x_period, d.y_period)
+    if !isnothing(verticesOnCell_inverted)
+        let voc = verticesOnCell_inverted::Vector{Int}
+            @parallel for i in voc
+                @inbounds verticesOnCell[i] = reverse(verticesOnCell[i])
+            end
+        end
+    end
+
+    cellsOnVertex = d.cellsOnVertex
+    cellsOnVertex_inverted = check_if_counter_clockwise(d.vertices, cellsOnVertex, d.generators, d.x_period, d.y_period)
+    if !isnothing(cellsOnVertex_inverted)
+        let cov = cellsOnVertex_inverted::Vector{Int}
+            @parallel for i in cov
+                @inbounds cellsOnVertex[i] = reverse(cellsOnVertex[i])
+            end
+        end
+    end
+
+    return d
+end
+
+function fix_diagram!(d::SphericalVoronoiDiagram)
+    verticesOnCell = d.verticesOnCell
+    verticesOnCell_inverted = check_if_counter_clockwise(d.sphere_radius, d.generators, verticesOnCell, d.vertices)
+    if !isnothing(verticesOnCell_inverted)
+        let voc = verticesOnCell_inverted::Vector{Int}
+            @parallel for i in voc
+                @inbounds verticesOnCell[i] = reverse(verticesOnCell[i])
+            end
+        end
+    end
+
+    cellsOnVertex = d.cellsOnVertex
+    cellsOnVertex_inverted = check_if_counter_clockwise(d.sphere_radius, d.vertices, cellsOnVertex, d.generators)
+    if !isnothing(cellsOnVertex_inverted)
+        let cov = cellsOnVertex_inverted::Vector{Int}
+            @parallel for i in cov
+                @inbounds cellsOnVertex[i] = reverse(cellsOnVertex[i])
+            end
+        end
+    end
+
+    return d
+end
+
+"""
+    fix_diagram!(d::AbstractVoronoiDiagram) -> d
+
+Fix any elements in `d.cellsOnVertex` and `d.verticesOnCell` that is not in counter-clockwise order
+"""
+fix_diagram!(d::VoronoiDiagram) = (fix_diagram!(get_diagram(d)); d )

@@ -108,9 +108,11 @@ function fill_with_polygon_mass_centroids!(new_points, N::Integer, lx::Number, l
 
     #Compute mass centroid for central polygons
     @parallel for i in Base.OneTo(N)
-        v = polygons[i]
-        vertices_position = polygon_points[@view(v[1:(end - 1)])]
-        @inbounds new_points[i] = periodic_to_base_point(mass_centroid(ρ, reinterpret(Vec2Dxy{Float64}, vertices_position)), lx, ly)
+        @inbounds begin
+            v = polygons[i]
+            vertices_position = polygon_points[@view(v[1:(end - 1)])]
+            new_points[i] = periodic_to_base_point(mass_centroid(ρ, reinterpret(Vec2Dxy{Float64}, vertices_position)), lx, ly)
+        end
     end
 
     return new_points

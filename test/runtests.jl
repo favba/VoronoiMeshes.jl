@@ -175,6 +175,7 @@ end
         end
  
         Base.Filesystem.rm("test_save.nc")
+        Base.Filesystem.rm("test_save.graph.info")
     end
 end
 

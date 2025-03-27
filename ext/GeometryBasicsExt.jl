@@ -1,7 +1,7 @@
 module GeometryBasicsExt
 
 using VoronoiMeshes
-using TensorsLite: Vec, norm
+using TensorsLite: Vec, norm, normalize
 using TensorsLiteGeometry, ImmutableVectors
 using GeometryBasics: GeometryBasics, Polygon, Point2f, LineString, Line, TupleView
 
@@ -38,47 +38,84 @@ function VoronoiMeshes.create_dual_triangles(mesh::AbstractVoronoiMesh{false})
     return create_polygons_periodic(mesh.cells.position, mesh.vertices.position, mesh.vertices.cells, mesh.x_period, mesh.y_period)
 end
 
-function create_polygons_sphere(vert_lon::Vector{T}, vert_lat, base_lon, verticesOnElement, clip::Bool = false) where {T<:Number}
+function create_polygons_sphere(vert_lon::Vector{T}, vert_lat, base_lon, edge_lon, edge_lat, verticesOnElement, edgesOnElement, clip::Bool = false) where {T<:Number}
     x_period = T(360)
 
     polygons = Vector{PolType}(undef, length(base_lon))
-    NE = max_length(eltype(verticesOnElement))
 
     @parallel for i in eachindex(base_lon)
         @inbounds begin
             c_lon_aux = rad2deg(base_lon[i])
             c_lon = c_lon_aux > 180 ? c_lon_aux - x_period : c_lon_aux
-            local_vertices = ImmutableVector{NE, Point2f}()
+            #local_vertices = ImmutableVector{NE, Point2f}()
+            local_vertices = Point2f[]
 
-            for i_v in verticesOnElement[i]
-                vlon_aux_1 = rad2deg(vert_lon[i_v])
-                vlon_aux = vlon_aux_1 > 180 ? vlon_aux_1 - x_period : vlon_aux_1
-                vlat = rad2deg(vert_lat[i_v])
-                vlons = (vlon_aux - x_period, vlon_aux, vlon_aux + x_period)
+            edgesOnEl = edgesOnElement[i]
+            verticesOnEl = verticesOnElement[i]
+            i_v1 = verticesOnEl[end]
+            for j in eachindex(edgesOnElement[i])
+                v1lon_aux_1 = rad2deg(vert_lon[i_v1])
+                v1lon_aux = v1lon_aux_1 > 180 ? v1lon_aux_1 - x_period : v1lon_aux_1
+                v1lat = rad2deg(vert_lat[i_v1])
+                v1lon = closest(c_lon, v1lon_aux)
 
-                min_diff = abs(vlons[1] - c_lon)
-                vlon = vlons[1]
-                diff = abs(vlons[2] - c_lon)
+                i_e = edgesOnEl[j]
+                elon_aux_1 = rad2deg(edge_lon[i_e])
+                elon_aux = elon_aux_1 > 180 ? elon_aux_1 - x_period : elon_aux_1
+                elat = rad2deg(edge_lat[i_e])
+                elon = closest(c_lon, elon_aux)
 
-                if diff < min_diff
-                    vlon = vlons[2]
-                    min_diff = diff
+                i_v2 = verticesOnEl[j]
+                v2lon_aux_1 = rad2deg(vert_lon[i_v2])
+                v2lon_aux = v2lon_aux_1 > 180 ? v2lon_aux_1 - x_period : v2lon_aux_1
+                v2lat = rad2deg(vert_lat[i_v2])
+                v2lon = closest(c_lon, v2lon_aux)
+
+
+
+                minlon = 3
+
+                difflon = abs(v1lon - elon)
+                if difflon <= minlon
+                    #Assuming vertex n in between edge n and n+1
+                    push!(local_vertices, Point2f(v1lon, v1lat), Point2f(elon, elat))
+                else
+                    nparts = div(difflon, minlon) + 2
+                    v1pos = lonlat_to_position(1, deg2rad(v1lon), deg2rad(v1lat))
+                    epos = lonlat_to_position(1, deg2rad(elon), deg2rad(elat))
+                    for l in 1:nparts
+                        w = (nparts - l)/(nparts - 1)
+                        @show w
+                        p = normalize(w*v1pos + (1-w)*epos)
+                        lonr, latr = position_to_lonlat(p)
+                        lon_aux_1 = rad2deg(lonr)
+                        lon_aux = lon_aux_1 > 180 ? lon_aux_1 - x_period : lon_aux_1
+                        lon = closest(c_lon, lon_aux)
+                        push!(local_vertices, Point2f(lon, rad2deg(latr)))
+                    end
                 end
 
-                if abs(vlons[3] - c_lon) < min_diff
-                    vlon = vlons[3]
+                difflon = abs(v2lon - elon)
+                if difflon > minlon
+                    nparts = div(difflon, minlon) + 2
+                    epos = lonlat_to_position(1, deg2rad(elon), deg2rad(elat))
+                    v2pos = lonlat_to_position(1, deg2rad(v2lon), deg2rad(v2lat))
+                    for l in 2:(nparts-1)
+                        w = (nparts - l)/(nparts - 1)
+                        @show w
+                        p = normalize(w*epos + (1-w)*v2pos)
+                        lonr, latr = position_to_lonlat(p)
+                        lon_aux_1 = rad2deg(lonr)
+                        lon_aux = lon_aux_1 > 180 ? lon_aux_1 - x_period : lon_aux_1
+                        lon = closest(c_lon, lon_aux)
+                        push!(local_vertices, Point2f(lon, rad2deg(latr)))
+                    end
                 end
 
-                # Move vertices that are outside the (-180, 180) longitude domain so we
-                # don't have issues when plotting with GeoMakie projections, which doesn't
-                # handle well polygons that crosses the -180 and 180 longitude lines.
-                # If no projection is used and we are plotting in a plain lon × lat domain
-                # we should set clip=false.
-                vlon = clip ? max(T(-180), min(vlon, T(180))) : vlon
+                i_v1 = i_v2
 
-                local_vertices = @inbounds push(local_vertices, Point2f(vlon, vlat))
             end
-            polygons[i] = Polygon(Array(local_vertices))
+            polygons[i] = Polygon(local_vertices)
         end
     end
 
@@ -86,11 +123,17 @@ function create_polygons_sphere(vert_lon::Vector{T}, vert_lat, base_lon, vertice
 end
 
 function VoronoiMeshes.create_cell_polygons(mesh::AbstractVoronoiMesh{true}, clip::Bool = false)
-    return create_polygons_sphere(mesh.vertices.longitude, mesh.vertices.latitude, mesh.cells.longitude, mesh.cells.vertices, clip)
+    return create_polygons_sphere(mesh.vertices.longitude, mesh.vertices.latitude,
+                                  mesh.cells.longitude,
+                                  mesh.edges.longitude, mesh.edges.latitude,
+                                  mesh.cells.vertices, mesh.cells.edges, clip)
 end
 
 function VoronoiMeshes.create_dual_triangles(mesh::AbstractVoronoiMesh{true}, clip::Bool = false)
-    return create_polygons_sphere(mesh.cells.longitude, mesh.cells.latitude, mesh.vertices.longitude, mesh.vertices.cells, clip)
+    return create_polygons_sphere(mesh.cells.longitude, mesh.cells.latitude,
+                                  mesh.vertices.longitude,
+                                  mesh.edges.longitude, mesh.edges.latitude,
+                                  mesh.vertices.cells, mesh.vertices.edges, clip)
 end
 
 function create_edge_quadrilaterals_periodic(edge_pos, vert_pos, cell_pos, verticesOnEdge, cellsOnEdge, x_period, y_period)

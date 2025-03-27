@@ -102,7 +102,6 @@ function create_polygons_sphere(vert_lon::Vector{T}, vert_lat, base_lon, edge_lo
                     v2pos = lonlat_to_position(1, deg2rad(v2lon), deg2rad(v2lat))
                     for l in 2:(nparts-1)
                         w = (nparts - l)/(nparts - 1)
-                        @show w
                         p = normalize(w*epos + (1-w)*v2pos)
                         lonr, latr = position_to_lonlat(p)
                         lon_aux_1 = rad2deg(lonr)

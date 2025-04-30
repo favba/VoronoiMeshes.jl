@@ -7,14 +7,16 @@ mutable struct CellInfo{S, max_nEdges, TI, TF, Tz}
     normal::TensorsLite.VecMaybe2DxyArray{Tz, TF, 1} # The same as Maybe1DzArray{TF, Tz, 1}
     zonalVector::Vec1DxOr2DxyArray{TF, Tz, 1}
     meridionalVector::VecMaybe1DyArray{TF, Tz, 1}
+    cellsOnEdge::Vector{Tuple{TI, TI}}
+    edgesSign::ImVecArray{max_nEdges, TF}
 
     function CellInfo(diagram::VoronoiDiagram{S, max_nEdges, TI, TF, Tz}) where {S, max_nEdges, TI, TF, Tz}
         return new{S, max_nEdges, TI, TF, Tz}(diagram)
     end
 end
 
-const planar_cellinfo_names = (:centroid, :area, :x_period, :y_period)
-const spherical_cellinfo_names = (filter(!=(:diagram), fieldnames(CellInfo))..., :sphere_radius)
+const planar_cellinfo_names = (:centroid, :area, :edgesSign, :x_period, :y_period)
+const spherical_cellinfo_names = (filter(x -> ((x != :diagram) & (x != :cellsOnEdge)), fieldnames(CellInfo))..., :sphere_radius)
 
 for nEdges in 6:10
     precompile(CellInfo, (VoronoiDiagram{false, nEdges, Int32, Float64, Zero},))
@@ -51,6 +53,8 @@ We refer to those as the "Computed Data".
 - `area::Vector`: An array with the area of each Voronoi cell.
 - `centroid::VecArray`: An array with each cells centroid position vector. For Centroidal Voronoi
   meshes with constant density function this should virtually be the same as the `position` vector.
+- `edgesSign::ImmutableVectorArray`: A vector of vectors associated with the edges that form the cell.
+   Has value of 1 if the edge normal points outward the cell and -1 otherwise.
 - `longitude::Vector`(Spherical meshes only): The longitude in radians of the cell `position` vector.
 - `latitude::Vector`(Spherical meshes only): The latitude in radians of the cell `position` vector.
 - `normal::VecArray`(Spherical meshes only): The unit vector perpendicular to the plane tangent to the
@@ -113,7 +117,20 @@ _getproperty(cell::Cells{true}, ::Val{:sphere_radius}) = get_diagram(cell).spher
 include("cell_info_creation.jl")
 
 for s in fieldnames(CellInfo)
-    if s !== :diagram
+    if s === :diagram
+
+        _getproperty(cell::Cells, ::Val{:diagram}) = getfield(cell, :info).diagram
+
+        for nEdges in 6:10
+            for TI in (Int32, Int64)
+                for TF in (Float32, Float64)
+                    precompile(_getproperty, (Cells{true, nEdges, TI, TF, TF}, Val{:diagram}))
+                    precompile(_getproperty, (Cells{false, nEdges, TI, TF, Zero}, Val{:diagram}))
+                end
+            end
+        end
+
+    elseif s !== :cellsOnEdge
         func = Symbol(string("compute_cell_", s))
         @eval function _getproperty(cell::Cells, ::Val{$(QuoteNode(s))})
             info = getfield(cell, :info)
@@ -128,10 +145,11 @@ for s in fieldnames(CellInfo)
                 for TF in (Float32, Float64)
                     @eval precompile($func, (Cells{true, $nEdges, $TI, $TF, $TF},))
                     @eval precompile($func, (Cells{false, $nEdges, $TI, $TF, Zero},))
+
+                    @eval precompile(_getproperty, (Cells{true, $nEdges, $TI, $TF, $TF}, Val{$(QuoteNode(s))}))
+                    @eval precompile(_getproperty, (Cells{false, $nEdges, $TI, $TF, Zero}, Val{$(QuoteNode(s))}))
                 end
             end
         end
-    else
-        _getproperty(cell::Cells, ::Val{:diagram}) = getfield(cell, :info).diagram
     end
 end

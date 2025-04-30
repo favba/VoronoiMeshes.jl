@@ -3,19 +3,21 @@ mutable struct VertexInfo{S, NE, TI, TF, Tz}
     centroid::TensorsLite.VecMaybe2DxyArray{TF, Tz, 1}
     area::Vector{TF}
     kiteAreas::Vector{NTuple{3, TF}}
+    edgesSign::Vector{NTuple{3, TF}}
     longitude::Vector{TF}
     latitude::Vector{TF}
+    verticesOnEdge::Vector{NTuple{2, TI}}
 
     function VertexInfo(diagram::VoronoiDiagram{S, NE, TI, TF, Tz}) where {S, NE, TI, TF, Tz}
         return new{S, NE, TI, TF, Tz}(diagram)
     end
 end
 
-const planar_vertexinfo_names = (:centroid, :area, :kiteAreas, :x_period, :y_period)
-const spherical_vertexinfo_names = (filter(!=(:diagram), fieldnames(VertexInfo))..., :sphere_radius)
+const planar_vertexinfo_names = (:centroid, :area, :kiteAreas, :edgesSign, :x_period, :y_period)
+const spherical_vertexinfo_names = (filter(x -> ((x != :diagram) & (x != :verticesOnEdge)), fieldnames(VertexInfo))..., :sphere_radius)
 
 """
-    Vertices{OnSphere, max_nEdges, <:Integer, <:Float, <:Union{Float, Zeros.Zero}} 
+    Vertices{OnSphere, max_nEdges, <:Integer, <:Float, <:Union{Float, Zeros.Zero}}
 
 Struct that holds all vertices (and dual cells (triangles)) information in a struct of arrays (SoA) layout, that is,
 each field is usually an array with the requested data for each vertex.
@@ -39,9 +41,11 @@ We refer to those as the "Computed Data".
 - `y_period::Real` (Planar meshes only): The domain `y` direction period.
 
 ## Computed Data
-- `area::Vector`: An array with the area of each Delaunay triangle.
-- `kiteAreas::Vector`: An array with a tuple containing the intersection areas between primal (Voronoi) and dual (triangular) cells.
-- `centroid::VecArray`: An array with each Delaunay triangle centroid position vector.
+- `area::Vector`: A vector with the area of each Delaunay triangle.
+- `kiteAreas::Vector`: A vector of tuples containing the intersection areas between primal (Voronoi) and dual (triangular) cells.
+- `centroid::VecArray`: A vector with each Delaunay triangle centroid position vector.
+- `edgesSign::Vector`: A vector of tuples associated with the edges that meet at the vertex.
+  Has value of 1 if the edge normal is oriented in the counter-clockwise direction and -1 otherwise.
 - `longitude::Vector`(Spherical meshes only): The longitude in radians of the vertex `position` vector.
 - `latitude::Vector`(Spherical meshes only): The latitude in radians of the vertex `position` vector.
 """
@@ -75,7 +79,20 @@ _getproperty(vertex::Vertices{true}, ::Val{:sphere_radius}) = get_diagram(vertex
 include("vertex_info_creation.jl")
 
 for s in fieldnames(VertexInfo)
-    if s !== :diagram
+    if s === :diagram
+
+        _getproperty(vertex::Vertices, ::Val{:diagram}) = getfield(vertex, :info).diagram
+
+        for nEdges in 6:10
+            for TI in (Int32, Int64)
+                for TF in (Float32, Float64)
+                    precompile(_getproperty, (Vertices{true, nEdges, TI, TF, TF}, Val{:diagram}))
+                    precompile(_getproperty, (Vertices{false, nEdges, TI, TF, Zero}, Val{:diagram}))
+                end
+            end
+        end
+
+    elseif s !== :verticesOnEdge
         func = Symbol(string("compute_vertex_", s))
         @eval function _getproperty(vertex::Vertices, ::Val{$(QuoteNode(s))})
             info = getfield(vertex, :info)
@@ -89,10 +106,11 @@ for s in fieldnames(VertexInfo)
                 for TF in (Float32, Float64)
                     @eval precompile($func, (Vertices{true, $nEdges, $TI, $TF, $TF},))
                     @eval precompile($func, (Vertices{false, $nEdges, $TI, $TF, Zero},))
+
+                    @eval precompile(_getproperty, (Vertices{true, $nEdges, $TI, $TF, $TF}, Val{$(QuoteNode(s))}))
+                    @eval precompile(_getproperty, (Vertices{false, $nEdges, $TI, $TF, Zero}, Val{$(QuoteNode(s))}))
                 end
             end
         end
-    else
-        _getproperty(vertex::Vertices, ::Val{:diagram}) = getfield(vertex, :info).diagram
     end
 end

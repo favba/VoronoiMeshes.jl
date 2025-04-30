@@ -29,6 +29,18 @@ include("vertex_struct.jl")
 
 include("edge_struct.jl")
 
+function set_info_fields!(c::Cells, v::Vertices, e::Edges)
+    ci = getfield(c, :info)
+    if !isdefined(ci, :cellsOnEdge)
+        ci.cellsOnEdge = e.cells
+    end
+    vi = getfield(v, :info)
+    if !isdefined(vi, :verticesOnEdge)
+        vi.verticesOnEdge = e.vertices
+    end
+    return nothing
+end
+
 abstract type AbstractVoronoiMesh{S, max_nEdges, TI, TF, TZ} end
 
 """
@@ -106,6 +118,7 @@ struct VoronoiMesh{S, maxEdges, TI, TF, Tz} <: AbstractVoronoiMesh{S, maxEdges, 
         if !(get_diagram(c) === get_diagram(v) === get_diagram(e))
             throw(DimensionMismatch("`Cell`, `Vertices` and `Edges` structs are not based on the same Voronoi diagram"))
         end
+        set_info_fields!(c, v, e)
         return new{S, NE, TI, TF, Tz}(c, v, e)
     end
 end

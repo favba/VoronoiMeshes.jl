@@ -6,7 +6,6 @@ compute_cell_centroid!(output, cells::Cells{false}) = compute_polygon_centroid_p
 compute_cell_centroid!(output, cells::Cells{true}) = compute_polygon_centroid_spherical!(output, cells.info.diagram.vertices, cells.vertices, cells.sphere_radius)
 compute_cell_centroid(cells::Cells) = compute_cell_centroid!(similar(cells.position), cells)
 
-
 compute_cell_longitude!(output, cells::Cells{false}) = fill!(output, zero(float_type(cells)))
 compute_cell_longitude!(output, cells::Cells{true}) = compute_longitude!(output, cells.position)
 compute_cell_longitude(cells::Cells) = compute_cell_longitude!(similar(cells.position.x), cells)
@@ -29,3 +28,29 @@ compute_cell_meridionalVector!(output, ::Cells{false}) = fill!(output, 𝐣)
 compute_cell_meridionalVector(cells::Cells{false}) = compute_cell_meridionalVector!(VecArray(y = similar(cells.position.y)), cells)
 compute_cell_meridionalVector!(output, cells::Cells{true}) = compute_meridionalVector!(output, cells.position)
 compute_cell_meridionalVector(cells::Cells{true}) = compute_cell_meridionalVector!(similar(cells.position), cells)
+
+function compute_cell_edgesSign!(edgesSign::ImVecArray{N, TF}, edgesOnCell, cellsOnEdge) where {N, TF<:AbstractFloat}
+    data = edgesSign.data
+
+    @parallel for c in eachindex(edgesOnCell)
+        @inbounds begin
+            eoc = edgesOnCell[c]
+
+            r = ImmutableVector{N, TF}()
+            for e in eoc
+                c1e, c2e = cellsOnEdge[e]
+                r = push(r, c1e == c ? TF(1) : c2e == c ? TF(-1) : TF(NaN)) # If everything is correct with the data should never be a NaN
+            end
+
+            data[c] = r.data
+        end
+    end
+
+    return edgesSign
+end
+
+function compute_cell_edgesSign(cells::Cells{S, N_MAX, TI, TF}) where {S, N_MAX, TI, TF}
+    edgesSign = ImmutableVectorArray(Vector{NTuple{N_MAX, TF}}(undef, cells.n), cells.nEdges)
+    cellsOnEdge = getfield(getfield(cells, :info), :cellsOnEdge)
+    return compute_cell_edgesSign!(edgesSign, cells.edges, cellsOnEdge)
+end

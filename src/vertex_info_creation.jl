@@ -71,3 +71,32 @@ compute_vertex_kiteAreas!(output, vertices::Vertices{true}) = compute_kite_areas
     vertices.cells, vertices.sphere_radius
 )
 compute_vertex_kiteAreas(vertices::Vertices) = compute_vertex_kiteAreas!(Vector{NTuple{3, float_type(vertices)}}(undef, vertices.n), vertices)
+
+function compute_vertex_edgesSign!(edgesSign::AbstractVector{NTuple{3, TF}}, edgesOnVertex, verticesOnEdge) where {TF<:AbstractFloat}
+
+    @parallel for v in eachindex(edgesOnVertex)
+        @inbounds begin
+            e1, e2, e3 = edgesOnVertex[v]
+
+            v1e1, v2e1 = verticesOnEdge[e1]
+            r1 = v1e1 == v ? TF(-1) : v2e1 == v ? TF(1) : TF(NaN)
+
+            v1e2, v2e2 = verticesOnEdge[e2]
+            r2 = v1e2 == v ? TF(-1) : v2e2 == v ? TF(1) : TF(NaN)
+
+            v1e3, v2e3 = verticesOnEdge[e3]
+            r3 = v1e3 == v ? TF(-1) : v2e3 == v ? TF(1) : TF(NaN)
+
+            # If everything is correct with the data should never have a NaN
+            edgesSign[v] = (r1, r2, r3)
+        end
+    end
+
+    return edgesSign
+end
+
+function compute_vertex_edgesSign(vertices::Vertices{S, N_MAX, TI, TF}) where {S, N_MAX, TI, TF}
+    edgesSign = Vector{NTuple{3, TF}}(undef, vertices.n)
+    verticesOnEdge = getfield(getfield(vertices, :info), :verticesOnEdge)
+    return compute_vertex_edgesSign!(edgesSign, vertices.edges, verticesOnEdge)
+end

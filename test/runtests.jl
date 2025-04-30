@@ -103,6 +103,9 @@ end
     @test isnothing(check_mesh(m_dist))
     @test isnothing(check_edge_normal_and_tangent(m_dist))
 
+    @test iszero(mapreduce(sum, +, mesh_dist.cells.edgesSign))
+    @test iszero(mapreduce(sum, +, mesh_dist.vertices.edgesSign))
+
     xp = m_dist.x_period
     yp = m_dist.y_period
     edges = m_dist.edges
@@ -119,6 +122,9 @@ end
     m_spherical = VoronoiMesh(mesh_spherical.cells.info.diagram)
     @test isnothing(check_mesh(m_spherical))
     @test isnothing(check_edge_normal_and_tangent(m_spherical))
+
+    @test iszero(mapreduce(sum, +, mesh_spherical.cells.edgesSign))
+    @test iszero(mapreduce(sum, +, mesh_spherical.vertices.edgesSign))
 
     R = m_spherical.sphere_radius
     cs = m_spherical.cells

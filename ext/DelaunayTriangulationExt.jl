@@ -102,27 +102,29 @@ end
 
 @inline const_density(𝐱) = TensorsLite.Zeros.One()
 
-function fill_with_polygon_mass_centroids!(new_points, N::Integer, lx::Number, ly::Number, voro, ρ::F = const_density) where {F <: Function}
+function fill_with_polygon_mass_centroids!(new_points, pol_length, N::Integer, lx::Number, ly::Number, voro, ρ::F = const_density) where {F <: Function}
     polygons = voro.polygons
-    polygon_points = voro.polygon_points
+    polygon_points = reinterpret(Vec2Dxy{Float64}, voro.polygon_points)
 
     #Compute mass centroid for central polygons
     @parallel for i in Base.OneTo(N)
         @inbounds begin
             v = polygons[i]
-            vertices_position = polygon_points[@view(v[1:(end - 1)])]
-            new_points[i] = periodic_to_base_point(mass_centroid(ρ, reinterpret(Vec2Dxy{Float64}, vertices_position)), lx, ly)
+            vertices_position = @view(polygon_points[@view(v[1:(end - 1)])])
+            new_points[i] = periodic_to_base_point(mass_centroid(ρ, vertices_position), lx, ly)
+            pol_length[i] = 0.95231281 * sqrt(4 * area(vertices_position) / pi)
         end
     end
 
     return new_points
 end
 
-function centroidal_voronoi_loyd(::TT, vor::TV, initial_generator_points, N::Integer, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = 20000, rtol::Real = 1.0e-8 / 100) where {TT <: Triangulation, TV <: VoronoiTessellation, F <: Function}
+function centroidal_voronoi_loyd(::TT, vor::TV, initial_generator_points, N::Integer, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = typemax(Int), rtol::Real = 1.0e-8 / 100, max_time = 4.0) where {TT <: Triangulation, TV <: VoronoiTessellation, F <: Function}
 
     initial_new = similar(initial_generator_points)
+    polygon_length = Vector{Float64}(undef, N)
 
-    fill_with_polygon_mass_centroids!(initial_new, N, lx, ly, vor, density)
+    fill_with_polygon_mass_centroids!(initial_new, polygon_length, N, lx, ly, vor, density)
 
     den_extrema = extrema(density, initial_new)
     p_new, inds_new = expand_periodic_points(initial_new, lx, ly, den_extrema)
@@ -130,27 +132,29 @@ function centroidal_voronoi_loyd(::TT, vor::TV, initial_generator_points, N::Int
     new_tri::TT = triangulate(reinterpret(NTuple{2, Float64}, p_new))
     new_vor::TV = voronoi(new_tri, clip = true)
 
-    expected_dc = probable_min_dc(N, lx, ly, den_extrema)
+    #expected_dc = probable_min_dc(N, lx, ly, den_extrema)
 
-    println("Performing Lloyd's iteration with relative tolerance = $rtol and maximum number of iterations: $max_iter")
+    t1 = time() / 60
+    println("Performing Lloyd's iteration with relative tolerance = $rtol, maximum number of iterations: $max_iter, and max time of $max_time minutes")
     iter = 0
     while !(
             mapreduce(
-                (x, y) -> isapprox_periodic(
+                (x, y, z) -> isapprox_periodic(
                     x, y, lx, ly;
-                    atol = rtol * expected_dc
+                    atol = rtol * z
                 ),
-                &, initial_generator_points, initial_new
+                &, initial_generator_points, initial_new, polygon_length
             )
         ) &&
-            iter < max_iter
+            iter < max_iter &&
+            (time() / 60) - t1 < max_time
         iter += 1
-        mod(iter, 10) == 0 && print("Lloyd iteration number $iter \u001b[1000D")
+        mod(iter, 10) == 0 && print("Elapsed time: $(round((time() / 60) - t1, digits=1)) minutes. Lloyd iteration number $iter \u001b[1000D")
 
         initial_generator_points .= initial_new
         vor::TV = new_vor
 
-        fill_with_polygon_mass_centroids!(initial_new, N, lx, ly, vor, density)
+        fill_with_polygon_mass_centroids!(initial_new, polygon_length, N, lx, ly, vor, density)
 
         p_new, inds_new = expand_periodic_points(initial_new, lx, ly, den_extrema)
 
@@ -158,7 +162,7 @@ function centroidal_voronoi_loyd(::TT, vor::TV, initial_generator_points, N::Int
         new_vor = voronoi(new_tri, clip = true)
     end
 
-    println("Stopped Lloyd's algorithm at iteration $iter")
+    println("Stopped Lloyd's algorithm at iteration $iter, after $(round((time() / 60) - t1, digits=1)) minutes")
 
     return initial_new, p_new, inds_new, new_vor, iter
 end
@@ -188,7 +192,7 @@ function check_and_fix_periodicity_points(points, lx::Number, ly::Number)
     return points_periodic
 end
 
-function generate_periodic_centroidal_voronoi(points::AbstractVector, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = 20000, rtol::Real = 1.0e-8 / 100) where {F <: Function}
+function generate_periodic_centroidal_voronoi(points::AbstractVector, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = typemax(Int), rtol::Real = 1.0e-8 / 100, max_time = 4.0) where {F <: Function}
 
     initial_generator_points = check_and_fix_periodicity_points(points, lx, ly)
 
@@ -198,7 +202,7 @@ function generate_periodic_centroidal_voronoi(points::AbstractVector, lx::Real, 
     tri = triangulate(p_tuple)
     vor = voronoi(tri, clip = true)
 
-    initial_new, p_new, inds_new, new_vor, n_iter = centroidal_voronoi_loyd(tri, vor, initial_generator_points, N, lx, ly, density = density, max_iter = max_iter, rtol = rtol)
+    initial_new, p_new, inds_new, new_vor, n_iter = centroidal_voronoi_loyd(tri, vor, initial_generator_points, N, lx, ly, density = density, max_iter = max_iter, rtol = rtol, max_time = max_time)
     return new_vor
 end
 
@@ -247,13 +251,13 @@ function extract_periodic_vertices_and_cells(N::Integer, lx::Number, ly::Number,
     return interior_cell_pos, interior_vertex_pos, verticesOnCell, cellsOnVertex
 end
 
-function VoronoiMeshes.PlanarVoronoiDiagram(initial_generator_points::AbstractVector{<:Vec2Dxy}, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = 20000, rtol::Real = 1.0e-8 / 100) where {F <: Function}
+function VoronoiMeshes.PlanarVoronoiDiagram(initial_generator_points::AbstractVector{<:Vec2Dxy}, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = typemax(Int), rtol::Real = 1.0e-8 / 100, max_time = 4.0) where {F <: Function}
 
     N = length(initial_generator_points)
 
     voro = generate_periodic_centroidal_voronoi(
         initial_generator_points, lx, ly;
-        density = density, max_iter = max_iter, rtol = rtol
+        density = density, max_iter = max_iter, rtol = rtol, max_time = max_time
     )
 
     generators, vertices, verticesOnCell, cellsOnVertex = extract_periodic_vertices_and_cells(N, lx, ly, voro)
@@ -293,26 +297,26 @@ function VoronoiMeshes.PlanarVoronoiDiagram(initial_generator_points::AbstractVe
     end
 end
 
-function VoronoiMeshes.VoronoiDiagram(initial_generator_points::AbstractVector{<:Vec2Dxy}, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = 20000, rtol::Real = 1.0e-8 / 100) where {F <: Function}
+function VoronoiMeshes.VoronoiDiagram(initial_generator_points::AbstractVector{<:Vec2Dxy}, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = typemax(Int), rtol::Real = 1.0e-8 / 100, max_time = 4.0) where {F <: Function}
     TF = nonzero_eltype(eltype(initial_generator_points))
-    VoronoiDiagram(PlanarVoronoiDiagram(initial_generator_points, convert(TF, lx), convert(TF, ly), density = density, max_iter = max_iter, rtol = rtol))
+    VoronoiDiagram(PlanarVoronoiDiagram(initial_generator_points, convert(TF, lx), convert(TF, ly), density = density, max_iter = max_iter, rtol = rtol, max_time = max_time))
 end
 
-function VoronoiMeshes.PlanarVoronoiDiagram(N::Integer, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = 20000, rtol::Real = 1.0e-8 / 100) where {F <: Function}
+function VoronoiMeshes.PlanarVoronoiDiagram(N::Integer, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = typemax(Int), rtol::Real = 1.0e-8 / 100, max_time = 4.0) where {F <: Function}
     points = generate_inital_points(N, lx, ly)
-    return VoronoiMeshes.PlanarVoronoiDiagram(points, lx, ly, density = density, max_iter = max_iter, rtol = rtol)
+    return VoronoiMeshes.PlanarVoronoiDiagram(points, lx, ly, density = density, max_iter = max_iter, rtol = rtol, max_time = max_time)
 end
 
-function VoronoiMeshes.VoronoiDiagram(N::Integer, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = 20000, rtol::Real = 1.0e-8 / 100) where {F <: Function}
-    VoronoiDiagram(PlanarVoronoiDiagram(N, lx, ly, density = density, max_iter = max_iter, rtol = rtol))
+function VoronoiMeshes.VoronoiDiagram(N::Integer, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = typemax(Int), rtol::Real = 1.0e-8 / 100, max_time = 4.0) where {F <: Function}
+    VoronoiDiagram(PlanarVoronoiDiagram(N, lx, ly, density = density, max_iter = max_iter, rtol = rtol, max_time = max_time))
 end
 
-function VoronoiMeshes.VoronoiMesh(initial_generator_points::AbstractVector{<:Vec2Dxy}, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = 20000, rtol::Real = 1.0e-8 / 100) where {F <: Function}
-    VoronoiMesh(VoronoiDiagram(PlanarVoronoiDiagram(initial_generator_points, lx, ly, density = density, max_iter = max_iter, rtol = rtol)))
+function VoronoiMeshes.VoronoiMesh(initial_generator_points::AbstractVector{<:Vec2Dxy}, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = typemax(Int), rtol::Real = 1.0e-8 / 100, max_time = 4.0) where {F <: Function}
+    VoronoiMesh(VoronoiDiagram(PlanarVoronoiDiagram(initial_generator_points, lx, ly, density = density, max_iter = max_iter, rtol = rtol, max_time = max_time)))
 end
 
-function VoronoiMeshes.VoronoiMesh(N::Integer, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = 20000, rtol::Real = 1.0e-8 / 100) where {F}
-    VoronoiMesh(VoronoiDiagram(PlanarVoronoiDiagram(N, lx, ly, density = density, max_iter = max_iter, rtol = rtol)))
+function VoronoiMeshes.VoronoiMesh(N::Integer, lx::Real, ly::Real; density::F = const_density, max_iter::Integer = typemax(Int), rtol::Real = 1.0e-8 / 100, max_time = 4.0) where {F}
+    VoronoiMesh(VoronoiDiagram(PlanarVoronoiDiagram(N, lx, ly, density = density, max_iter = max_iter, rtol = rtol, max_time = max_time)))
 end
 
 include("precompile_delaunay.jl")

@@ -1,4 +1,4 @@
-function circular_refinement_function(center, inner_radius, buffer_radius, inner_density, outer_density, lx, ly)
+function circular_refinement_function(lx, ly; center = (lx/2)𝐢 + (ly/2)𝐣, inner_radius = min(lx/2, ly/2)/2, buffer_radius = min(lx/2, ly/2), inner_density = 3.0, outer_density = 1.0)
     f = let center = center, inner_radius = inner_radius, buffer_radius = buffer_radius,
             inner_density = inner_density, outer_density = outer_density, lx = lx, ly = ly
 
@@ -20,7 +20,7 @@ function circular_refinement_function(center, inner_radius, buffer_radius, inner
     return f
 end
 
-function y_refinement_function(center_y, length, buffer_length, inner_density, outer_density, lx, ly)
+function y_refinement_function(lx, ly; center_y = ly/2, length = ly/4, buffer_length = ly/2, inner_density = 3.0, outer_density = 1.0)
     f = let center_y = center_y, length = length, buffer_length = buffer_length,
             inner_density = inner_density, outer_density = outer_density
 
@@ -41,7 +41,7 @@ function y_refinement_function(center_y, length, buffer_length, inner_density, o
     return f
 end
 
-function x_refinement_function(center_x, length, buffer_length, inner_density, outer_density, lx, ly)
+function x_refinement_function(lx, ly; center_x = lx/2, length = lx/4, buffer_length = lx/2, inner_density = 3.0, outer_density = 1.0)
     f = let center_x = center_x, length = length, buffer_length = buffer_length,
             inner_density = inner_density, outer_density = outer_density
 

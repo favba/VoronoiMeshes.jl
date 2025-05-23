@@ -321,6 +321,41 @@ function VoronoiMeshes.VoronoiMesh(N::Integer, lx::Real, ly::Real; density::F = 
     VoronoiMesh(VoronoiDiagram(PlanarVoronoiDiagram(N, lx, ly, density = density, max_iter = max_iter, rtol = rtol, max_time = max_time)))
 end
 
+@inline function round_to_even_Int(x::Real)
+    ru = round(Int,x,RoundUp)
+    rd = round(Int,x,RoundDown)
+    if ru == rd
+        val = ru + mod(ru,2)
+    else
+        val = iseven(ru) ? ru : rd
+    end
+    return val
+end
+
+function VoronoiMeshes.create_planar_hex_mesh(lx::Number, ly::Number, dc::Number)
+    nx = round(Int,lx/dc)
+    ny = round_to_even_Int((2ly)/(√3*dc))
+    N = nx*ny
+    generators = VecArray(x = zeros(N), y = zeros(N))
+    dp = (dc/32) * (𝐢 + 𝐣)
+
+    l = sqrt(3)*dc/3
+
+    I = LinearIndices((Base.OneTo(nx), Base.OneTo(ny)))
+    @parallel for j in Base.OneTo(ny)
+        y = (j-1)*1.5*l
+        aux = iseven(j)
+        @inbounds for i in Base.OneTo(nx)
+            x = (i-1)*dc + aux*dc/2
+            generators[I[i,j]] = x*𝐢 + y*𝐣 + dp
+        end
+    end
+
+    xp = Float64(nx*dc)
+    yp = ny*3l/2
+    return VoronoiMesh(generators, xp, yp, max_iter=0)
+end
+
 include("precompile_delaunay.jl")
 
 end # Module

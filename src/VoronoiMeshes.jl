@@ -206,6 +206,9 @@ include("refinement_functions.jl")
 function save_to_netcdf end
 function save_to_netcdf! end
 
+#Definitions are in ext/DelaunayTriangulationExt.jl
+function create_planar_hex_mesh end
+ 
 #functions to be used when Makie is loaded
 #Definitions are in ext/GeometryBasicsExt.jl
 function create_cell_polygons end

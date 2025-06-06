@@ -1,5 +1,6 @@
 module VoronoiMeshes
 
+using LinearAlgebra
 using Zeros, TensorsLite, ImmutableVectors, TensorsLiteGeometry
 
 export @parallel

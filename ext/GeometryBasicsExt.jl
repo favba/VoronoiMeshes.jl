@@ -1,11 +1,13 @@
 module GeometryBasicsExt
 
 using VoronoiMeshes
-using TensorsLite: Vec, norm, normalize
+using LinearAlgebra: normalize
+using TensorsLite: Vec
 using TensorsLiteGeometry, ImmutableVectors
-using GeometryBasics: GeometryBasics, Polygon, Point2f, LineString, Line, TupleView
+using GeometryBasics: GeometryBasics, Polygon, Point2f
 
 @static if pkgversion(GeometryBasics) < v"0.5"
+    using GeometryBasics: LineString, Line, TupleView
     const PolType = Polygon{2, Float32, Point2f, LineString{2, Float32, Point2f, Base.ReinterpretArray{Line{2, Float32}, 1, Tuple{Point2f, Point2f}, TupleView{Tuple{Point2f, Point2f}, 2, 1, Vector{Point2f}}, false}}, Vector{LineString{2, Float32, Point2f, Base.ReinterpretArray{Line{2, Float32}, 1, Tuple{Point2f, Point2f}, TupleView{Tuple{Point2f, Point2f}, 2, 1, Vector{Point2f}}, false}}}}
 else
     const PolType = Polygon{2, Float32}

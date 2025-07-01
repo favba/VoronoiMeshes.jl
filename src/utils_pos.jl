@@ -1,4 +1,4 @@
-function graph_partition(cellsOnCell::AbstractVector{<:ImmutableVector},nEdges::Integer)
+function graph_partition(cellsOnCell::AbstractVector{<:SmallVector},nEdges::Integer)
     nCells = length(cellsOnCell)
     outIO = IOBuffer()
     println(outIO, nCells,' ',nEdges)
@@ -275,7 +275,7 @@ function check_cell_indexing_periodic(cpos, cellsOnCell, verticesOnCell, vpos, e
     return all(isnothing, (edges, cells)) ? nothing : (;edges, cells)
 end
 
-precompile(Tuple{typeof(check_cell_indexing_periodic), VecArray{Vec{Union{Zeros.Zero, Float64}, 1, Float64, Float64, Zeros.Zero}, 1, Array{Float64, 1}, Array{Float64, 1}, Array{Zeros.Zero, 1}}, ImmutableVectors.ImmutableVectorArray{6, Int32, 1, Array{NTuple{6, Int32}, 1}}, ImmutableVectors.ImmutableVectorArray{6, Int32, 1, Array{NTuple{6, Int32}, 1}}, VecArray{Vec{Union{Zeros.Zero, Float64}, 1, Float64, Float64, Zeros.Zero}, 1, Array{Float64, 1}, Array{Float64, 1}, Array{Zeros.Zero, 1}}, ImmutableVectors.ImmutableVectorArray{6, Int32, 1, Array{NTuple{6, Int32}, 1}}, VecArray{Vec{Union{Zeros.Zero, Float64}, 1, Float64, Float64, Zeros.Zero}, 1, Array{Float64, 1}, Array{Float64, 1}, Array{Zeros.Zero, 1}}, Float64, Float64})
+precompile(Tuple{typeof(check_cell_indexing_periodic), VecArray{Vec{Union{Zeros.Zero, Float64}, 1, Float64, Float64, Zeros.Zero}, 1, Array{Float64, 1}, Array{Float64, 1}, Array{Zeros.Zero, 1}}, SmallVectorArray{6, Int32, 1, Array{FixedVector{6, Int32}, 1}}, SmallVectorArray{6, Int32, 1, Array{FixedVector{6, Int32}, 1}}, VecArray{Vec{Union{Zeros.Zero, Float64}, 1, Float64, Float64, Zeros.Zero}, 1, Array{Float64, 1}, Array{Float64, 1}, Array{Zeros.Zero, 1}}, SmallVectorArray{6, Int32, 1, Array{FixedVector{6, Int32}, 1}}, VecArray{Vec{Union{Zeros.Zero, Float64}, 1, Float64, Float64, Zeros.Zero}, 1, Array{Float64, 1}, Array{Float64, 1}, Array{Zeros.Zero, 1}}, Float64, Float64})
 
 """
     check_cell_indexing(mesh::AbstractVoronoiMesh)

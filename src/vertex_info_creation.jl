@@ -70,9 +70,9 @@ compute_vertex_kiteAreas!(output, vertices::Vertices{true}) = compute_kite_areas
     output, vertices.info.diagram.generators, vertices.position,
     vertices.cells, vertices.sphere_radius
 )
-compute_vertex_kiteAreas(vertices::Vertices) = compute_vertex_kiteAreas!(Vector{NTuple{3, float_type(vertices)}}(undef, vertices.n), vertices)
+compute_vertex_kiteAreas(vertices::Vertices) = compute_vertex_kiteAreas!(Vector{FixedVector{3, float_type(vertices)}}(undef, vertices.n), vertices)
 
-function compute_vertex_edgesSign!(edgesSign::AbstractVector{NTuple{3, TF}}, edgesOnVertex, verticesOnEdge) where {TF<:AbstractFloat}
+function compute_vertex_edgesSign!(edgesSign::AbstractVector{FixedVector{3, TF}}, edgesOnVertex, verticesOnEdge) where {TF<:AbstractFloat}
 
     @parallel for v in eachindex(edgesOnVertex)
         @inbounds begin
@@ -96,7 +96,7 @@ function compute_vertex_edgesSign!(edgesSign::AbstractVector{NTuple{3, TF}}, edg
 end
 
 function compute_vertex_edgesSign(vertices::Vertices{S, N_MAX, TI, TF}) where {S, N_MAX, TI, TF}
-    edgesSign = Vector{NTuple{3, TF}}(undef, vertices.n)
+    edgesSign = Vector{FixedVector{3, TF}}(undef, vertices.n)
     verticesOnEdge = getfield(getfield(vertices, :info), :verticesOnEdge)
     return compute_vertex_edgesSign!(edgesSign, vertices.edges, verticesOnEdge)
 end

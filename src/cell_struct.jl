@@ -7,8 +7,8 @@ mutable struct CellInfo{S, max_nEdges, TI, TF, Tz}
     normal::TensorsLite.VecMaybe2DxyArray{Tz, TF, 1} # The same as Maybe1DzArray{TF, Tz, 1}
     zonalVector::Vec1DxOr2DxyArray{TF, Tz, 1}
     meridionalVector::VecMaybe1DyArray{TF, Tz, 1}
-    cellsOnEdge::Vector{Tuple{TI, TI}}
-    edgesSign::ImVecArray{max_nEdges, TF}
+    cellsOnEdge::Vector{FixedVector{2, TI}}
+    edgesSign::SmVecArray{max_nEdges, TF}
 
     function CellInfo(diagram::VoronoiDiagram{S, max_nEdges, TI, TF, Tz}) where {S, max_nEdges, TI, TF, Tz}
         return new{S, max_nEdges, TI, TF, Tz}(diagram)
@@ -41,10 +41,10 @@ We refer to those as the "Computed Data".
 - `position::VecArray`: An array with each cells position vector, that is, the position of the Voronoi
    Cell generator point. An array with a particular coordinate can also be extracted throught the dot
    syntax. For example, an array with `x` coordinates of the cells is given by `cells.position.x`.
-- `nEdges::Vector{UInt8}`: The number of edges on each cell (which is equal to the number of vertices).
-- `vertices::ImmutableVectorArray`: A Vector of vectors with the index ID of the vertices forming the cell.
-- `edges::ImmutableVectorArray`: A Vector of vectors with the index ID of the edges forming the cell.
-- `cells::ImmutableVectorArray`: A Vector of vectors with the index ID of the cells neighboring a given cell.
+- `nEdges::Vector{Int16}`: The number of edges on each cell (which is equal to the number of vertices).
+- `vertices::SmallVectorArray`: A Vector of vectors with the index ID of the vertices forming the cell.
+- `edges::SmallVectorArray`: A Vector of vectors with the index ID of the edges forming the cell.
+- `cells::SmallVectorArray`: A Vector of vectors with the index ID of the cells neighboring a given cell.
 - `sphere_radius::Real` (Spherical meshes only): The sphere radius.
 - `x_period::Real` (Planar meshes only): The domain `x` direction period.
 - `y_period::Real` (Planar meshes only): The domain `y` direction period.
@@ -53,7 +53,7 @@ We refer to those as the "Computed Data".
 - `area::Vector`: An array with the area of each Voronoi cell.
 - `centroid::VecArray`: An array with each cells centroid position vector. For Centroidal Voronoi
   meshes with constant density function this should virtually be the same as the `position` vector.
-- `edgesSign::ImmutableVectorArray`: A vector of vectors associated with the edges that form the cell.
+- `edgesSign::SmallVectorArray`: A vector of vectors associated with the edges that form the cell.
    Has value of 1 if the edge normal points outward the cell and -1 otherwise.
 - `longitude::Vector`(Spherical meshes only): The longitude in radians of the cell `position` vector.
 - `latitude::Vector`(Spherical meshes only): The latitude in radians of the cell `position` vector.
@@ -66,10 +66,10 @@ We refer to those as the "Computed Data".
 struct Cells{S, max_nEdges, TI, TF, Tz}
     n::Int
     position::TensorsLite.VecMaybe2DxyArray{TF, Tz, 1}
-    nEdges::Vector{UInt8}
-    vertices::ImVecArray{max_nEdges, TI, 1}
-    edges::ImVecArray{max_nEdges, TI, 1}
-    cells::ImVecArray{max_nEdges, TI, 1}
+    nEdges::Vector{Int16}
+    vertices::SmVecArray{max_nEdges, TI, 1}
+    edges::SmVecArray{max_nEdges, TI, 1}
+    cells::SmVecArray{max_nEdges, TI, 1}
     info::CellInfo{S, max_nEdges, TI, TF, Tz}
 end
 
@@ -86,8 +86,8 @@ for nEdges in 6:10
 
     precompile(
         Cells, (
-            Int, Vec2DxyArray{Float64, 1}, Vector{UInt8}, ImVecArray{nEdges, Int32, 1},
-            ImVecArray{nEdges, Int32, 1}, ImVecArray{nEdges, Int32, 1},
+            Int, Vec2DxyArray{Float64, 1}, Vector{Int16}, SmVecArray{nEdges, Int32, 1},
+            SmVecArray{nEdges, Int32, 1}, SmVecArray{nEdges, Int32, 1},
             CellInfo{false, nEdges, Int32, Float64, Zero},
         )
     )
@@ -96,8 +96,8 @@ for nEdges in 6:10
 
     precompile(
         Cells, (
-            Int, Vec3DArray{Float64, 1}, Vector{UInt8}, ImVecArray{nEdges, Int32, 1},
-            ImVecArray{nEdges, Int32, 1}, ImVecArray{nEdges, Int32, 1},
+            Int, Vec3DArray{Float64, 1}, Vector{Int16}, SmVecArray{nEdges, Int32, 1},
+            SmVecArray{nEdges, Int32, 1}, SmVecArray{nEdges, Int32, 1},
             CellInfo{true, nEdges, Int32, Float64, Float64},
         )
     )

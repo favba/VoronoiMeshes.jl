@@ -1,6 +1,7 @@
 module DelaunayTriangulationExt
 
-using Zeros, VoronoiMeshes, DelaunayTriangulation, TensorsLite, ImmutableVectors, TensorsLiteGeometry
+using Zeros, VoronoiMeshes, DelaunayTriangulation, TensorsLite, SmallCollections, TensorsLiteGeometry
+using PrecompileTools
 
 """
     probable_max_dc(N::Integer, lx::Number, ly::Number, [density_extrema=(1,1)]) -> dc::Real
@@ -231,7 +232,7 @@ function extract_periodic_vertices_and_cells(N::Integer, lx::Number, ly::Number,
         y = map(a -> a[2], @view(vertices_pos_tuple[interior_vertex_i]))
     )
 
-    T = ImmutableVector{16, Int32}
+    T = SmallVector{16, Int32}
     verticesOnCell_global = vor.polygons
     verticesOnCell = Vector{T}(undef, N)
     for c in eachindex(verticesOnCell)
@@ -243,7 +244,7 @@ function extract_periodic_vertices_and_cells(N::Integer, lx::Number, ly::Number,
     cell_pos = parent(vor.triangulation.points)
     interior_cell_pos = cell_pos[Base.OneTo(N)]
     cellsOnVertex_global = vor.circumcenter_to_triangle
-    cellsOnVertex = Vector{NTuple{3, Int32}}(undef, nVertices)
+    cellsOnVertex = Vector{FixedVector{3, Int32}}(undef, nVertices)
     for v in eachindex(cellsOnVertex)
         gcov = cellsOnVertex_global[interior_vertex_i[v]]
         cps = map(x -> getindex(cell_pos, x), gcov)
@@ -275,25 +276,25 @@ function VoronoiMeshes.PlanarVoronoiDiagram(initial_generator_points::AbstractVe
     lx_TF = convert(TF, lx)
     ly_TF = convert(TF, ly)
     if maxEdges == 6
-        verticesOnCell_6 = ImVecArray{6, Int32}(N)
+        verticesOnCell_6 = SmVecArray{6, Int32}(N)
         verticesOnCell_6 .= verticesOnCell
         return fix_diagram!(PlanarVoronoiDiagram(generators, vertices, verticesOnCell_6, cellsOnVertex, meshDensity, lx_TF, ly_TF))
     elseif maxEdges == 7
-        verticesOnCell_7 = ImVecArray{7, Int32}(N)
+        verticesOnCell_7 = SmVecArray{7, Int32}(N)
         verticesOnCell_7 .= verticesOnCell
         return fix_diagram!(PlanarVoronoiDiagram(generators, vertices, verticesOnCell_7, cellsOnVertex, meshDensity, lx_TF, ly_TF))
     elseif maxEdges == 8
-        verticesOnCell_8 = ImVecArray{8, Int32}(N)
+        verticesOnCell_8 = SmVecArray{8, Int32}(N)
         verticesOnCell_8 .= verticesOnCell
         return fix_diagram!(PlanarVoronoiDiagram(generators, vertices, verticesOnCell_8, cellsOnVertex, meshDensity, lx_TF, ly_TF))
     elseif maxEdges == 9
-        verticesOnCell_9 = ImVecArray{9, Int32}(N)
+        verticesOnCell_9 = SmVecArray{9, Int32}(N)
         verticesOnCell_9 .= verticesOnCell
         return fix_diagram!(PlanarVoronoiDiagram(generators, vertices, verticesOnCell_9, cellsOnVertex, meshDensity, lx_TF, ly_TF))
     elseif maxEdges > 10
         throw(error("Generated Voronoi diagram has polygons of more than 10 sides"))
     else
-        verticesOnCell_10 = ImVecArray{10, Int32}(N)
+        verticesOnCell_10 = SmVecArray{10, Int32}(N)
         verticesOnCell_10 .= verticesOnCell
         return fix_diagram!(PlanarVoronoiDiagram(generators, vertices, verticesOnCell_10, cellsOnVertex, meshDensity, lx_TF, ly_TF))
     end
@@ -356,6 +357,9 @@ function VoronoiMeshes.create_planar_hex_mesh(lx::Number, ly::Number, dc::Number
     return VoronoiMesh(generators, xp, yp, max_iter=0)
 end
 
-include("precompile_delaunay.jl")
+@compile_workload begin
+    m = VoronoiMesh(17, 1.0, 1.0)
+    m2 = VoronoiMesh(17, 1.0, 1.0, density=VoronoiMeshes.circular_refinement_function(1.0, 1.0), rtol=1e-4, max_time = 0.2)
+end
 
 end # Module

@@ -2,11 +2,11 @@ mutable struct VertexInfo{S, NE, TI, TF, Tz}
     const diagram::VoronoiDiagram{S, NE, TI, TF, Tz}
     centroid::TensorsLite.VecMaybe2DxyArray{TF, Tz, 1}
     area::Vector{TF}
-    kiteAreas::Vector{NTuple{3, TF}}
-    edgesSign::Vector{NTuple{3, TF}}
+    kiteAreas::Vector{FixedVector{3, TF}}
+    edgesSign::Vector{FixedVector{3, TF}}
     longitude::Vector{TF}
     latitude::Vector{TF}
-    verticesOnEdge::Vector{NTuple{2, TI}}
+    verticesOnEdge::Vector{FixedVector{2, TI}}
 
     function VertexInfo(diagram::VoronoiDiagram{S, NE, TI, TF, Tz}) where {S, NE, TI, TF, Tz}
         return new{S, NE, TI, TF, Tz}(diagram)
@@ -52,8 +52,8 @@ We refer to those as the "Computed Data".
 struct Vertices{S, NE, TI, TF, Tz}
     n::Int
     position::TensorsLite.VecMaybe2DxyArray{TF, Tz, 1}
-    edges::Vector{NTuple{3, TI}}
-    cells::Vector{NTuple{3, TI}}
+    edges::Vector{FixedVector{3, TI}}
+    cells::Vector{FixedVector{3, TI}}
     info::VertexInfo{S, NE, TI, TF, Tz}
 end
 

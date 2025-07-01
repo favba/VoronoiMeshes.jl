@@ -3,7 +3,7 @@ module GeometryBasicsExt
 using VoronoiMeshes
 using LinearAlgebra: normalize
 using TensorsLite: Vec
-using TensorsLiteGeometry, ImmutableVectors
+using TensorsLiteGeometry, SmallCollections
 using GeometryBasics: GeometryBasics, Polygon, Point2f
 
 @static if pkgversion(GeometryBasics) < v"0.5"
@@ -20,7 +20,7 @@ function create_polygons_periodic(vert_pos, polygon_pos, verticesOnPolygon, x_pe
     @parallel for i in eachindex(polygon_pos)
         @inbounds begin
             ppos = polygon_pos[i]
-            local_vertices = ImmutableVector{NE, Point2f}()
+            local_vertices = SmallVector{NE, Point2f}()
             for i_v in verticesOnPolygon[i]
                 vpos = closest(ppos, vert_pos[i_v], x_period, y_period)
                 local_vertices = @inbounds push(local_vertices, Point2f(vpos.x, vpos.y))
@@ -49,7 +49,7 @@ function create_polygons_sphere(vert_lon::Vector{T}, vert_lat, base_lon, edge_lo
         @inbounds begin
             c_lon_aux = rad2deg(base_lon[i])
             c_lon = c_lon_aux > 180 ? c_lon_aux - x_period : c_lon_aux
-            #local_vertices = ImmutableVector{NE, Point2f}()
+            #local_vertices = SmallVector{NE, Point2f}()
             local_vertices = Point2f[]
 
             edgesOnEl = edgesOnElement[i]

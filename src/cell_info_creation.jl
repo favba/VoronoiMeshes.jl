@@ -29,20 +29,20 @@ compute_cell_meridionalVector(cells::Cells{false}) = compute_cell_meridionalVect
 compute_cell_meridionalVector!(output, cells::Cells{true}) = compute_meridionalVector!(output, cells.position)
 compute_cell_meridionalVector(cells::Cells{true}) = compute_cell_meridionalVector!(similar(cells.position), cells)
 
-function compute_cell_edgesSign!(edgesSign::ImVecArray{N, TF}, edgesOnCell, cellsOnEdge) where {N, TF<:AbstractFloat}
+function compute_cell_edgesSign!(edgesSign::SmVecArray{N, TF}, edgesOnCell, cellsOnEdge) where {N, TF<:AbstractFloat}
     data = edgesSign.data
 
     @parallel for c in eachindex(edgesOnCell)
         @inbounds begin
             eoc = edgesOnCell[c]
 
-            r = ImmutableVector{N, TF}()
+            r = SmallVector{N, TF}()
             for e in eoc
                 c1e, c2e = cellsOnEdge[e]
                 r = push(r, c1e == c ? TF(1) : c2e == c ? TF(-1) : TF(NaN)) # If everything is correct with the data should never be a NaN
             end
 
-            data[c] = r.data
+            data[c] = fixedvector(r)
         end
     end
 
@@ -50,7 +50,7 @@ function compute_cell_edgesSign!(edgesSign::ImVecArray{N, TF}, edgesOnCell, cell
 end
 
 function compute_cell_edgesSign(cells::Cells{S, N_MAX, TI, TF}) where {S, N_MAX, TI, TF}
-    edgesSign = ImmutableVectorArray(Vector{NTuple{N_MAX, TF}}(undef, cells.n), cells.nEdges)
+    edgesSign = SmallVectorArray(Vector{FixedVector{N_MAX, TF}}(undef, cells.n), cells.nEdges)
     cellsOnEdge = getfield(getfield(cells, :info), :cellsOnEdge)
     return compute_cell_edgesSign!(edgesSign, cells.edges, cellsOnEdge)
 end

@@ -21,56 +21,56 @@ function tmap!(output, func::F, var::Vararg) where {F <: Function}
     return output
 end
 
-function copy_matrix_to_tuple_vector!(tuple_vector::AbstractVector{NTuple{N, T}}, matrix::AbstractMatrix{T2}) where {N, T, T2}
+function copy_matrix_to_fixedvector_vector!(tuple_vector::AbstractVector{FixedVector{N, T}}, matrix::AbstractMatrix{T2}) where {N, T, T2}
     n = Val{N}()
     @parallel for k in axes(matrix, 2)
-        @inbounds tuple_vector[k] = ntuple(i -> (convert(T, @inbounds(matrix[i, k]))), n)
+        @inbounds tuple_vector[k] = FixedVector(ntuple(i -> (convert(T, @inbounds(matrix[i, k]))), n))
     end
     return tuple_vector
 end
 
 for T in (Int32, Int64, Float32, Float64)
     for N in 2:12
-        precompile(copy_matrix_to_tuple_vector!, (Vector{NTuple{N, T}}, Matrix{T}))
+        precompile(copy_matrix_to_fixedvector_vector!, (Vector{FixedVector{N, T}}, Matrix{T}))
     end
 end
 
-@inline function unsafe_drop_element(t::NTuple{3}, el::Integer)
+@inline function unsafe_drop_element(t::FixedVector{3}, el::Integer)
     if t[1] == el
-        return (t[2], t[3])
+        return FixedVector((t[2], t[3]))
     elseif t[2] == el
-        return (t[1], t[3])
+        return FixedVector((t[1], t[3]))
     else
-        return (t[1], t[2])
+        return FixedVector((t[1], t[2]))
     end
 end
 
-precompile(unsafe_drop_element, (NTuple{3, Int32}, Int32))
-precompile(unsafe_drop_element, (NTuple{3, Int64}, Int64))
+precompile(unsafe_drop_element, (FixedVector{3, Int32}, Int32))
+precompile(unsafe_drop_element, (FixedVector{3, Int64}, Int64))
 
-@inline function unsafe_tuple2_intersection(t1::NTuple{2}, t2::NTuple{2})
+@inline function unsafe_fixedvector2_intersection(t1::FixedVector{2}, t2::FixedVector{2})
     t11, t12 = t1
     t21, t22 = t2
     t11 == t21 ? t11 : t11 == t22 ? t11 : t12
 end
 
-precompile(unsafe_tuple2_intersection, (NTuple{2, Int32}, NTuple{2, Int32}))
-precompile(unsafe_tuple2_intersection, (NTuple{2, Int64}, NTuple{2, Int64}))
+precompile(unsafe_fixedvector2_intersection, (FixedVector{2, Int32}, FixedVector{2, Int32}))
+precompile(unsafe_fixedvector2_intersection, (FixedVector{2, Int64}, FixedVector{2, Int64}))
 
 @inline function find_cellOnCell(current_cell::Integer, shared_vertex1::Integer, shared_vertex2::Integer, cellsOnVertex::AbstractVector)
     cells_v1 = cellsOnVertex[shared_vertex1]
     cells_v2 = cellsOnVertex[shared_vertex2]
     cells1 = unsafe_drop_element(cells_v1, current_cell)
     cells2 = unsafe_drop_element(cells_v2, current_cell)
-    return unsafe_tuple2_intersection(cells1, cells2)
+    return unsafe_fixedvector2_intersection(cells1, cells2)
 end
 
-precompile(find_cellOnCell, (Int32, Int32, Int32, Vector{NTuple{3, Int32}}))
-precompile(find_cellOnCell, (Int64, Int64, Int64, Vector{NTuple{3, Int64}}))
+precompile(find_cellOnCell, (Int32, Int32, Int32, Vector{FixedVector{3, Int32}}))
+precompile(find_cellOnCell, (Int64, Int64, Int64, Vector{FixedVector{3, Int64}}))
 
-@inline ordered(x, y) = y < x ? (y, x) : (x, y)
+@inline ordered(x, y) = y < x ? FixedVector((y, x)) : FixedVector((x, y))
 
-function compute_cellsOnCell!(cellsOnCell::ImVecArray, verticesOnCell::AbstractVector, cellsOnVertex::AbstractVector)
+function compute_cellsOnCell!(cellsOnCell::SmVecArray, verticesOnCell::AbstractVector, cellsOnVertex::AbstractVector)
     # cellsOnCell[n] should be between verticesOnCell[n] and verticesOnCell[n-1]
 
     cellsOnCellTuple = cellsOnCell.data
@@ -88,61 +88,28 @@ function compute_cellsOnCell!(cellsOnCell::ImVecArray, verticesOnCell::AbstractV
                 cells = push(cells, find_cellOnCell(c, vlead, vprev, cellsOnVertex))
             end
 
-            cellsOnCellTuple[c] = cells.data
+            cellsOnCellTuple[c] = fixedvector(cells)
         end
     end
     return cellsOnCell
 end
 
 for nEdges in 6:10
-    precompile(compute_cellsOnCell!, (ImVecArray{nEdges, Int32, 1}, ImVecArray{nEdges, Int32, 1}, Vector{NTuple{3, Int32}}))
-    precompile(compute_cellsOnCell!, (ImVecArray{nEdges, Int64, 1}, ImVecArray{nEdges, Int64, 1}, Vector{NTuple{3, Int64}}))
+    precompile(compute_cellsOnCell!, (SmVecArray{nEdges, Int32, 1}, SmVecArray{nEdges, Int32, 1}, Vector{FixedVector{3, Int32}}))
+    precompile(compute_cellsOnCell!, (SmVecArray{nEdges, Int64, 1}, SmVecArray{nEdges, Int64, 1}, Vector{FixedVector{3, Int64}}))
 end
 
-function compute_cellsOnCell(verticesOnCell::ImVecArray, cellsOnVertex::AbstractVector)
-    cellsOnCell = ImmutableVectorArray(similar(verticesOnCell.data), verticesOnCell.length)
+function compute_cellsOnCell(verticesOnCell::SmVecArray, cellsOnVertex::AbstractVector)
+    cellsOnCell = SmallVectorArray(similar(verticesOnCell.data), verticesOnCell.length)
     return compute_cellsOnCell!(cellsOnCell, verticesOnCell, cellsOnVertex)
 end
 
 for nEdges in 6:10
-    precompile(compute_cellsOnCell, (ImVecArray{nEdges, Int32, 1}, Vector{NTuple{3, Int32}}))
-    precompile(compute_cellsOnCell, (ImVecArray{nEdges, Int64, 1}, Vector{NTuple{3, Int64}}))
+    precompile(compute_cellsOnCell, (SmVecArray{nEdges, Int32, 1}, Vector{FixedVector{3, Int32}}))
+    precompile(compute_cellsOnCell, (SmVecArray{nEdges, Int64, 1}, Vector{FixedVector{3, Int64}}))
 end
 
-#function compute_edgesOnCell!(edgesOnCell, cellsOnCell, cellsOnEdge::Vector{<:NTuple{2}})
-#
-#    edgesOnCellTuple = edgesOnCell.data
-#    @parallel for c in eachindex(cellsOnCell)
-#        @inbounds begin
-#            cells = cellsOnCell[c]
-#            edges = eltype(cellsOnCell)()
-#            for e in eachindex(cells)
-#                pair = ordered(TI(c), cells[e])
-#                e_i = findfirst(x -> (ordered(x[1], x[2]) === pair), cellsOnEdge)
-#                edges = push(edges, e_i)
-#            end
-#            edgesOnCellTuple[c] = edges.data
-#        end
-#    end
-#    return edgesOnCell
-#end
-
-#for nEdges in 6:10
-#    precompile(compute_edgesOnCell!, (ImVecArray{nEdges, Int32, 1}, ImVecArray{nEdges, Int32, 1}, Vector{NTuple{2, Int32}}))
-#    precompile(compute_edgesOnCell!, (ImVecArray{nEdges, Int64, 1}, ImVecArray{nEdges, Int64, 1}, Vector{NTuple{2, Int64}}))
-#end
-
-#function compute_edgesOnCell(cellsOnCell::ImVecArray, cellsOnEdge::AbstractVector)
-    #edgesOnCell = ImmutableVectorArray(similar(cellsOnCell.data), cellsOnCell.length)
-    #return compute_edgesOnCell!(edgesOnCell, cellsOnCell, cellsOnEdge)
-#end
-
-#for nEdges in 6:10
-    #precompile(compute_edgesOnCell, (ImVecArray{nEdges, Int32, 1}, Vector{NTuple{2, Int32}}))
-    #precompile(compute_edgesOnCell, (ImVecArray{nEdges, Int64, 1}, Vector{NTuple{2, Int64}}))
-#end
-
-function compute_edgesOnCell!(edgesOnCell, cellsOnCell, cells_pair_to_edge::Dict{NTuple{2,TI}, TI}) where {TI}
+function compute_edgesOnCell!(edgesOnCell, cellsOnCell, cells_pair_to_edge::Dict{FixedVector{2,TI}, TI}) where {TI}
 
     edgesOnCellTuple = edgesOnCell.data
     @parallel for c in eachindex(cellsOnCell)
@@ -154,56 +121,28 @@ function compute_edgesOnCell!(edgesOnCell, cellsOnCell, cells_pair_to_edge::Dict
                 e_i = cells_pair_to_edge[pair]
                 edges = push(edges, e_i)
             end
-            edgesOnCellTuple[c] = edges.data
+            edgesOnCellTuple[c] = fixedvector(edges)
         end
     end
     return edgesOnCell
 end
 
 for nEdges in 6:10
-    precompile(compute_edgesOnCell!, (ImVecArray{nEdges, Int32, 1}, ImVecArray{nEdges, Int32, 1}, Dict{NTuple{2, Int32}, Int32}))
-    precompile(compute_edgesOnCell!, (ImVecArray{nEdges, Int64, 1}, ImVecArray{nEdges, Int64, 1}, Dict{NTuple{2, Int64}, Int64}))
+    precompile(compute_edgesOnCell!, (SmVecArray{nEdges, Int32, 1}, SmVecArray{nEdges, Int32, 1}, Dict{FixedVector{2, Int32}, Int32}))
+    precompile(compute_edgesOnCell!, (SmVecArray{nEdges, Int64, 1}, SmVecArray{nEdges, Int64, 1}, Dict{FixedVector{2, Int64}, Int64}))
 end
 
-function compute_edgesOnCell(cellsOnCell::ImVecArray, cells_pair_to_edge::Dict)
-    edgesOnCell = ImmutableVectorArray(similar(cellsOnCell.data), cellsOnCell.length)
+function compute_edgesOnCell(cellsOnCell::SmVecArray, cells_pair_to_edge::Dict)
+    edgesOnCell = SmallVectorArray(similar(cellsOnCell.data), cellsOnCell.length)
     return compute_edgesOnCell!(edgesOnCell, cellsOnCell, cells_pair_to_edge)
 end
 
 for nEdges in 6:10
-    precompile(compute_edgesOnCell, (ImVecArray{nEdges, Int32, 1}, Dict{NTuple{2, Int32}, Int32}))
-    precompile(compute_edgesOnCell, (ImVecArray{nEdges, Int64, 1}, Dict{NTuple{2, Int64}, Int32}))
+    precompile(compute_edgesOnCell, (SmVecArray{nEdges, Int32, 1}, Dict{FixedVector{2, Int32}, Int32}))
+    precompile(compute_edgesOnCell, (SmVecArray{nEdges, Int64, 1}, Dict{FixedVector{2, Int64}, Int32}))
 end
 
-#function compute_edgesOnVertex!(edgesOnVertex::AbstractVector, cellsOnVertex::AbstractVector, cellsOnEdge::Vector{NTuple{2, TI}}) where {TI}
-#
-#    @parallel for v in eachindex(edgesOnVertex)
-#        @inbounds begin
-#            c1, c2, c3 = cellsOnVertex[v]
-#            pair1 = ordered(c3, c1)
-#            e1 = findfirst(x -> (ordered(x[1], x[2]) === pair1), cellsOnEdge)
-#            pair2 = ordered(c1, c2)
-#            e2 = findfirst(x -> (ordered(x[1], x[2]) === pair2), cellsOnEdge)
-#            pair3 = ordered(c2, c3)
-#            e3 = findfirst(x -> (ordered(x[1], x[2]) === pair3), cellsOnEdge)
-#            edgesOnVertex[v] = (e1, e2, e3)
-#        end
-#    end
-#    return edgesOnVertex
-#end
-
-#precompile(compute_edgesOnVertex!, (Vector{NTuple{3, Int32}}, Vector{NTuple{3, Int32}}, Vector{NTuple{2, Int32}}))
-#precompile(compute_edgesOnVertex!, (Vector{NTuple{3, Int64}}, Vector{NTuple{3, Int64}}, Vector{NTuple{2, Int64}}))
-
-#function compute_edgesOnVertex(cellsOnVertex::Vector{NTuple{3, TI}}, cellsOnEdge) where {TI}
-#    edgesOnVertex = Vector{NTuple{3, TI}}(undef, length(cellsOnVertex))
-#    return compute_edgesOnVertex!(edgesOnVertex, cellsOnVertex, cellsOnEdge)
-#end
-
-#precompile(compute_edgesOnVertex, (Vector{NTuple{3, Int32}}, Vector{NTuple{2, Int32}}))
-#precompile(compute_edgesOnVertex, (Vector{NTuple{3, Int64}}, Vector{NTuple{2, Int64}}))
-
-function compute_edgesOnVertex!(edgesOnVertex::AbstractVector, cellsOnVertex::AbstractVector, cells_pair_to_edge::Dict{NTuple{2, TI}, TI}) where {TI}
+function compute_edgesOnVertex!(edgesOnVertex::AbstractVector, cellsOnVertex::AbstractVector, cells_pair_to_edge::Dict{FixedVector{2, TI}, TI}) where {TI}
 
     @parallel for v in eachindex(edgesOnVertex)
         @inbounds begin
@@ -220,16 +159,16 @@ function compute_edgesOnVertex!(edgesOnVertex::AbstractVector, cellsOnVertex::Ab
     return edgesOnVertex
 end
 
-precompile(compute_edgesOnVertex!, (Vector{NTuple{3, Int32}}, Vector{NTuple{3, Int32}}, Dict{NTuple{2, Int32}, Int32}))
-precompile(compute_edgesOnVertex!, (Vector{NTuple{3, Int64}}, Vector{NTuple{3, Int64}}, Dict{NTuple{2, Int64}, Int64}))
+precompile(compute_edgesOnVertex!, (Vector{FixedVector{3, Int32}}, Vector{FixedVector{3, Int32}}, Dict{FixedVector{2, Int32}, Int32}))
+precompile(compute_edgesOnVertex!, (Vector{FixedVector{3, Int64}}, Vector{FixedVector{3, Int64}}, Dict{FixedVector{2, Int64}, Int64}))
 
-function compute_edgesOnVertex(cellsOnVertex::Vector{NTuple{3, TI}}, cells_pair_to_edge::Dict) where {TI}
-    edgesOnVertex = Vector{NTuple{3, TI}}(undef, length(cellsOnVertex))
+function compute_edgesOnVertex(cellsOnVertex::Vector{FixedVector{3, TI}}, cells_pair_to_edge::Dict) where {TI}
+    edgesOnVertex = Vector{FixedVector{3, TI}}(undef, length(cellsOnVertex))
     return compute_edgesOnVertex!(edgesOnVertex, cellsOnVertex, cells_pair_to_edge)
 end
 
-precompile(compute_edgesOnVertex, (Vector{NTuple{3, Int32}}, Dict{NTuple{2, Int32}, Int32}))
-precompile(compute_edgesOnVertex, (Vector{NTuple{3, Int64}}, Dict{NTuple{2, Int64}, Int64}))
+precompile(compute_edgesOnVertex, (Vector{FixedVector{3, Int32}}, Dict{FixedVector{2, Int32}, Int32}))
+precompile(compute_edgesOnVertex, (Vector{FixedVector{3, Int64}}, Dict{FixedVector{2, Int64}, Int64}))
 
 function compute_polygon_area_periodic!(output, vpos, verticesOnPolygon, xp::Number, yp::Number)
     @parallel for c in eachindex(verticesOnPolygon)
@@ -238,9 +177,9 @@ function compute_polygon_area_periodic!(output, vpos, verticesOnPolygon, xp::Num
     return output
 end
 
-precompile(compute_polygon_area_periodic!, (Vector{Float64}, Vec2DxyArray{Float64, 1}, Vector{NTuple{3, Int32}}, Float64, Float64))
+precompile(compute_polygon_area_periodic!, (Vector{Float64}, Vec2DxyArray{Float64, 1}, Vector{FixedVector{3, Int32}}, Float64, Float64))
 for nEdges in 6:10
-    precompile(compute_polygon_area_periodic!, (Vector{Float64}, Vec2DxyArray{Float64, 1}, ImVecArray{nEdges, Int32, 1}, Float64, Float64))
+    precompile(compute_polygon_area_periodic!, (Vector{Float64}, Vec2DxyArray{Float64, 1}, SmVecArray{nEdges, Int32, 1}, Float64, Float64))
 end
 
 function compute_polygon_area_spherical!(output, vpos, verticesOnPolygon, R::Number)
@@ -250,9 +189,9 @@ function compute_polygon_area_spherical!(output, vpos, verticesOnPolygon, R::Num
     return output
 end
 
-precompile(compute_polygon_area_spherical!, (Vector{Float64}, Vec3DArray{Float64, 1}, Vector{NTuple{3, Int32}}, Float64))
+precompile(compute_polygon_area_spherical!, (Vector{Float64}, Vec3DArray{Float64, 1}, Vector{FixedVector{3, Int32}}, Float64))
 for nEdges in 6:10
-    precompile(compute_polygon_area_spherical!, (Vector{Float64}, Vec3DArray{Float64, 1}, ImVecArray{nEdges, Int32, 1}, Float64))
+    precompile(compute_polygon_area_spherical!, (Vector{Float64}, Vec3DArray{Float64, 1}, SmVecArray{nEdges, Int32, 1}, Float64))
 end
 
 function compute_polygon_centroid_periodic!(output, vpos, verticesOnPolygon, xp::Number, yp::Number)
@@ -262,9 +201,9 @@ function compute_polygon_centroid_periodic!(output, vpos, verticesOnPolygon, xp:
     return output
 end
 
-precompile(compute_polygon_centroid_periodic!, (Vec2DxyArray{Float64, 1}, Vec2DxyArray{Float64, 1}, Vector{NTuple{3, Int32}}, Float64, Float64))
+precompile(compute_polygon_centroid_periodic!, (Vec2DxyArray{Float64, 1}, Vec2DxyArray{Float64, 1}, Vector{FixedVector{3, Int32}}, Float64, Float64))
 for nEdges in 6:10
-    precompile(compute_polygon_centroid_periodic!, (Vec2DxyArray{Float64, 1}, Vec2DxyArray{Float64, 1}, ImVecArray{nEdges, Int32, 1}, Float64, Float64))
+    precompile(compute_polygon_centroid_periodic!, (Vec2DxyArray{Float64, 1}, Vec2DxyArray{Float64, 1}, SmVecArray{nEdges, Int32, 1}, Float64, Float64))
 end
 
 function compute_polygon_centroid_spherical!(output, vpos, verticesOnPolygon, R::Number)
@@ -273,9 +212,9 @@ function compute_polygon_centroid_spherical!(output, vpos, verticesOnPolygon, R:
     end
     return output
 end
-precompile(compute_polygon_centroid_spherical!, (Vec3DArray{Float64, 1}, Vec3DArray{Float64, 1}, Vector{NTuple{3, Int32}}, Float64))
+precompile(compute_polygon_centroid_spherical!, (Vec3DArray{Float64, 1}, Vec3DArray{Float64, 1}, Vector{FixedVector{3, Int32}}, Float64))
 for nEdges in 6:10
-    precompile(compute_polygon_centroid_spherical!, (Vec3DArray{Float64, 1}, Vec3DArray{Float64, 1}, ImVecArray{nEdges, Int32, 1}, Float64))
+    precompile(compute_polygon_centroid_spherical!, (Vec3DArray{Float64, 1}, Vec3DArray{Float64, 1}, SmVecArray{nEdges, Int32, 1}, Float64))
 end
 
 function compute_longitude_periodic(cpos::Vec2DxyArray{T, 1}) where {T}
@@ -362,7 +301,7 @@ end
 precompile(compute_meridionalVector!, (Vec3DArray{Float64, 1}, Vec3DArray{Float64, 1}))
 
 """
-    select_kite_area(kiteAreaOnVertex::Vector{NTuple{3}}, cellsOnVertex::Vector{NTuple{3,<:Integer}}, v_i::Integer, c_i::Integer)
+    select_kite_area(kiteAreaOnVertex::Vector{FixedVector{3}}, cellsOnVertex::Vector{FixedVector{3,<:Integer}}, v_i::Integer, c_i::Integer)
 Returns the kite Area associated with cell `c_i` and vertex `v_i`.
 Throws an error if vertex `v_i` doens't belong to cell `c_i`.
 """
@@ -437,7 +376,7 @@ function check_if_counter_clockwise(reference_position, indicesOnReference, refe
 end
 
 for N in 6:9
-    precompile(Tuple{typeof(check_if_counter_clockwise), VecArray{Vec{Union{Zeros.Zero, Float64}, 1, Float64, Float64, Zeros.Zero}, 1, Array{Float64, 1}, Array{Float64, 1}, Array{Zeros.Zero, 1}}, ImmutableVectorArray{N, Int32, 1, Array{NTuple{N, Int32}, 1}}, VecArray{Vec{Union{Zeros.Zero, Float64}, 1, Float64, Float64, Zeros.Zero}, 1, Array{Float64, 1}, Array{Float64, 1}, Array{Zeros.Zero, 1}}, Float64, Float64})
+    precompile(Tuple{typeof(check_if_counter_clockwise), VecArray{Vec{Union{Zeros.Zero, Float64}, 1, Float64, Float64, Zeros.Zero}, 1, Array{Float64, 1}, Array{Float64, 1}, Array{Zeros.Zero, 1}}, SmallVectorArray{N, Int32, 1, Array{FixedVector{N, Int32}, 1}}, VecArray{Vec{Union{Zeros.Zero, Float64}, 1, Float64, Float64, Zeros.Zero}, 1, Array{Float64, 1}, Array{Float64, 1}, Array{Zeros.Zero, 1}}, Float64, Float64})
 end
 precompile(Tuple{typeof(check_if_counter_clockwise), VecArray{Vec{Union{Zeros.Zero, Float64}, 1, Float64, Float64, Zeros.Zero}, 1, Array{Float64, 1}, Array{Float64, 1}, Array{Zeros.Zero, 1}}, Array{Tuple{Int32, Int32, Int32}, 1}, VecArray{Vec{Union{Zeros.Zero, Float64}, 1, Float64, Float64, Zeros.Zero}, 1, Array{Float64, 1}, Array{Float64, 1}, Array{Zeros.Zero, 1}}, Float64, Float64})
 

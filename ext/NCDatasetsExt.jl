@@ -1,7 +1,8 @@
 module NCDatasetsExt
 
-using VoronoiMeshes, NCDatasets, TensorsLite, TensorsLite.Zeros, ImmutableVectors
-import VoronoiMeshes: save_to_netcdf, save_to_netcdf!, copy_matrix_to_tuple_vector!
+using VoronoiMeshes, NCDatasets, TensorsLite, TensorsLite.Zeros, SmallCollections
+import VoronoiMeshes: save_to_netcdf, save_to_netcdf!, copy_matrix_to_fixedvector_vector!
+using PrecompileTools
 
 function on_a_sphere(ncfile::NCDatasets.NCDataset)
     oas = lowercase(strip(ncfile.attrib["on_a_sphere"]::String))
@@ -10,17 +11,17 @@ end
 
 precompile(on_a_sphere, (NCDatasets.NCDataset{Nothing, Missing},))
 
-function VoronoiMeshes.PlanarVoronoiDiagram(::Val{N}, nEdges::Vector{UInt8}, ncfile::NCDatasets.NCDataset) where {N}
+function VoronoiMeshes.PlanarVoronoiDiagram(::Val{N}, nEdges::Vector{Int16}, ncfile::NCDatasets.NCDataset) where {N}
     verticesOnCellArray = (ncfile["verticesOnCell"][:, :])::Matrix{Int32}
     nCells = length(nEdges)
 
-    verticesOnCell = ImmutableVectorArray(Vector{NTuple{N, Int32}}(undef, nCells), nEdges)
-    t1 = Threads.@spawn copy_matrix_to_tuple_vector!($(verticesOnCell.data), $verticesOnCellArray)
+    verticesOnCell = SmallVectorArray(Vector{FixedVector{N, Int32}}(undef, nCells), nEdges)
+    t1 = Threads.@spawn copy_matrix_to_fixedvector_vector!($(verticesOnCell.data), $verticesOnCellArray)
 
     cellsOnVertexArray = ncfile["cellsOnVertex"][:, :]::Matrix{Int32}
     nVertices = size(cellsOnVertexArray, 2)
-    cellsOnVertex = Vector{NTuple{3, Int32}}(undef, nVertices)
-    t2 = Threads.@spawn copy_matrix_to_tuple_vector!($cellsOnVertex, $cellsOnVertexArray)
+    cellsOnVertex = Vector{FixedVector{3, Int32}}(undef, nVertices)
+    t2 = Threads.@spawn copy_matrix_to_fixedvector_vector!($cellsOnVertex, $cellsOnVertexArray)
 
     xCell = ncfile["xCell"][:]::Vector{Float64}
     yCell = ncfile["yCell"][:]::Vector{Float64}
@@ -42,13 +43,13 @@ function VoronoiMeshes.PlanarVoronoiDiagram(::Val{N}, nEdges::Vector{UInt8}, ncf
 end
 
 for N in 6:10
-    precompile(VoronoiMeshes.PlanarVoronoiDiagram, (Val{N}, Vector{UInt8}, NCDatasets.NCDataset{Nothing, Missing}))
+    precompile(VoronoiMeshes.PlanarVoronoiDiagram, (Val{N}, Vector{Int16}, NCDatasets.NCDataset{Nothing, Missing}))
 end
 
 function VoronoiMeshes.PlanarVoronoiDiagram(ncfile::NCDatasets.NCDataset)
     on_a_sphere(ncfile) && throw(error("Mesh is not planar"))
 
-    nEdgesOnCell = UInt8.(ncfile["nEdgesOnCell"][:]::Vector{Int32})
+    nEdgesOnCell = Int16.(ncfile["nEdgesOnCell"][:]::Vector{Int32})
     maxEdges = Int(maximum(nEdgesOnCell))
 
     #Avoid dynamic dispatch for most common cases
@@ -71,7 +72,7 @@ end
 function VoronoiMeshes.PlanarVoronoiDiagram(n::Val{maxEdges}, ncfile::NCDatasets.NCDataset) where {maxEdges}
     on_a_sphere(ncfile) && throw(error("Mesh is not planar"))
 
-    nEdgesOnCell = UInt8.(ncfile["nEdgesOnCell"][:]::Vector{Int32})
+    nEdgesOnCell = Int16.(ncfile["nEdgesOnCell"][:]::Vector{Int32})
     maxEdges == Int(maximum(nEdgesOnCell)) || throw(error("nEdges not consistent with data in NetCDF file"))
 
     return PlanarVoronoiDiagram(n, nEdgesOnCell, ncfile)
@@ -81,17 +82,17 @@ for N in 6:10
     precompile(VoronoiMeshes.PlanarVoronoiDiagram, (Val{N}, NCDatasets.NCDataset{Nothing, Missing}))
 end
 
-function VoronoiMeshes.SphericalVoronoiDiagram(::Val{N}, nEdges::Vector{UInt8}, ncfile::NCDatasets.NCDataset) where {N}
+function VoronoiMeshes.SphericalVoronoiDiagram(::Val{N}, nEdges::Vector{Int16}, ncfile::NCDatasets.NCDataset) where {N}
     verticesOnCellArray = (ncfile["verticesOnCell"][:, :])::Matrix{Int32}
     nCells = length(nEdges)
 
-    verticesOnCell = ImmutableVectorArray(Vector{NTuple{N, Int32}}(undef, nCells), nEdges)
-    t1 = Threads.@spawn copy_matrix_to_tuple_vector!($(verticesOnCell.data), $verticesOnCellArray)
+    verticesOnCell = SmallVectorArray(Vector{FixedVector{N, Int32}}(undef, nCells), nEdges)
+    t1 = Threads.@spawn copy_matrix_to_fixedvector_vector!($(verticesOnCell.data), $verticesOnCellArray)
 
     cellsOnVertexArray = ncfile["cellsOnVertex"][:, :]::Matrix{Int32}
     nVertices = size(cellsOnVertexArray, 2)
-    cellsOnVertex = Vector{NTuple{3, Int32}}(undef, nVertices)
-    t2 = Threads.@spawn copy_matrix_to_tuple_vector!($cellsOnVertex, $cellsOnVertexArray)
+    cellsOnVertex = Vector{FixedVector{3, Int32}}(undef, nVertices)
+    t2 = Threads.@spawn copy_matrix_to_fixedvector_vector!($cellsOnVertex, $cellsOnVertexArray)
 
     xCell = ncfile["xCell"][:]::Vector{Float64}
     yCell = ncfile["yCell"][:]::Vector{Float64}
@@ -114,13 +115,13 @@ function VoronoiMeshes.SphericalVoronoiDiagram(::Val{N}, nEdges::Vector{UInt8}, 
 end
 
 for N in 6:10
-    precompile(VoronoiMeshes.SphericalVoronoiDiagram, (Val{N}, Vector{UInt8}, NCDatasets.NCDataset{Nothing, Missing}))
+    precompile(VoronoiMeshes.SphericalVoronoiDiagram, (Val{N}, Vector{Int16}, NCDatasets.NCDataset{Nothing, Missing}))
 end
 
 function VoronoiMeshes.SphericalVoronoiDiagram(ncfile::NCDatasets.NCDataset)
     on_a_sphere(ncfile) || throw(error("Mesh is not spherical"))
 
-    nEdgesOnCell = UInt8.(ncfile["nEdgesOnCell"][:]::Vector{Int32})
+    nEdgesOnCell = Int16.(ncfile["nEdgesOnCell"][:]::Vector{Int32})
     maxEdges = Int(maximum(nEdgesOnCell))
 
     #Avoid dynamic dispatch for most common cases
@@ -143,7 +144,7 @@ end
 function VoronoiMeshes.SphericalVoronoiDiagram(n::Val{maxEdges}, ncfile::NCDatasets.NCDataset) where {maxEdges}
     on_a_sphere(ncfile) || throw(error("Mesh is not spherical"))
 
-    nEdgesOnCell = UInt8.(ncfile["nEdgesOnCell"][:]::Vector{Int32})
+    nEdgesOnCell = Int16.(ncfile["nEdgesOnCell"][:]::Vector{Int32})
     maxEdges == Int(maximum(nEdgesOnCell)) || throw(error("nEdges not consistent with data in NetCDF file"))
 
     return SphericalVoronoiDiagram(n, nEdgesOnCell, ncfile)
@@ -162,7 +163,7 @@ function VoronoiMeshes.VoronoiDiagram(ncfile::NCDatasets.NCDataset)
 end
 
 function VoronoiMeshes.VoronoiDiagram(n::Val{maxEdges}, ncfile::NCDatasets.NCDataset) where {maxEdges}
-    nEdges = UInt8.(ncfile["nEdgesOnCell"][:]::Vector{Int32})
+    nEdges = Int16.(ncfile["nEdgesOnCell"][:]::Vector{Int32})
     maxEdges == Int(maximum(nEdges)) || throw(error("nEdges not consistent with data in NetCDF file"))
     if on_a_sphere(ncfile)
         return VoronoiDiagram(SphericalVoronoiDiagram(n, nEdges, ncfile))
@@ -220,10 +221,10 @@ function VoronoiMeshes.Cells(voro::VoronoiDiagram{S, NE, TI, TF, Tz}, ncfile::NC
     n = length(position)
     vertices = voro.verticesOnCell
     nEdges = vertices.length
-    edges = ImmutableVectorArray(similar(vertices.data), nEdges)
-    copy_matrix_to_tuple_vector!(edges.data, ncfile["edgesOnCell"][:, :]::Matrix{Int32})
-    cells = ImmutableVectorArray(similar(vertices.data), nEdges)
-    copy_matrix_to_tuple_vector!(cells.data, ncfile["cellsOnCell"][:, :]::Matrix{Int32})
+    edges = SmallVectorArray(similar(vertices.data), nEdges)
+    copy_matrix_to_fixedvector_vector!(edges.data, ncfile["edgesOnCell"][:, :]::Matrix{Int32})
+    cells = SmallVectorArray(similar(vertices.data), nEdges)
+    copy_matrix_to_fixedvector_vector!(cells.data, ncfile["cellsOnCell"][:, :]::Matrix{Int32})
 
     return Cells(n, position, nEdges, vertices, edges, cells, CellInfo(voro, ncfile))
 end
@@ -258,7 +259,7 @@ function VoronoiMeshes.Vertices(voro::VoronoiDiagram{S, NE, TI, TF, Tz}, ncfile:
     n = length(position)
     cells = voro.cellsOnVertex
     edges = similar(cells)
-    copy_matrix_to_tuple_vector!(edges, ncfile["edgesOnVertex"][:, :]::Matrix{Int32})
+    copy_matrix_to_fixedvector_vector!(edges, ncfile["edgesOnVertex"][:, :]::Matrix{Int32})
     return Vertices(n, position, edges, cells, VertexInfo(voro, ncfile))
 end
 
@@ -305,12 +306,12 @@ function VoronoiMeshes.Edges(voro::VoronoiDiagram{S, NE, TI, TF, Tz}, ncfile::NC
 
     verticesOnEdgeArray = ncfile["verticesOnEdge"][:, :]::Matrix{Int32}
     n = size(verticesOnEdgeArray, 2)
-    vertices = Vector{NTuple{2, Int32}}(undef, n)
-    copy_matrix_to_tuple_vector!(vertices, verticesOnEdgeArray)
+    vertices = Vector{FixedVector{2, Int32}}(undef, n)
+    copy_matrix_to_fixedvector_vector!(vertices, verticesOnEdgeArray)
 
     cellsOnEdgeArray = ncfile["cellsOnEdge"][:, :]::Matrix{Int32}
-    cells = Vector{NTuple{2, Int32}}(undef, n)
-    copy_matrix_to_tuple_vector!(cells, cellsOnEdgeArray)
+    cells = Vector{FixedVector{2, Int32}}(undef, n)
+    copy_matrix_to_fixedvector_vector!(cells, cellsOnEdgeArray)
 
     xEdge = ncfile["xEdge"][:]::Vector{Float64}
     yEdge = ncfile["yEdge"][:]::Vector{Float64}
@@ -472,6 +473,18 @@ end
 
 include("save_to_netcdf.jl")
 
-include("precompile_NCDatasets.jl")
+@compile_workload begin
+    m_iso = VoronoiMesh("../test/mesh.nc")
+    m_sphe = VoronoiMesh("../test/spherical_grid_500km.nc")
+    m_dist = VoronoiMesh(fix_diagram!(VoronoiDiagram("../test/mesh_distorted_issues.nc")))
+    m_sphe_2 = VoronoiMesh(fix_diagram!(VoronoiDiagram("../test/x1.4002.grid.nc")))
+
+    save("test_save.nc", m_iso; force3D=true, write_computed=true)
+    Base.Filesystem.rm("test_save.nc")
+    Base.Filesystem.rm("test_save.graph.info")
+    save("test_save.nc", m_sphe; write_computed=true)
+    Base.Filesystem.rm("test_save.nc")
+    Base.Filesystem.rm("test_save.graph.info")
+end
 
 end # module

@@ -3,8 +3,8 @@ abstract type AbstractVoronoiDiagram{S, maxEdges, TI <: Integer, TF <: Real, Tz}
 struct PlanarVoronoiDiagram{maxEdges, TI, TF} <: AbstractVoronoiDiagram{false, maxEdges, TI, TF, Zeros.Zero}
     generators::Vec2DxyArray{TF, 1}
     vertices::Vec2DxyArray{TF, 1}
-    verticesOnCell::ImVecArray{maxEdges, TI, 1}
-    cellsOnVertex::Vector{NTuple{3, TI}}
+    verticesOnCell::SmVecArray{maxEdges, TI, 1}
+    cellsOnVertex::Vector{FixedVector{3, TI}}
     meshDensity::Vector{TF}
     x_period::TF
     y_period::TF
@@ -13,8 +13,8 @@ end
 struct SphericalVoronoiDiagram{maxEdges, TI, TF} <: AbstractVoronoiDiagram{true, maxEdges, TI, TF, TF}
     generators::Vec3DArray{TF, 1}
     vertices::Vec3DArray{TF, 1}
-    verticesOnCell::ImVecArray{maxEdges, TI, 1}
-    cellsOnVertex::Vector{NTuple{3, TI}}
+    verticesOnCell::SmVecArray{maxEdges, TI, 1}
+    cellsOnVertex::Vector{FixedVector{3, TI}}
     meshDensity::Vector{TF}
     sphere_radius::TF
 end
@@ -39,8 +39,8 @@ _getproperty(v::VoronoiDiagram, ::Val{:data}) = get_diagram(v)
 
 for maxEdges in 6:10
     let TF = Float64, TI = Int32
-        precompile(PlanarVoronoiDiagram, (Vec2DxyArray{TF, 1}, Vec2DxyArray{TF, 1}, ImVecArray{maxEdges, TI, 1}, Vector{NTuple{3, TI}}, Vector{TF}, TF, TF))
-        precompile(SphericalVoronoiDiagram, (Vec3DArray{TF, 1}, Vec3DArray{TF, 1}, ImVecArray{maxEdges, TI, 1}, Vector{NTuple{3, TI}}, Vector{TF}, TF))
+        precompile(PlanarVoronoiDiagram, (Vec2DxyArray{TF, 1}, Vec2DxyArray{TF, 1}, SmVecArray{maxEdges, TI, 1}, Vector{FixedVector{3, TI}}, Vector{TF}, TF, TF))
+        precompile(SphericalVoronoiDiagram, (Vec3DArray{TF, 1}, Vec3DArray{TF, 1}, SmVecArray{maxEdges, TI, 1}, Vector{FixedVector{3, TI}}, Vector{TF}, TF))
         precompile(VoronoiDiagram, (PlanarVoronoiDiagram{maxEdges, TI, TF},))
         precompile(VoronoiDiagram, (SphericalVoronoiDiagram{maxEdges, TI, TF},))
         precompile(get_diagram, (VoronoiDiagram{true, maxEdges, TI, TF, TF},))

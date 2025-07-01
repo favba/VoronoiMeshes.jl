@@ -1,10 +1,11 @@
 module VoronoiMeshes
 
 using LinearAlgebra
-using Zeros, TensorsLite, ImmutableVectors, TensorsLiteGeometry
+using Zeros, TensorsLite, SmallCollections, TensorsLiteGeometry
 
 export @parallel
 
+export SmallVectorArray, SmVecArray
 export AbstractVoronoiDiagram, VoronoiDiagram, PlanarVoronoiDiagram, SphericalVoronoiDiagram
 export CellInfo, Cells, VertexInfo, Vertices, EdgeInfo, Edges
 export AbstractVoronoiMesh, VoronoiMesh, on_sphere, max_edges, integer_type, float_type, get_diagram
@@ -19,6 +20,8 @@ export fix_diagram!, create_planar_hex_mesh
 const VecMaybe1DxArray{TX, TYZ, N} = TensorsLite.VecArray{Vec{Union{TX, TYZ}, 1, TX, TYZ, TYZ}, N, Array{TX, N}, Array{TYZ, N}, Array{TYZ, N}}
 const Vec1DxOr2DxyArray{TX, TXY, N} = TensorsLite.VecArray{Vec{Union{TX, Zero}, 1, TX, TXY, Zero}, N, Array{TX, N}, Array{TXY, N}, Array{Zero, N}}
 const VecMaybe1DyArray{TY, TXZ, N} = TensorsLite.VecArray{Vec{Union{TY, TXZ}, 1, TXZ, TY, TXZ}, N, Array{TXZ, N}, Array{TY, N}, Array{TXZ, N}}
+
+include("imvecarray.jl")
 
 include("utils_pre.jl")
 

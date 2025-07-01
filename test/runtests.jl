@@ -1,4 +1,4 @@
-using VoronoiMeshes, TensorsLite, ImmutableVectors, TensorsLiteGeometry, NCDatasets, LinearAlgebra, DelaunayTriangulation
+using VoronoiMeshes, TensorsLite, SmallCollections, TensorsLiteGeometry, NCDatasets, LinearAlgebra, DelaunayTriangulation
 using Test
 
 function my_approx(a, b; atol = 0.0, rtol = sqrt(eps(Float64)))

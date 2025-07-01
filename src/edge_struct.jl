@@ -59,8 +59,8 @@ An array with a particular coordinate can also be extracted throught the dot
 struct Edges{S, NE, TI, TF, Tz}
     n::Int
     position::TensorsLite.VecMaybe2DxyArray{TF, Tz, 1}
-    vertices::Vector{NTuple{2, TI}}
-    cells::Vector{NTuple{2, TI}}
+    vertices::Vector{FixedVector{2, TI}}
+    cells::Vector{FixedVector{2, TI}}
     info::EdgeInfo{S, NE, TI, TF, Tz}
 end
 
@@ -118,14 +118,14 @@ function build_edges(diagram::VoronoiDiagram{false, NE, TI, TF}) where {NE, TI, 
     nEdges = nVertex + nCells
 
     position = similar(diagram.vertices, nEdges)
-    vertices = Vector{NTuple{2, TI}}(undef, nEdges)
-    cells = Vector{NTuple{2, TI}}(undef, nEdges)
+    vertices = Vector{FixedVector{2, TI}}(undef, nEdges)
+    cells = Vector{FixedVector{2, TI}}(undef, nEdges)
 
     xp = diagram.x_period
     yp = diagram.y_period
 
-    vertex_pair_to_edge = Dict{NTuple{2, TI}, TI}()
-    cell_pair_to_edge = Dict{NTuple{2, TI}, TI}()
+    vertex_pair_to_edge = Dict{FixedVector{2, TI}, TI}()
+    cell_pair_to_edge = Dict{FixedVector{2, TI}, TI}()
     e = 0
     @inbounds for c in eachindex(cpos)
         cell_vertices = verticesOnCell[c]
@@ -141,8 +141,8 @@ function build_edges(diagram::VoronoiDiagram{false, NE, TI, TF}) where {NE, TI, 
                 vertex_pair_to_edge[pair] = e
                 c2 = find_cellOnCell(c, v2, v1, cellsOnVertex)
                 position[e] = periodic_to_base_point(((cp + closest(cp, cpos[c2], xp, yp)) / 2), xp, yp)
-                vertices[e] = (v1, v2)
-                cells[e] = (c, c2)
+                vertices[e] = FixedVector((v1, v2))
+                cells[e] = FixedVector((c, c2))
                 cell_pair_to_edge[ordered(c,c2)] = e
             end
         end
@@ -154,8 +154,8 @@ function build_edges(diagram::VoronoiDiagram{false, NE, TI, TF}) where {NE, TI, 
             vertex_pair_to_edge[pair] = e
             c2 = find_cellOnCell(c, v2, v1, cellsOnVertex)
             position[e] = periodic_to_base_point(((cp + closest(cp, cpos[c2], xp, yp)) / 2), xp, yp)
-            vertices[e] = (v1, v2)
-            cells[e] = (c, c2)
+            vertices[e] = FixedVector((v1, v2))
+            cells[e] = FixedVector((c, c2))
             cell_pair_to_edge[ordered(c,c2)] = e
         end
     end
@@ -175,13 +175,13 @@ function build_edges(diagram::VoronoiDiagram{true, NE, TI, TF}) where {NE, TI, T
     nEdges = nVertex + nCells - 2
 
     position = similar(diagram.vertices, nEdges)
-    vertices = Vector{NTuple{2, TI}}(undef, nEdges)
-    cells = Vector{NTuple{2, TI}}(undef, nEdges)
+    vertices = Vector{FixedVector{2, TI}}(undef, nEdges)
+    cells = Vector{FixedVector{2, TI}}(undef, nEdges)
 
     R = diagram.sphere_radius
 
-    vertex_pair_to_edge = Dict{NTuple{2, TI}, TI}()
-    cell_pair_to_edge = Dict{NTuple{2, TI}, TI}()
+    vertex_pair_to_edge = Dict{FixedVector{2, TI}, TI}()
+    cell_pair_to_edge = Dict{FixedVector{2, TI}, TI}()
     e = 0
     @inbounds for c in eachindex(cpos)
         cell_vertices = verticesOnCell[c]
@@ -197,8 +197,8 @@ function build_edges(diagram::VoronoiDiagram{true, NE, TI, TF}) where {NE, TI, T
                 vertex_pair_to_edge[pair] = e
                 c2 = find_cellOnCell(c, v2, v1, cellsOnVertex)
                 position[e] = arc_midpoint(R, cp, cpos[c2])
-                vertices[e] = (v1, v2)
-                cells[e] = (c, c2)
+                vertices[e] = FixedVector((v1, v2))
+                cells[e] = FixedVector((c, c2))
                 cell_pair_to_edge[ordered(c,c2)] = e
             end
         end
@@ -210,8 +210,8 @@ function build_edges(diagram::VoronoiDiagram{true, NE, TI, TF}) where {NE, TI, T
             vertex_pair_to_edge[pair] = e
             c2 = find_cellOnCell(c, v2, v1, cellsOnVertex)
             position[e] = arc_midpoint(R, cp, cpos[c2])
-            vertices[e] = (v1, v2)
-            cells[e] = (c, c2)
+            vertices[e] = FixedVector((v1, v2))
+            cells[e] = FixedVector((c, c2))
             cell_pair_to_edge[ordered(c,c2)] = e
         end
     end

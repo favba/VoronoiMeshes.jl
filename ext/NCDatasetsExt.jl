@@ -473,18 +473,21 @@ end
 
 include("save_to_netcdf.jl")
 
-@compile_workload begin
-    m_iso = VoronoiMesh("../test/mesh.nc")
-    m_sphe = VoronoiMesh("../test/spherical_grid_500km.nc")
-    m_dist = VoronoiMesh(fix_diagram!(VoronoiDiagram("../test/mesh_distorted_issues.nc")))
-    m_sphe_2 = VoronoiMesh(fix_diagram!(VoronoiDiagram("../test/x1.4002.grid.nc")))
-
-    save("test_save.nc", m_iso; force3D=true, write_computed=true)
-    Base.Filesystem.rm("test_save.nc")
-    Base.Filesystem.rm("test_save.graph.info")
-    save("test_save.nc", m_sphe; write_computed=true)
-    Base.Filesystem.rm("test_save.nc")
-    Base.Filesystem.rm("test_save.graph.info")
+@setup_workload begin
+    bdir = string(Base.@__DIR__, "/")
+    @compile_workload begin
+        m_iso = VoronoiMesh(string(bdir, "../test/mesh.nc"))
+        m_sphe = VoronoiMesh(string(bdir, "../test/spherical_grid_500km.nc"))
+        m_dist = VoronoiMesh(fix_diagram!(VoronoiDiagram(string(bdir, "../test/mesh_distorted_issues.nc"))))
+        m_sphe_2 = VoronoiMesh(fix_diagram!(VoronoiDiagram(string(bdir , "../test/x1.4002.grid.nc"))))
+    
+        save(string(bdir, "test_save.nc"), m_iso; force3D=true, write_computed=true)
+        Base.Filesystem.rm(string(bdir, "test_save.nc"))
+        Base.Filesystem.rm(string(bdir, "test_save.graph.info"))
+        save(string(bdir, "test_save.nc"), m_sphe; write_computed=true)
+        Base.Filesystem.rm(string(bdir, "test_save.nc"))
+        Base.Filesystem.rm(string(bdir, "test_save.graph.info"))
+    end
 end
 
 end # module

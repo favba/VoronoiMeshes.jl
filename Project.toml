@@ -18,10 +18,10 @@ Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 NCDatasets = "85f8d34a-cbdd-5861-8df4-14fed0d494ab"
 
 [extensions]
-DelaunayTriangulationExt = "DelaunayTriangulation"
-GeometryBasicsExt = "GeometryBasics"
+DelaunayTriangulationExt = ["DelaunayTriangulation", "Zeros", "TensorsLite", "TensorsLiteGeometry", "SmallCollections"]
+GeometryBasicsExt = ["GeometryBasics", "LinearAlgebra", "TensorsLite", "TensorsLiteGeometry"]
 MakieExt = "Makie"
-NCDatasetsExt = "NCDatasets"
+NCDatasetsExt = ["NCDatasets", "TensorsLite", "Zeros", "SmallCollections", "PrecompileTools"]
 
 [compat]
 DelaunayTriangulation = "1.6.0"

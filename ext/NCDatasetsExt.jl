@@ -1,6 +1,6 @@
 module NCDatasetsExt
 
-using VoronoiMeshes, NCDatasets, TensorsLite, TensorsLite.Zeros, SmallCollections
+using VoronoiMeshes, NCDatasets, TensorsLite, Zeros, SmallCollections
 import VoronoiMeshes: save_to_netcdf, save_to_netcdf!, copy_matrix_to_fixedvector_vector!
 using PrecompileTools
 

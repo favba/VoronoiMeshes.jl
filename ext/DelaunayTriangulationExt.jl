@@ -1,6 +1,7 @@
 module DelaunayTriangulationExt
 
 using Zeros, VoronoiMeshes, DelaunayTriangulation, TensorsLite, SmallCollections, TensorsLiteGeometry
+using Polyester
 using PrecompileTools
 
 """
@@ -110,7 +111,7 @@ function fill_with_polygon_mass_centroids!(new_points, pol_length, N::Integer, l
     polygon_points = reinterpret(Vec2Dxy{Float64}, voro.polygon_points)
 
     #Compute mass centroid for central polygons
-    @parallel for i in Base.OneTo(N)
+    @batch for i in Base.OneTo(N)
         @inbounds begin
             v = polygons[i]
             vertices_position = @view(polygon_points[@view(v[1:(end - 1)])])
@@ -218,9 +219,11 @@ function extract_periodic_vertices_and_cells(N::Integer, lx::Number, ly::Number,
     vertices_pos_tuple = vor.polygon_points
 
     #function that filters (choses) points that are inside the [0, lx) × [0, ly) domain
-    fil_func = function (i)
-        vp = vertices_pos_tuple[i]
-        return (0 <= vp[1] < lx) && (0 <= vp[2] < ly)
+    fil_func = let vertices_pos_tuple = vertices_pos_tuple
+        function (i)
+            vp = vertices_pos_tuple[i]
+            return (0 <= vp[1] < lx) && (0 <= vp[2] < ly)
+        end
     end
 
     #indices belonging to vertices that are in the base domain [0, lx) × [0, ly)
@@ -235,20 +238,29 @@ function extract_periodic_vertices_and_cells(N::Integer, lx::Number, ly::Number,
     T = SmallVector{16, Int32}
     verticesOnCell_global = vor.polygons
     verticesOnCell = Vector{T}(undef, N)
-    for c in eachindex(verticesOnCell)
-        vocg = T(@view(verticesOnCell_global[c][1:(end - 1)]))
-        vps = map(x -> reinterpret(Vec2Dxy{Float64}, getindex(vertices_pos_tuple, x)), vocg)
-        verticesOnCell[c] = map(v -> find_base_point_index(v, interior_vertex_pos, lx, ly), vps)
+    let vertices_pos_vec = reinterpret(Vec2Dxy{Float64}, vertices_pos_tuple), 
+        interior_vertex_pos = interior_vertex_pos, lx = lx, ly = ly
+        func1 = @inline i -> @inbounds(getindex(vertices_pos_vec, i))
+        func2 = @inline v -> find_base_point_index(v, interior_vertex_pos, lx, ly)
+        @batch for c in eachindex(verticesOnCell)
+            vocg = T(@view(verticesOnCell_global[c][1:(end - 1)]))
+            vps = map(func1, vocg)
+            verticesOnCell[c] = map(func2, vps)
+        end
     end
 
     cell_pos = parent(vor.triangulation.points)
     interior_cell_pos = cell_pos[Base.OneTo(N)]
     cellsOnVertex_global = vor.circumcenter_to_triangle
     cellsOnVertex = Vector{FixedVector{3, Int32}}(undef, nVertices)
-    for v in eachindex(cellsOnVertex)
-        gcov = cellsOnVertex_global[interior_vertex_i[v]]
-        cps = map(x -> getindex(cell_pos, x), gcov)
-        cellsOnVertex[v] = map(c -> find_base_point_index(c, interior_cell_pos, lx, ly), cps)
+    let cell_pos = cell_pos, interior_cell_pos = interior_cell_pos, lx = lx, ly = ly
+        func3 = @inline i -> @inbounds(getindex(cell_pos, i))
+        func4 = @inline c -> find_base_point_index(c, interior_cell_pos, lx, ly)
+        @batch for v in eachindex(cellsOnVertex)
+            gcov = cellsOnVertex_global[interior_vertex_i[v]]
+            cps = map(func3, gcov)
+            cellsOnVertex[v] = map(func4, cps)
+        end
     end
 
     return interior_cell_pos, interior_vertex_pos, verticesOnCell, cellsOnVertex
@@ -267,7 +279,7 @@ function VoronoiMeshes.PlanarVoronoiDiagram(initial_generator_points::AbstractVe
 
     meshDensity = Vector{nonzero_eltype(eltype(generators))}(undef, N)
 
-    @inbounds for i in eachindex(meshDensity)
+    @batch for i in eachindex(meshDensity)
         meshDensity[i] = density(generators[i])
     end
 
@@ -343,8 +355,8 @@ function VoronoiMeshes.create_planar_hex_mesh(lx::Number, ly::Number, dc::Number
     l = sqrt(3)*dc/3
 
     I = LinearIndices((Base.OneTo(nx), Base.OneTo(ny)))
-    @parallel for j in Base.OneTo(ny)
-        y = (j-1)*1.5*l
+    @batch for j in Base.OneTo(ny)
+        y = ((3 * (j-1)) // 2 ) * l
         aux = iseven(j)
         @inbounds for i in Base.OneTo(nx)
             x = (i-1)*dc + aux*dc/2
@@ -360,6 +372,7 @@ end
 @compile_workload begin
     m = VoronoiMesh(17, 1.0, 1.0)
     m2 = VoronoiMesh(17, 1.0, 1.0, density=VoronoiMeshes.circular_refinement_function(1.0, 1.0), rtol=1e-4, max_time = 0.2)
+    m3 = create_planar_hex_mesh(1.0, 1.0, 0.1)
 end
 
 end # Module

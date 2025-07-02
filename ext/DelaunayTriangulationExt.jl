@@ -365,7 +365,7 @@ function VoronoiMeshes.create_planar_hex_mesh(lx::Number, ly::Number, dc::Number
     end
 
     xp = Float64(nx*dc)
-    yp = ny*3l/2
+    yp = ((3*ny) // 2) * l
     return VoronoiMesh(generators, xp, yp, max_iter=0)
 end
 

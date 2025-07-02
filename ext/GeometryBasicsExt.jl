@@ -13,10 +13,13 @@ else
     const PolType = Polygon{2, Float32}
 end
 
+@inline _capacity(::Type{<:SmallVector{N}}) where {N} = N
+@inline _capacity(::Type{<:FixedVector{N}}) where {N} = N
+
 function create_polygons_periodic(vert_pos, polygon_pos, verticesOnPolygon, x_period, y_period)
 
     polygons = Vector{PolType}(undef, length(polygon_pos))
-    NE = max_length(eltype(verticesOnPolygon))
+    NE = _capacity(eltype(verticesOnPolygon))
     @parallel for i in eachindex(polygon_pos)
         @inbounds begin
             ppos = polygon_pos[i]

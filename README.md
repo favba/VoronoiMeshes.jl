@@ -1,3 +1,3 @@
 # VoronoiMeshes
 
-[![Build Status](https://github.com/favba/VoronoiMeshes.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/favba/VoronoiMeshes.jl/actions/workflows/CI.yml?query=branch%3Amain)
+![Bi-periodic planar mesh creation](./assets/mesh_creation_15fps_748x551.avif)

@@ -14,7 +14,7 @@ The `NCDatasets` package must be loaded to use this function.
 Save the `diagram` in a NetCDF file named `filename`.
 By default the CDF5 NetCDF file format is used. Other formats can be specified with the `format` keyword. See other available options with ?[`NCDataset`](@ref).
 """
-function save(filename, obj::T; kwds...) where {T<:Union{<:AbstractVoronoiDiagram,<:AbstractVoronoiMesh}}
+function save(filename::AbstractString, obj::T; kwds...) where {T<:Union{<:AbstractVoronoiDiagram,<:AbstractVoronoiMesh}}
     name, ext = Base.Filesystem.splitext(filename)
     if ext == ".nc"
         save_to_netcdf(filename, obj; kwds...)

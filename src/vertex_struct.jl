@@ -31,7 +31,7 @@ We refer to those as the "Computed Data".
 
 ## Base Data
 - `n::Int`: The total number of vertices (and dual cells (triangles)).
-- `position::VecArray`: An array with each vertex position vector, that is, the position of the Delaunay
+- `position::TensorArray`: An array with each vertex position vector, that is, the position of the Delaunay
   triangle circumcenter. An array with a particular coordinate can also be extracted throught the dot
    syntax. For example, an array with `x` coordinates of the vertex is given by `vertices.position.x`.
 - `edges::Vector`: A Vector of tuples with the index ID of the edges that meet at the vertex.
@@ -43,7 +43,7 @@ We refer to those as the "Computed Data".
 ## Computed Data
 - `area::Vector`: A vector with the area of each Delaunay triangle.
 - `kiteAreas::Vector`: A vector of tuples containing the intersection areas between primal (Voronoi) and dual (triangular) cells.
-- `centroid::VecArray`: A vector with each Delaunay triangle centroid position vector.
+- `centroid::TensorArray`: A vector with each Delaunay triangle centroid position vector.
 - `edgesSign::Vector`: A vector of tuples associated with the edges that meet at the vertex.
   Has value of 1 if the edge normal is oriented in the counter-clockwise direction and -1 otherwise.
 - `longitude::Vector`(Spherical meshes only): The longitude in radians of the vertex `position` vector.

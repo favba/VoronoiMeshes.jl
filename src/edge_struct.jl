@@ -33,7 +33,7 @@ We refer to those as the "Computed Data".
 
 ## Base Data
 - `n::Int`: The total number of edges.
-- `position::VecArray`: An array with each edge position vector, that is, the position of the intersection
+- `position::TensorArray`: An array with each edge position vector, that is, the position of the intersection
   between the Delaunay triangle and Voronoi cell edges.
   This always lies in the midpoint of the Delaunay triangle edge.
 An array with a particular coordinate can also be extracted throught the dot
@@ -48,9 +48,9 @@ An array with a particular coordinate can also be extracted throught the dot
 - `length::Vector`: An array with the length of each edge (the Voronoi cell edge).
 - `lengthDual::Vector`: An array with the length of the dual edge (the Delaunay triangle edge) that crosses the Voronoi cell edge.
   This is the distance between the Voronoi cells generators points that are divided by the edge.
-- `midpoint::VecArray`: An array with the position vector of the Voronoi cell edge midpoint.
-- `normal::VecArray`: An array with unit vectors that are normal to the edge and tangent to the mesh, at the edge `position`.
-- `tangent::VecArray`: An array with unit vectors that are tangent both to the the edge and to the mesh, at the edge `position`.
+- `midpoint::TensorArray`: An array with the position vector of the Voronoi cell edge midpoint.
+- `normal::TensorArray`: An array with unit vectors that are normal to the edge and tangent to the mesh, at the edge `position`.
+- `tangent::TensorArray`: An array with unit vectors that are tangent both to the the edge and to the mesh, at the edge `position`.
 - `angle::Vector`: Angle in radians between local north and the positive tangential direction of an edge.
   Which is the same as the angle between the edge normal and the eastward direction.
 - `longitude::Vector`(Spherical meshes only): The longitude in radians of the edge `position` vector.

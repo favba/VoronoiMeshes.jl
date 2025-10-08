@@ -38,7 +38,7 @@ We refer to those as the "Computed Data".
 
 ## Base Data
 - `n::Int`: The total number of Voronoi Cells.
-- `position::VecArray`: An array with each cells position vector, that is, the position of the Voronoi
+- `position::TensorArray`: An array with each cells position vector, that is, the position of the Voronoi
    Cell generator point. An array with a particular coordinate can also be extracted throught the dot
    syntax. For example, an array with `x` coordinates of the cells is given by `cells.position.x`.
 - `nEdges::Vector{Int16}`: The number of edges on each cell (which is equal to the number of vertices).
@@ -51,16 +51,16 @@ We refer to those as the "Computed Data".
 
 ## Computed Data
 - `area::Vector`: An array with the area of each Voronoi cell.
-- `centroid::VecArray`: An array with each cells centroid position vector. For Centroidal Voronoi
+- `centroid::TensorArray`: An array with each cells centroid position vector. For Centroidal Voronoi
   meshes with constant density function this should virtually be the same as the `position` vector.
 - `edgesSign::SmallVectorArray`: A vector of vectors associated with the edges that form the cell.
    Has value of 1 if the edge normal points outward the cell and -1 otherwise.
 - `longitude::Vector`(Spherical meshes only): The longitude in radians of the cell `position` vector.
 - `latitude::Vector`(Spherical meshes only): The latitude in radians of the cell `position` vector.
-- `normal::VecArray`(Spherical meshes only): The unit vector perpendicular to the plane tangent to the
+- `normal::TensorArray`(Spherical meshes only): The unit vector perpendicular to the plane tangent to the
   sphere at the cell `position`.
-- `zonalVector::VecArray`(Spherical meshes only): The unit vector tangent to the sphere and pointing eastward.
-- `meridionalVector::VecArray`(Spherical meshes only): The unit vector tangent to the sphere and pointing northward.
+- `zonalVector::TensorArray`(Spherical meshes only): The unit vector tangent to the sphere and pointing eastward.
+- `meridionalVector::TensorArray`(Spherical meshes only): The unit vector tangent to the sphere and pointing northward.
 
 """
 struct Cells{S, max_nEdges, TI, TF, Tz}

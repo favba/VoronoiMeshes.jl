@@ -17,9 +17,9 @@ export save
 export circular_refinement_function, y_refinement_function, x_refinement_function
 export fix_diagram!, create_planar_hex_mesh
 
-const VecMaybe1DxArray{TX, TYZ, N} = TensorsLite.VecArray{Vec{Union{TX, TYZ}, 1, TX, TYZ, TYZ}, N, Array{TX, N}, Array{TYZ, N}, Array{TYZ, N}}
-const Vec1DxOr2DxyArray{TX, TXY, N} = TensorsLite.VecArray{Vec{Union{TX, Zero}, 1, TX, TXY, Zero}, N, Array{TX, N}, Array{TXY, N}, Array{Zero, N}}
-const VecMaybe1DyArray{TY, TXZ, N} = TensorsLite.VecArray{Vec{Union{TY, TXZ}, 1, TXZ, TY, TXZ}, N, Array{TXZ, N}, Array{TY, N}, Array{TXZ, N}}
+const VecMaybe1DxArray{TX, TYZ, N} = TensorsLite.TensorArray{Tensor{Union{TX, TYZ}, 1, TX, TYZ, TYZ}, N, Array{TX, N}, Array{TYZ, N}, Array{TYZ, N}}
+const Vec1DxOr2DxyArray{TX, TXY, N} = TensorsLite.TensorArray{Tensor{Union{TX, Zero}, 1, TX, TXY, Zero}, N, Array{TX, N}, Array{TXY, N}, Array{Zero, N}}
+const VecMaybe1DyArray{TY, TXZ, N} = TensorsLite.TensorArray{Tensor{Union{TY, TXZ}, 1, TXZ, TY, TXZ}, N, Array{TXZ, N}, Array{TY, N}, Array{TXZ, N}}
 
 include("imvecarray.jl")
 
@@ -91,7 +91,7 @@ The `density` function should accept a `TensorsLite.Vec` and return a scalar.
 
 ---
 
-    VoronoiMesh(points::VecArray, x_period::Real, y_perid::Real; density=(x -> 1), rtol=1e-6, max_iter=20000)
+    VoronoiMesh(points::TensorArray, x_period::Real, y_perid::Real; density=(x -> 1), rtol=1e-6, max_iter=20000)
 
 The `DelaunayTriangulation` package must be loaded in order to use this method.
 Construct a biperiodic planar Voronoi mesh with in the `[0, x_period] × [0, y_period]` domain using `points`

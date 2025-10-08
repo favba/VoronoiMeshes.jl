@@ -222,7 +222,7 @@ function compute_longitude_periodic(cpos::Vec2DxyArray{T, 1}) where {T}
 end
 precompile(compute_longitude_periodic, (Vec2DxyArray{Float64, 1},))
 
-function compute_longitude!(longitude::Vector, pos::VecArray)
+function compute_longitude!(longitude::Vector, pos::TensorArray)
     px = pos.x
     py = pos.y
     @parallel for c in eachindex(pos)
@@ -239,7 +239,7 @@ function compute_latitude_periodic(cpos::Vec2DxyArray{T, 1}) where {T}
 end
 precompile(compute_latitude_periodic, (Vec2DxyArray{Float64, 1},))
 
-function compute_latitude!(latitude::Vector, pos::VecArray)
+function compute_latitude!(latitude::Vector, pos::TensorArray)
     px = pos.x
     py = pos.y
     pz = pos.z
@@ -260,7 +260,7 @@ function compute_zonalVector_periodic(cpos::Vec2DxyArray{T, 1}) where {T}
 end
 precompile(compute_zonalVector_periodic, (Vec2DxyArray{Float64, 1},))
 
-function compute_zonalVector!(zonalVector::VecArray, pos::VecArray)
+function compute_zonalVector!(zonalVector::TensorArray, pos::TensorArray)
     px = pos.x
     py = pos.y
     @parallel for c in eachindex(pos)
@@ -278,7 +278,7 @@ function compute_meridionalVector_periodic(cpos::Vec2DxyArray{T, 1}) where {T}
 end
 precompile(compute_meridionalVector_periodic, (Vec2DxyArray{Float64, 1},))
 
-function compute_meridionalVector!(meridionalVector::VecArray, pos::VecArray)
+function compute_meridionalVector!(meridionalVector::TensorArray, pos::TensorArray)
     px = pos.x
     py = pos.y
     pz = pos.z
@@ -376,9 +376,9 @@ function check_if_counter_clockwise(reference_position, indicesOnReference, refe
 end
 
 for N in 6:9
-    precompile(Tuple{typeof(check_if_counter_clockwise), VecArray{Vec{Union{Zeros.Zero, Float64}, 1, Float64, Float64, Zeros.Zero}, 1, Array{Float64, 1}, Array{Float64, 1}, Array{Zeros.Zero, 1}}, SmallVectorArray{N, Int32, 1, Array{FixedVector{N, Int32}, 1}}, VecArray{Vec{Union{Zeros.Zero, Float64}, 1, Float64, Float64, Zeros.Zero}, 1, Array{Float64, 1}, Array{Float64, 1}, Array{Zeros.Zero, 1}}, Float64, Float64})
+    precompile(Tuple{typeof(check_if_counter_clockwise), Vec2DxyArray{Float64,1}, SmallVectorArray{N, Int32, 1, Array{FixedVector{N, Int32}, 1}}, Vec2DxyArray{Float64,1}, Float64, Float64})
 end
-precompile(Tuple{typeof(check_if_counter_clockwise), VecArray{Vec{Union{Zeros.Zero, Float64}, 1, Float64, Float64, Zeros.Zero}, 1, Array{Float64, 1}, Array{Float64, 1}, Array{Zeros.Zero, 1}}, Array{Tuple{Int32, Int32, Int32}, 1}, VecArray{Vec{Union{Zeros.Zero, Float64}, 1, Float64, Float64, Zeros.Zero}, 1, Array{Float64, 1}, Array{Float64, 1}, Array{Zeros.Zero, 1}}, Float64, Float64})
+precompile(Tuple{typeof(check_if_counter_clockwise), Vec2DxyArray{Float64,1}, Array{Tuple{Int32, Int32, Int32}, 1}, Vec2DxyArray{Float64,1}, Float64, Float64})
 
 function check_indices_ordering(R::Number, ref_position, indOnRef1, rferee_pos1, indOnRef2, rferee_pos2)
     r = Int[]

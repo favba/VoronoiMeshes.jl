@@ -180,7 +180,7 @@ function check_edge_indexing_periodic(cellsOnEdge::AbstractVector, cell_pos, ver
     return n_problems == 0 ? nothing : r
 end
 
-precompile(Tuple{typeof(check_edge_indexing_periodic), Array{Tuple{Int32, Int32}, 1}, VecArray{Vec{Union{Zeros.Zero, Float64}, 1, Float64, Float64, Zeros.Zero}, 1, Array{Float64, 1}, Array{Float64, 1}, Array{Zeros.Zero, 1}}, Array{Tuple{Int32, Int32}, 1}, VecArray{Vec{Union{Zeros.Zero, Float64}, 1, Float64, Float64, Zeros.Zero}, 1, Array{Float64, 1}, Array{Float64, 1}, Array{Zeros.Zero, 1}}, Float64, Float64})
+precompile(Tuple{typeof(check_edge_indexing_periodic), Array{Tuple{Int32, Int32}, 1}, Vec2DxyArray{Float64, 1}, Array{Tuple{Int32, Int32}, 1}, Vec2DxyArray{Float64, 1}, Float64, Float64})
 
 """
     check_edge_indexing(mesh::AbstractVoronoiMesh)
@@ -215,7 +215,7 @@ function check_vertex_indexing_periodic(vpos, cellsOnVertex, cpos, edgesOnVertex
     isnothing(cells) ? nothing : (; cells)
 end
 
-precompile(Tuple{typeof(check_vertex_indexing_periodic), VecArray{Vec{Union{Zeros.Zero, Float64}, 1, Float64, Float64, Zeros.Zero}, 1, Array{Float64, 1}, Array{Float64, 1}, Array{Zeros.Zero, 1}}, Array{Tuple{Int32, Int32, Int32}, 1}, VecArray{Vec{Union{Zeros.Zero, Float64}, 1, Float64, Float64, Zeros.Zero}, 1, Array{Float64, 1}, Array{Float64, 1}, Array{Zeros.Zero, 1}}, Array{Tuple{Int32, Int32, Int32}, 1}, VecArray{Vec{Union{Zeros.Zero, Float64}, 1, Float64, Float64, Zeros.Zero}, 1, Array{Float64, 1}, Array{Float64, 1}, Array{Zeros.Zero, 1}}, Float64, Float64})
+precompile(Tuple{typeof(check_vertex_indexing_periodic), Vec2DxyArray{Float64, 1}, Array{Tuple{Int32, Int32, Int32}, 1}, Vec2DxyArray{Float64, 1}, Array{Tuple{Int32, Int32, Int32}, 1}, Vec2DxyArray{Float64, 1}, Float64, Float64})
 
 """
     check_vertex_indexing(mesh::AbstractVoronoiMesh)
@@ -275,7 +275,7 @@ function check_cell_indexing_periodic(cpos, cellsOnCell, verticesOnCell, vpos, e
     return all(isnothing, (edges, cells)) ? nothing : (;edges, cells)
 end
 
-precompile(Tuple{typeof(check_cell_indexing_periodic), VecArray{Vec{Union{Zeros.Zero, Float64}, 1, Float64, Float64, Zeros.Zero}, 1, Array{Float64, 1}, Array{Float64, 1}, Array{Zeros.Zero, 1}}, SmallVectorArray{6, Int32, 1, Array{FixedVector{6, Int32}, 1}}, SmallVectorArray{6, Int32, 1, Array{FixedVector{6, Int32}, 1}}, VecArray{Vec{Union{Zeros.Zero, Float64}, 1, Float64, Float64, Zeros.Zero}, 1, Array{Float64, 1}, Array{Float64, 1}, Array{Zeros.Zero, 1}}, SmallVectorArray{6, Int32, 1, Array{FixedVector{6, Int32}, 1}}, VecArray{Vec{Union{Zeros.Zero, Float64}, 1, Float64, Float64, Zeros.Zero}, 1, Array{Float64, 1}, Array{Float64, 1}, Array{Zeros.Zero, 1}}, Float64, Float64})
+precompile(Tuple{typeof(check_cell_indexing_periodic), Vec2DxyArray{Float64, 1}, SmallVectorArray{6, Int32, 1, Array{FixedVector{6, Int32}, 1}}, SmallVectorArray{6, Int32, 1, Array{FixedVector{6, Int32}, 1}}, Vec2DxyArray{Float64, 1}, SmallVectorArray{6, Int32, 1, Array{FixedVector{6, Int32}, 1}}, Vec2DxyArray{Float64, 1}, Float64, Float64})
 
 """
     check_cell_indexing(mesh::AbstractVoronoiMesh)

@@ -52,3 +52,39 @@ cd test
 julia --project=. -e 'import Pkg; Pkg.develop([Pkg.PackageSpec(path="../../TensorsLite.jl"), Pkg.PackageSpec(path="../../TensorsLiteGeometry.jl"), Pkg.PackageSpec(path="../../VoronoiMeshes.jl")]); Pkg.add("DelaunayTriangulation"); Pkg.add("GeometryBasics"); Pkg.add("GLMakie"); Pkg.add("LinearAlgebra"); Pkg.add("NCDatasets"); Pkg.add("SmallCollections"); Pkg.add("Test"); Pkg.instantiate(); Pkg.status()'
 ```
 
+
+## Quick usage guide
+
+
+Creating a simple centroidal biperiodic planar Voronoi mesh from N random generators:
+
+```julia 
+import Pkg
+Pkg.add("DelaunayTriangulation") 
+using VoronoiMeshes, DelaunayTriangulation
+
+# Create a centroidal Voronoi mesh with 200 cells on a 1×1 periodic domain
+mesh = VoronoiMesh(20, 1.0, 1.0)
+
+println(mesh)
+```
+
+Create a mesh from a given set of generator points (VecArray of x,y coordinates):
+
+```julia
+using VoronoiMeshes, DelaunayTriangulation, TensorsLite
+
+generators = VecArray(x = rand(10), y = rand(10))
+mesh = VoronoiMesh(generators, 1.0, 1.0)
+println(mesh)
+```
+
+Create a regular hexagonal planar mesh (utility provided in the Delaunay extension):
+
+```julia
+using VoronoiMeshes
+
+# dx ~ target cell spacing
+hexmesh = create_planar_hex_mesh(1.0, 1.0, 0.05)
+```
+

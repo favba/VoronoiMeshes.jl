@@ -22,7 +22,7 @@ Pkg.add(url="https://github.com/favba/VoronoiMeshes.jl.git")
 ```
 
 
-## Development Guide 
+## Developer's Guide 
 
 Assuming Julia already installed (for instance via juliaup). 
 
@@ -35,7 +35,7 @@ git clone git@github.com:favba/TensorsLite.jl.git
 git clone git@github.com:favba/TensorsLiteGeometry.jl.git
 ```
 
-Create manisfests
+Create project (manisfests) for VoronoiMeshes
 
 ```
 cd TensorsLite.jl
@@ -43,5 +43,12 @@ julia --project=. -e 'import Pkg; Pkg.instantiate(); Pkg.status()'
 cd ../TensorsLiteGeometry.jl
 julia --project=. -e 'import Pkg; Pkg.develop(path="../TensorsLite.jl"); Pkg.instantiate(); Pkg.status()'
 cd ../VoronoiMeshes.jl
-julia --project=. -e 'import Pkg; Pkg.develop([Pkg.PackageSpec(path="../TensorsLite.jl"), Pkg.PackageSpec(path="../TensorsLiteGeometry.jl"),]); Pkg.add("DelaunayTriangulation"); Pkg.instantiate(); Pkg.status()'
+julia --project=. -e 'import Pkg; Pkg.develop([Pkg.PackageSpec(path="../TensorsLite.jl"), Pkg.PackageSpec(path="../TensorsLiteGeometry.jl")]); Pkg.instantiate(); Pkg.status()'
 ```
+
+Create project (manifests) for 'test'
+```
+cd test
+julia --project=. -e 'import Pkg; Pkg.develop([Pkg.PackageSpec(path="../../TensorsLite.jl"), Pkg.PackageSpec(path="../../TensorsLiteGeometry.jl"), Pkg.PackageSpec(path="../../VoronoiMeshes.jl")]); Pkg.add("DelaunayTriangulation"); Pkg.add("GeometryBasics"); Pkg.add("GLMakie"); Pkg.add("LinearAlgebra"); Pkg.add("NCDatasets"); Pkg.add("SmallCollections"); Pkg.add("Test"); Pkg.instantiate(); Pkg.status()'
+```
+

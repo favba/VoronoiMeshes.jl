@@ -22,6 +22,7 @@
 # Output
 #   - `mesh_primal.png` : PNG image of the primal Voronoi mesh (if Makie present)
 #   - `mesh_dual.png`   : PNG image of the dual (Delaunay) mesh (if Makie present)
+#   - `mesh_primal_and_dual.png` : PNG image of both primal and dual meshes (if Makie present)
 #   - `mesh.nc`         : NetCDF file containing the mesh (if NCDatasets present)
 #
 #########################################################################
@@ -30,7 +31,7 @@ using DelaunayTriangulation
 using TensorsLite
 using LinearAlgebra
 
-using GLMakie  # Optional, for plotting if Makie is installed
+using GLMakie  # Optional, for plotting if Makie is installed. Could also be any other Makie backend
 using NCDatasets # Optional, for saving/loading meshes in NetCDF format
 
 # Create a centroidal Voronoi mesh with 20 cells on a 1×1 periodic domain
@@ -58,15 +59,27 @@ for (i, p) in enumerate(mesh.cells.position)
 end
 
 
-# Plot the mesh (requires Makie)
+# Plot the mesh (requires some Makie backend)
 println("Plotting the mesh ...")
 plt = plotmesh(mesh)
-Makie.save("mesh_primal.png", plt)
+GLMakie.save("mesh_primal.png", plt)
 
 # Plot the dual mesh
 plt1 = plotdualmesh(mesh)
-Makie.save("mesh_dual.png", plt1)
-println("Mesh plots saved to mesh_primal.png and mesh_dual.png")
+GLMakie.save("mesh_dual.png", plt1)
+
+# Plot the Voronoi mesh with red lines of with=2
+fig_both = Figure()
+ax = Axis(fig_both[1,1])
+
+# Plot the Voronoi mesh with red lines of with=2
+plotmesh!(ax, mesh, color=:red, linewidth=2)
+
+# Plot the dual mesh with blue dashed lines of width=0.75, and use dotted lines for the ghost edges.
+plotdualmesh!(ax, mesh, color=:blue, linewith=0.75, edgelinestyle=:dash, ghostedgelinestyle=:dot)
+GLMakie.save("mesh_primal_and_dual.png", fig_both)
+
+println("Mesh plots saved to mesh_primal.png, mesh_dual.png, and mesh_primal_and_dual.png")
 
 # Save the mesh to a NetCDF file (requires NCDatasets)
 println("Saving the mesh to mesh.nc ...")

@@ -70,7 +70,7 @@ println(mesh)
 #Mesh plotting
 using GLMakie
 plotmesh(mesh)
-plotdualmesh(mesh)
+plotdualmesh!(mesh) # Plot on top of the previous plot
 ```
 
 Create a mesh from a given set of generator points (VecArray of x,y coordinates):
@@ -86,7 +86,7 @@ println(mesh)
 Create a regular hexagonal planar mesh (utility provided in the Delaunay extension):
 
 ```julia
-using VoronoiMeshes
+using DelaunayTriangulation, VoronoiMeshes
 
 # dx ~ target cell spacing
 hexmesh = create_planar_hex_mesh(1.0, 1.0, 0.05)

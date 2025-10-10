@@ -65,8 +65,12 @@ using VoronoiMeshes, DelaunayTriangulation
 
 # Create a centroidal Voronoi mesh with 200 cells on a 1×1 periodic domain
 mesh = VoronoiMesh(20, 1.0, 1.0)
-
 println(mesh)
+
+#Mesh plotting
+using GLMakie
+plotmesh(mesh)
+plotdualmesh(mesh)
 ```
 
 Create a mesh from a given set of generator points (VecArray of x,y coordinates):

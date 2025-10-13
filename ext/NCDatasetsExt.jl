@@ -216,7 +216,7 @@ VoronoiMeshes.CellInfo(ncfile::NCDatasets.NCDataset) = CellInfo(VoronoiDiagram(n
 VoronoiMeshes.CellInfo(v::Val{N}, ncfile::NCDatasets.NCDataset) where {N} = CellInfo(VoronoiDiagram(v, ncfile), ncfile)
 
 
-function VoronoiMeshes.Cells(voro::VoronoiDiagram{S, NE, TI, TF, Tz}, ncfile::NCDatasets.NCDataset) where {S, NE, TI, TF, Tz}
+function VoronoiMeshes.Cells(voro::VoronoiDiagram{S, NE, TI, TF, Tz}, ncfile::NCDatasets.NCDataset, read_computed::Bool=true) where {S, NE, TI, TF, Tz}
     position = voro.generators
     n = length(position)
     vertices = voro.verticesOnCell
@@ -226,11 +226,13 @@ function VoronoiMeshes.Cells(voro::VoronoiDiagram{S, NE, TI, TF, Tz}, ncfile::NC
     cells = SmallVectorArray(similar(vertices.data), nEdges)
     copy_matrix_to_fixedvector_vector!(cells.data, ncfile["cellsOnCell"][:, :]::Matrix{Int32})
 
-    return Cells(n, position, nEdges, vertices, edges, cells, CellInfo(voro, ncfile))
+    cellinfo = read_computed ? CellInfo(voro, ncfile) : CellInfo(voro)
+
+    return Cells(n, position, nEdges, vertices, edges, cells, cellinfo)
 end
 
-VoronoiMeshes.Cells(ncfile::NCDatasets.NCDataset) = Cells(VoronoiDiagram(ncfile), ncfile)
-VoronoiMeshes.Cells(v::Val{N}, ncfile::NCDatasets.NCDataset) where {N} = Cells(VoronoiDiagram(v, ncfile), ncfile)
+VoronoiMeshes.Cells(ncfile::NCDatasets.NCDataset, read_computed::Bool=true) = Cells(VoronoiDiagram(ncfile), ncfile, read_computed)
+VoronoiMeshes.Cells(v::Val{N}, ncfile::NCDatasets.NCDataset, read_computed::Bool=true) where {N} = Cells(VoronoiDiagram(v, ncfile), ncfile, read_computed)
 
 function VoronoiMeshes.VertexInfo(voro::VoronoiDiagram{S, NE, TI, TF, Tz}, ncfile::NCDatasets.NCDataset) where {S, NE, TI, TF, Tz}
     vertex_info = VertexInfo(voro)
@@ -254,17 +256,18 @@ end
 VoronoiMeshes.VertexInfo(ncfile::NCDatasets.NCDataset) = VertexInfo(VoronoiDiagram(ncfile), ncfile)
 VoronoiMeshes.VertexInfo(v::Val{N}, ncfile::NCDatasets.NCDataset) where {N} = VertexInfo(VoronoiDiagram(v, ncfile), ncfile)
 
-function VoronoiMeshes.Vertices(voro::VoronoiDiagram{S, NE, TI, TF, Tz}, ncfile::NCDatasets.NCDataset) where {S, NE, TI, TF, Tz}
+function VoronoiMeshes.Vertices(voro::VoronoiDiagram{S, NE, TI, TF, Tz}, ncfile::NCDatasets.NCDataset, read_computed::Bool=true) where {S, NE, TI, TF, Tz}
     position = voro.vertices
     n = length(position)
     cells = voro.cellsOnVertex
     edges = similar(cells)
     copy_matrix_to_fixedvector_vector!(edges, ncfile["edgesOnVertex"][:, :]::Matrix{Int32})
-    return Vertices(n, position, edges, cells, VertexInfo(voro, ncfile))
+    vertexinfo = read_computed ? VertexInfo(voro, ncfile) : VertexInfo(voro)
+    return Vertices(n, position, edges, cells, vertexinfo)
 end
 
-VoronoiMeshes.Vertices(ncfile::NCDatasets.NCDataset) = Vertices(VoronoiDiagram(ncfile), ncfile)
-VoronoiMeshes.Vertices(v::Val{N}, ncfile::NCDatasets.NCDataset) where {N} = Vertices(VoronoiDiagram(v, ncfile), ncfile)
+VoronoiMeshes.Vertices(ncfile::NCDatasets.NCDataset, read_computed::Bool=true) = Vertices(VoronoiDiagram(ncfile), ncfile, read_computed)
+VoronoiMeshes.Vertices(v::Val{N}, ncfile::NCDatasets.NCDataset, read_computed::Bool=true) where {N} = Vertices(VoronoiDiagram(v, ncfile), ncfile, read_computed)
 
 function VoronoiMeshes.EdgeInfo(voro::VoronoiDiagram{S, NE, TI, TF, Tz}, ncfile::NCDatasets.NCDataset) where {S, NE, TI, TF, Tz}
     edge_info = EdgeInfo(voro)
@@ -302,7 +305,7 @@ end
 VoronoiMeshes.EdgeInfo(ncfile::NCDatasets.NCDataset) = EdgeInfo(VoronoiDiagram(ncfile), ncfile)
 VoronoiMeshes.EdgeInfo(v::Val{N}, ncfile::NCDatasets.NCDataset) where {N} = EdgeInfo(VoronoiDiagram(v, ncfile), ncfile)
 
-function VoronoiMeshes.Edges(voro::VoronoiDiagram{S, NE, TI, TF, Tz}, ncfile::NCDatasets.NCDataset) where {S, NE, TI, TF, Tz}
+function VoronoiMeshes.Edges(voro::VoronoiDiagram{S, NE, TI, TF, Tz}, ncfile::NCDatasets.NCDataset, read_computed::Bool=true) where {S, NE, TI, TF, Tz}
 
     verticesOnEdgeArray = ncfile["verticesOnEdge"][:, :]::Matrix{Int32}
     n = size(verticesOnEdgeArray, 2)
@@ -323,11 +326,13 @@ function VoronoiMeshes.Edges(voro::VoronoiDiagram{S, NE, TI, TF, Tz}, ncfile::NC
         position = VecArray(x = xEdge, y = yEdge)
     end
 
-    return Edges(n, position, vertices, cells, EdgeInfo(voro, ncfile))
+    edgeinfo = read_computed ? EdgeInfo(voro, ncfile) : EdgeInfo(voro)
+
+    return Edges(n, position, vertices, cells, edgeinfo)
 end
 
-VoronoiMeshes.Edges(ncfile::NCDatasets.NCDataset) = Edges(VoronoiDiagram(ncfile), ncfile)
-VoronoiMeshes.Edges(v::Val{N}, ncfile::NCDatasets.NCDataset) where {N} = Edges(VoronoiDiagram(v, ncfile), ncfile)
+VoronoiMeshes.Edges(ncfile::NCDatasets.NCDataset, read_computed::Bool=true) = Edges(VoronoiDiagram(ncfile), ncfile, read_computed)
+VoronoiMeshes.Edges(v::Val{N}, ncfile::NCDatasets.NCDataset, read_computed::Bool=true) where {N} = Edges(VoronoiDiagram(v, ncfile), ncfile, read_computed)
 
 for S in (true, false)
     for NE in 6:10
@@ -336,75 +341,78 @@ for S in (true, false)
                 for Tz in (TF, Zero)
                     precompile(VoronoiMeshes.CellInfo, (VoronoiDiagram{S, NE, TI, TF, Tz}, NCDatasets.NCDataset{Nothing, Missing}))
                     precompile(VoronoiMeshes.Cells, (VoronoiDiagram{S, NE, TI, TF, Tz}, NCDatasets.NCDataset{Nothing, Missing}))
+                    precompile(VoronoiMeshes.Cells, (VoronoiDiagram{S, NE, TI, TF, Tz}, NCDatasets.NCDataset{Nothing, Missing}, Bool))
                     precompile(VoronoiMeshes.VertexInfo, (VoronoiDiagram{S, NE, TI, TF, Tz}, NCDatasets.NCDataset{Nothing, Missing}))
                     precompile(VoronoiMeshes.Vertices, (VoronoiDiagram{S, NE, TI, TF, Tz}, NCDatasets.NCDataset{Nothing, Missing}))
+                    precompile(VoronoiMeshes.Vertices, (VoronoiDiagram{S, NE, TI, TF, Tz}, NCDatasets.NCDataset{Nothing, Missing}, Bool))
                     precompile(VoronoiMeshes.EdgeInfo, (VoronoiDiagram{S, NE, TI, TF, Tz}, NCDatasets.NCDataset{Nothing, Missing}))
                     precompile(VoronoiMeshes.Edges, (VoronoiDiagram{S, NE, TI, TF, Tz}, NCDatasets.NCDataset{Nothing, Missing}))
+                    precompile(VoronoiMeshes.Edges, (VoronoiDiagram{S, NE, TI, TF, Tz}, NCDatasets.NCDataset{Nothing, Missing}, Bool))
                 end
             end
         end
     end
 end
 
-function _VoronoiMesh(ncfile::NCDatasets.NCDataset)
+function _VoronoiMesh(ncfile::NCDatasets.NCDataset, read_computed::Bool=true)
     maxEdges = Int(maximum(ncfile["nEdgesOnCell"][:]::Vector{Int32}))
     S = on_a_sphere(ncfile)
     if S
         if maxEdges == 6
             diag6 = VoronoiDiagram(SphericalVoronoiDiagram(Val{6}(), ncfile))
-            return VoronoiMesh(Cells(diag6, ncfile), Vertices(diag6, ncfile), Edges(diag6, ncfile))
+            return VoronoiMesh(Cells(diag6, ncfile, read_computed), Vertices(diag6, ncfile, read_computed), Edges(diag6, ncfile, read_computed))
         elseif maxEdges == 7
             diag7 = VoronoiDiagram(SphericalVoronoiDiagram(Val{7}(), ncfile))
-            return VoronoiMesh(Cells(diag7, ncfile), Vertices(diag7, ncfile), Edges(diag7, ncfile))
+            return VoronoiMesh(Cells(diag7, ncfile, read_computed), Vertices(diag7, ncfile, read_computed), Edges(diag7, ncfile, read_computed))
         elseif maxEdges == 8
             diag8 = VoronoiDiagram(SphericalVoronoiDiagram(Val{8}(), ncfile))
-            return VoronoiMesh(Cells(diag8, ncfile), Vertices(diag8, ncfile), Edges(diag8, ncfile))
+            return VoronoiMesh(Cells(diag8, ncfile, read_computed), Vertices(diag8, ncfile, read_computed), Edges(diag8, ncfile, read_computed))
         elseif maxEdges == 9
             diag9 = VoronoiDiagram(SphericalVoronoiDiagram(Val{9}(), ncfile))
-            return VoronoiMesh(Cells(diag9, ncfile), Vertices(diag9, ncfile), Edges(diag9, ncfile))
+            return VoronoiMesh(Cells(diag9, ncfile, read_computed), Vertices(diag9, ncfile, read_computed), Edges(diag9, ncfile, read_computed))
 
         elseif maxEdges == 10
             diag10 = VoronoiDiagram(SphericalVoronoiDiagram(Val{10}(), ncfile))
-            return VoronoiMesh(Cells(diag10, ncfile), Vertices(diag10, ncfile), Edges(diag10, ncfile))
+            return VoronoiMesh(Cells(diag10, ncfile, read_computed), Vertices(diag10, ncfile, read_computed), Edges(diag10, ncfile, read_computed))
         else
             diag = VoronoiDiagram(SphericalVoronoiDiagram(ncfile))
-            return VoronoiMesh(Cells(diag, ncfile), Vertices(diag, ncfile), Edges(diag, ncfile))::(VoronoiMesh{true, N, Int32, Float64, Float64} where {N})
+            return VoronoiMesh(Cells(diag, ncfile, read_computed), Vertices(diag, ncfile, read_computed), Edges(diag, ncfile, read_computed))::(VoronoiMesh{true, N, Int32, Float64, Float64} where {N})
         end
     else
         if maxEdges == 6
             pdiag6 = VoronoiDiagram(PlanarVoronoiDiagram(Val{6}(), ncfile))
-            return VoronoiMesh(Cells(pdiag6, ncfile), Vertices(pdiag6, ncfile), Edges(pdiag6, ncfile))
+            return VoronoiMesh(Cells(pdiag6, ncfile, read_computed), Vertices(pdiag6, ncfile, read_computed), Edges(pdiag6, ncfile, read_computed))
         elseif maxEdges == 7
             pdiag7 = VoronoiDiagram(PlanarVoronoiDiagram(Val{7}(), ncfile))
-            return VoronoiMesh(Cells(pdiag7, ncfile), Vertices(pdiag7, ncfile), Edges(pdiag7, ncfile))
+            return VoronoiMesh(Cells(pdiag7, ncfile, read_computed), Vertices(pdiag7, ncfile, read_computed), Edges(pdiag7, ncfile, read_computed))
         elseif maxEdges == 8
             pdiag8 = VoronoiDiagram(PlanarVoronoiDiagram(Val{8}(), ncfile))
-            return VoronoiMesh(Cells(pdiag8, ncfile), Vertices(pdiag8, ncfile), Edges(pdiag8, ncfile))
+            return VoronoiMesh(Cells(pdiag8, ncfile, read_computed), Vertices(pdiag8, ncfile, read_computed), Edges(pdiag8, ncfile, read_computed))
         elseif maxEdges == 9
             pdiag9 = VoronoiDiagram(PlanarVoronoiDiagram(Val{9}(), ncfile))
-            return VoronoiMesh(Cells(pdiag9, ncfile), Vertices(pdiag9, ncfile), Edges(pdiag9, ncfile))
+            return VoronoiMesh(Cells(pdiag9, ncfile, read_computed), Vertices(pdiag9, ncfile, read_computed), Edges(pdiag9, ncfile, read_computed))
 
         elseif maxEdges == 10
             pdiag10 = VoronoiDiagram(PlanarVoronoiDiagram(Val{10}(), ncfile))
-            return VoronoiMesh(Cells(pdiag10, ncfile), Vertices(pdiag10, ncfile), Edges(pdiag10, ncfile))
+            return VoronoiMesh(Cells(pdiag10, ncfile, read_computed), Vertices(pdiag10, ncfile, read_computed), Edges(pdiag10, ncfile, read_computed))
         else
             pdiag = VoronoiDiagram(PlanarVoronoiDiagram(ncfile))
-            return VoronoiMesh(Cells(pdiag, ncfile), Vertices(pdiag, ncfile), Edges(pdiag, ncfile))::(VoronoiMesh{false, N, Int32, Float64, Zeros.Zero} where {N})
+            return VoronoiMesh(Cells(pdiag, ncfile, read_computed), Vertices(pdiag, ncfile, read_computed), Edges(pdiag, ncfile, read_computed))::(VoronoiMesh{false, N, Int32, Float64, Zeros.Zero} where {N})
         end
     end
 end
 
-function VoronoiMeshes.VoronoiMesh(ncfile::NCDatasets.NCDataset, warn_issues::Bool=true)
-    mesh = _VoronoiMesh(ncfile)
+function VoronoiMeshes.VoronoiMesh(ncfile::NCDatasets.NCDataset; warn_issues::Bool=true, read_computed::Bool=true)
+    mesh = _VoronoiMesh(ncfile, read_computed)
     if warn_issues
         Threads.@spawn VoronoiMeshes.warn_mesh_issues($mesh)
     end
     return mesh
 end
 
-function VoronoiMeshes.VoronoiMesh(v::Val{NE}, ncfile::NCDatasets.NCDataset, warn_issues::Bool = true) where {NE}
+function VoronoiMeshes.VoronoiMesh(v::Val{NE}, ncfile::NCDatasets.NCDataset; warn_issues::Bool = true, read_computed::Bool = true) where {NE}
     diag = VoronoiDiagram(v, ncfile)
-    mesh = VoronoiMesh(Cells(diag, ncfile), Vertices(diag, ncfile), Edges(diag, ncfile))
+    mesh = VoronoiMesh(Cells(diag, ncfile, read_computed), Vertices(diag, ncfile, read_computed), Edges(diag, ncfile, read_computed))
     if warn_issues
         Threads.@spawn VoronoiMeshes.warn_mesh_issues($mesh)
     end
@@ -413,7 +421,7 @@ end
 
 for func in (
         :PlanarVoronoiDiagram, :SphericalVoronoiDiagram, :VoronoiDiagram,
-        :CellInfo, :Cells, :VertexInfo, :Vertices, :EdgeInfo, :Edges,
+        :CellInfo, :VertexInfo, :EdgeInfo,
        # :VoronoiMesh,
     )
     @eval begin
@@ -442,34 +450,55 @@ for func in (
     end
 end
 
-function VoronoiMeshes.VoronoiMesh(file_name::String, warn_issues::Bool = true)
+for func in (:Cells, :Vertices, :Edges)
+    @eval begin
+        function VoronoiMeshes.$func(file_name::String, read_computed::Bool=true)
+            f = NCDataset(file_name)
+            try
+                VoronoiMeshes.$func(f, read_computed)
+            finally
+                close(f)
+            end
+        end
+        function VoronoiMeshes.$func(v::Val, file_name::String, read_computed::Bool=true)
+            f = NCDataset(file_name)
+            try
+                VoronoiMeshes.$func(v, f, read_computed)
+            finally
+                close(f)
+            end
+        end
+        precompile(VoronoiMeshes.$func, (NCDatasets.NCDataset{Nothing, Missing}, Bool))
+        precompile(VoronoiMeshes.$func, (NCDatasets.NCDataset{Nothing, Missing},))
+        precompile(VoronoiMeshes.$func, (String, Bool))
+        precompile(VoronoiMeshes.$func, (String,))
+    end
+    for N in 6:10
+        @eval precompile(VoronoiMeshes.$func, (Val{$N}, NCDatasets.NCDataset{Nothing, Missing}, Bool))
+        @eval precompile(VoronoiMeshes.$func, (Val{$N}, NCDatasets.NCDataset{Nothing, Missing}))
+        @eval precompile(VoronoiMeshes.$func, (Val{$N}, String, Bool))
+        @eval precompile(VoronoiMeshes.$func, (Val{$N}, String))
+    end
+end
+
+
+function VoronoiMeshes.VoronoiMesh(file_name::String; warn_issues::Bool = true, read_computed::Bool = true)
     f = NCDataset(file_name)
     try
-        VoronoiMeshes.VoronoiMesh(f, warn_issues)
+        VoronoiMeshes.VoronoiMesh(f; warn_issues = warn_issues, read_computed = read_computed)
     finally
         close(f)
     end
 end
-function VoronoiMeshes.VoronoiMesh(v::Val, file_name::String, warn_issues::Bool = true)
+function VoronoiMeshes.VoronoiMesh(v::Val, file_name::String; warn_issues::Bool = true, read_computed::Bool = true)
     f = NCDataset(file_name)
     try
-        VoronoiMeshes.VoronoiMesh(v, f, warn_issues)
+        VoronoiMeshes.VoronoiMesh(v, f; warn_issues = warn_issues, read_computed = read_computed)
     finally
         close(f)
     end
 end
 
-precompile(VoronoiMeshes.VoronoiMesh, (NCDatasets.NCDataset{Nothing, Missing}, Bool))
-precompile(VoronoiMeshes.VoronoiMesh, (String, Bool))
-precompile(VoronoiMeshes.VoronoiMesh, (NCDatasets.NCDataset{Nothing, Missing},))
-precompile(VoronoiMeshes.VoronoiMesh, (String,))
-
-for N in 6:10
-    @eval precompile(VoronoiMeshes.VoronoiMesh, (Val{$N}, NCDatasets.NCDataset{Nothing, Missing}, Bool))
-    @eval precompile(VoronoiMeshes.VoronoiMesh, (Val{$N}, String, Bool))
-    @eval precompile(VoronoiMeshes.VoronoiMesh, (Val{$N}, NCDatasets.NCDataset{Nothing, Missing}))
-    @eval precompile(VoronoiMeshes.VoronoiMesh, (Val{$N}, String))
-end
 
 include("save_to_netcdf.jl")
 

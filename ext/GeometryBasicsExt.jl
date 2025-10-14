@@ -168,6 +168,38 @@ function VoronoiMeshes.create_edge_quadrilaterals(mesh::AbstractVoronoiMesh{fals
     return create_edge_quadrilaterals_periodic(mesh.edges.position, mesh.vertices.position, mesh.cells.position, mesh.edges.vertices, mesh.edges.cells, mesh.x_period, mesh.y_period)
 end
 
+
+
+"""
+        create_polygon_linesegments_periodic(vert_pos, edge_pos, polygon_pos, edgesOnPolygon, verticesOnEdge, x_period, y_period)
+
+Build line-segment coordinate lists for polygons while taking periodic
+domain into account. This helper is used by the exported wrappers
+`create_cell_linesegments` and `create_dual_triangles_linesegments`.
+
+Arguments
+- `vert_pos` : array-like of vertex positions (objects with `.x, .y` fields)
+- `edge_pos` : array-like of edge midpoints/positions (with `.x, .y`)
+- `polygon_pos` : array-like of polygon centers (used as reference to pick
+    the closest periodic images)
+- `edgesOnPolygon` : topology mapping polygon -> list of incident edges
+- `verticesOnEdge` : topology mapping edge -> tuple/list of its two vertices
+- `x_period, y_period` : periodic domain lengths (used by `closest` to
+    compute wrapped images)
+
+Returns
+- A tuple `((x, y), (x_periodic, y_periodic))` where:
+    - `(x, y)` are vectors of x/y coordinates for interior (non-wrapping)
+        line-segment endpoints (interleaved pairs represent segment endpoints)
+    - `(x_periodic, y_periodic)` are vectors of coordinates for segments
+        that cross periodic boundaries (wrapped pieces)
+
+Notes
+- The function avoids duplicate segments by tracking processed edge
+    positions via a `Set`. It uses `closest(...)` to select the image of
+    vertices/edges nearest the polygon center so that segments are drawn
+    consistently across periodic boundaries.
+"""
 function create_polygon_linesegments_periodic(vert_pos, edge_pos, polygon_pos, edgesOnPolygon, verticesOnEdge, x_period, y_period)
     x = eltype(edge_pos.x)[]
     y = eltype(edge_pos.y)[]

@@ -16,7 +16,8 @@ Threads.@threads for i in 1:n
            idx = collect(mesh.vertices.cells[i])
            triangles[i] = MeshCell(VTKCellTypes.VTK_TRIANGLE, idx)
        end
-vtk = vtk_grid("test.vtu", points, triangles)
+
+vtk = vtk_grid("mesh_primal.vtu", points, triangles)
 saved_files = close(vtk)
 
 end # module WriteVTKExt

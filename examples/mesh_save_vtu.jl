@@ -1,75 +1,43 @@
+
 #########################################################################
-# VoronoiMeshes — vtu save
+# VoronoiMeshes — VTU save/read example
 #
+# This example demonstrates how to:
+#   - Construct a centroidal Voronoi mesh on a periodic domain
+#   - Export the Voronoi (dual) and Delaunay (triangulation) grids to VTU files
+#   - Use the high-level `save` function for automatic format selection
+#
+# Requirements:
+#   - VoronoiMeshes.jl (with extensions)
+#   - WriteVTK, VTKBase, ReadVTK (for VTU I/O)
+#   - DelaunayTriangulation, TensorsLite, GLMakie, NCDatasets (optional)
 #########################################################################
+
+# Basic modules for mesh construction and manipulation
 using VoronoiMeshes
 using DelaunayTriangulation
 using TensorsLite
 using LinearAlgebra
 
-using GLMakie  # Optional, for plotting if Makie is installed
-using NCDatasets # Optional, for saving/loading meshes in NetCDF format
-using ReadVTK  # For loading meshes in VTU format
-using WriteVTK # For saving meshes in VTU format
+# Optional: for plotting and NetCDF I/O
+using GLMakie      # For plotting (if Makie is installed)
+using NCDatasets   # For saving/loading meshes in NetCDF format
 
-# Create a centroidal Voronoi mesh with 20 cells on a 1×1 periodic domain
+# Required for VTU export/import (loads extensions automatically)
+using VTKBase      # For VTK cell types
+using WriteVTK     # For saving meshes in VTU format
+using ReadVTK      # For reading meshes in VTU format
+
+# Create a centroidal Voronoi mesh with 40 cells on a 1×1 periodic domain
 mesh = VoronoiMesh(40, 1.0, 1.0)
 
-points = [mesh.cells.position.x'; mesh.cells.position.y'; mesh.cells.position.z']
-nverts = length(mesh.vertices.cells)
-triangles = Vector{MeshCell}(undef, nverts)
-for i in 1:nverts
-    # allocate per-iteration data to avoid races
-    idx = collect(mesh.vertices.cells[i])
-    triangles[i] = MeshCell(VTKCellTypes.VTK_TRIANGLE, idx)
-end
-vtk = vtk_grid("mesh_triangular.vtu", points, triangles)
-saved_files = close(vtk)
+# --- Export Voronoi (dual) grid to VTU ---
+# This will handle periodic ghost vertices automatically
+save_voronoi_to_vtu("mesh_voronoi.vtu", mesh)
 
+# --- Export Delaunay triangulation (primal) grid to VTU ---
+save_triangulation_to_vtu("mesh_triangulation.vtu", mesh)
 
-# Print a summary of the mesh
-println(mesh)
-
-# --- write dual (Voronoi) grid to VTU ---
-
-points_vertices = [mesh.vertices.position.x'; mesh.vertices.position.y'; mesh.vertices.position.z']
-
-ncells = mesh.cells.n
-voronoi_cells = Vector{MeshCell}(undef, ncells)
-for i in 1:ncells
-    idx = collect(mesh.cells.vertices[i])
-    # Voronoi cells are polygons; use the VTK polygon cell type instead of
-    # constructing internal PolyData objects (those are opaque and have no fields).
-    voronoi_cells[i] = MeshCell(VTKCellTypes.VTK_POLYGON, idx)
-end
-
-vtk2 = vtk_grid("mesh_voronoi.vtu", points_vertices, voronoi_cells)
-saved_files2 = close(vtk2)
-
-
-# --- write triangular grid on a edge by edge way ---
-
-#points_vertices = [mesh.vertices.position.x'; mesh.vertices.position.y'; mesh.vertices.position.z']
-
-
-let
-    vor_poly = create_cell_polygons(mesh)
-    n_polys = length(vor_poly)
-    points_mat = Matrix{Float64}(undef, 2, n_polys*6)  # preallocate assuming average 6 vertices per polygon
-    voronoi_cells = Vector{MeshCell}(undef, n_polys)
-    ivtx = Int64(1)
-    for i in 1:n_polys
-        ivtx_start = ivtx
-        for pt in vor_poly[i]
-            points_mat[1, ivtx] = pt[1]
-            points_mat[2, ivtx] = pt[2]
-            ivtx += 1
-        end
-        links = collect(ivtx_start:ivtx - 1)
-        voronoi_cells[i] = MeshCell(VTKCellTypes.VTK_POLYGON, links)
-    end
-    println(points_mat)
-    vtk2 = vtk_grid("mesh_periodic.vtu", points_mat, voronoi_cells)
-    saved_files2 = close(vtk2)
-end
-
+# --- Use high-level save function (auto-selects format by extension) ---
+# This will call the appropriate extension based on the file extension
+VoronoiMeshes.save("mesh_all.vtu", mesh)

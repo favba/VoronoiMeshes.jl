@@ -1,5 +1,9 @@
 
-# VTKExt: Extension for VoronoiMeshes to export meshes to VTU format using WriteVTK/VTKBase
+
+# VTKExt: Export VoronoiMeshes.jl meshes to VTU (VTK Unstructured Grid) format.
+# - Provides functions to export Voronoi and Delaunay meshes with periodic ghost vertices.
+# - Uses WriteVTK/VTKBase for file output; supports mesh metadata and ghost marking.
+# - Includes both specific and generic mesh export helpers for flexible usage.
 module VTKExt
 
 using VoronoiMeshes, TensorsLite, TensorsLiteGeometry, Zeros, SmallCollections, LinearAlgebra
@@ -94,8 +98,6 @@ function create_ghost_periodic_points(vert_pos, polygon_pos, verticesOnPolygon, 
     println("Added $n_ghosts ghost vertices to VTU to handle periodicity in mesh with ", length(vert_pos), " original vertices.")
     return vertices_with_ghosts, verticesOnPolygon_with_ghosts, n_ghosts, ghost_dict
 end
-
-
 
 """
     save_voronoi_to_vtu(file_name::String, mesh::AbstractVoronoiMesh{false})

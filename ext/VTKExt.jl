@@ -54,19 +54,44 @@ function create_ghost_periodic_points(vert_pos, polygon_pos, verticesOnPolygon, 
     vertices_with_ghosts = copy(vert_pos)
     ivertices_with_ghosts = length(vert_pos) + 1
     verticesOnPolygon_with_ghosts = [Vector(v) for v in verticesOnPolygon]
+    d = Dict{Int, Vector{Int}}() # Save ghost index for each original vertex
     for i in eachindex(polygon_pos)
         ppos = polygon_pos[i]
         for j in eachindex(verticesOnPolygon[i])
-            vpos = closest(ppos, vert_pos[verticesOnPolygon[i][j]], x_period, y_period)
-            if norm(vpos-vert_pos[verticesOnPolygon[i][j]]) > 0.4*min(x_period, y_period)
-                push!(vertices_with_ghosts, vpos)
-                verticesOnPolygon_with_ghosts[i][j] = ivertices_with_ghosts
-                ivertices_with_ghosts += 1
+            original_index = verticesOnPolygon[i][j]
+            vpos = closest(ppos, vert_pos[original_index], x_period, y_period)
+            if norm(vpos-vert_pos[original_index]) > 0.4*min(x_period, y_period)
+                if !haskey(d, original_index) #first time we see this ghost
+                    d[original_index] = [ivertices_with_ghosts]
+                    verticesOnPolygon_with_ghosts[i][j] = ivertices_with_ghosts
+                    push!(vertices_with_ghosts, vpos)
+                    ivertices_with_ghosts += 1
+                    #println(i, " ", j, " Ghost found:", vpos, " for original vertex ", original_index, " at ", vert_pos[original_index], " Dict:", d[original_index])
+                else #in this case a key already exists, check if this vertex is close or not to existing ghosts
+                    ghost_exists = false
+                    for k in d[original_index]
+                        if norm(vpos-vertices_with_ghosts[k]) < 1e-8*min(x_period, y_period)
+                            # use the existing ghost vertex
+                            verticesOnPolygon_with_ghosts[i][j] = k
+                            ghost_exists = true
+                            #println(i, " ", j, " Ghost already existed:", vpos, " for original vertex ", original_index, " at ", vert_pos[original_index], " Dict:", d[original_index])
+                        end
+                    end
+                    #New ghost vertex needed
+                    if !ghost_exists
+                        # add new ghost vertex
+                        push!(d[original_index], ivertices_with_ghosts)
+                        verticesOnPolygon_with_ghosts[i][j] = ivertices_with_ghosts
+                        push!(vertices_with_ghosts, vpos)
+                        ivertices_with_ghosts += 1
+                        #println(i, " ", j, " New repeated ghost found:", vpos, " for original vertex ", original_index, " at ", vert_pos[original_index], " Dict:", d[original_index])
+                    end
+                end
             end
         end
     end
     n_ghosts = length(vertices_with_ghosts) - length(vert_pos)
-    println("Added $n_ghosts ghost vertices to handle periodicity in mesh")
+    println("Added $n_ghosts ghost vertices to VTU to handle periodicity in mesh")
     return vertices_with_ghosts, verticesOnPolygon_with_ghosts, n_ghosts
 end
 

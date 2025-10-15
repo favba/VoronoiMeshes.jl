@@ -1,5 +1,8 @@
 using VoronoiMeshes, TensorsLite, SmallCollections, TensorsLiteGeometry, NCDatasets, LinearAlgebra, DelaunayTriangulation
 using Test
+using VTKBase      # For VTK cell types
+using WriteVTK     # For saving meshes in VTU format
+using ReadVTK      # For reading meshes in VTU format
 
 function my_approx(a, b; atol = 0.0, rtol = sqrt(eps(Float64)))
     all(x -> isapprox(x[1], x[2], atol = atol, rtol = rtol), zip(a, b))
@@ -185,3 +188,33 @@ end
     end
 end
 
+@testset "Save to VTU" begin
+    mesh = VoronoiMesh(VoronoiDiagram("mesh_distorted.nc"))
+
+
+    for p in Base.propertynames(mesh.cells)
+        getproperty(mesh.cells, p);
+    end
+    for p in Base.propertynames(mesh.vertices)
+        getproperty(mesh.vertices, p);
+    end
+    for p in Base.propertynames(mesh.edges)
+        getproperty(mesh.edges, p);
+    end
+
+    save("test_save.vtu", mesh)
+    # test_mesh = VoronoiMesh("test_save.vtu");
+
+    # for p in Base.propertynames(mesh.cells)
+    #     @test getproperty(mesh.cells, p) == getproperty(test_mesh.cells, p)
+    # end
+    # for p in Base.propertynames(mesh.vertices)
+    #     @test getproperty(mesh.vertices, p) == getproperty(test_mesh.vertices, p)
+    # end
+    # for p in Base.propertynames(mesh.edges)
+    #     @test getproperty(mesh.edges, p) == getproperty(test_mesh.edges, p)
+    # end
+
+    Base.Filesystem.rm("test_save_tri.vtu")
+    Base.Filesystem.rm("test_save_vor.vtu")
+end

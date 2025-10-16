@@ -41,5 +41,5 @@ save_triangulation_to_vtu("mesh_triangulation.vtu", mesh)
 # This will call the appropriate extension based on the file extension
 VoronoiMeshes.save("mesh.vtu", mesh)
 
-mesh_read =  VoronoiMesh("mesh.vtu")
+mesh_read =  VoronoiMesh_VTU("mesh.vtu")
 

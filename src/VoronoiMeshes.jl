@@ -18,7 +18,7 @@ export circular_refinement_function, y_refinement_function, x_refinement_functio
 export fix_diagram!, create_planar_hex_mesh
 
 # WriteVTKExt functions
-export save_voronoi_to_vtu, save_triangulation_to_vtu   
+export save_voronoi_to_vtu, save_triangulation_to_vtu, VoronoiMesh_VTU   
 
 const VecMaybe1DxArray{TX, TYZ, N} = TensorsLite.TensorArray{Tensor{Union{TX, TYZ}, 1, TX, TYZ, TYZ}, N, Array{TX, N}, Array{TYZ, N}, Array{TYZ, N}}
 const Vec1DxOr2DxyArray{TX, TXY, N} = TensorsLite.TensorArray{Tensor{Union{TX, Zero}, 1, TX, TXY, Zero}, N, Array{TX, N}, Array{TXY, N}, Array{Zero, N}}
@@ -235,8 +235,11 @@ function plotdualmesh! end
 function plotdiagram end
 function plotdiagram! end
 
-#Definitions are in ext/VTKExt.jl
+#Definitions are in ext/WriteVTKExt.jl
 function save_voronoi_to_vtu end
 function save_triangulation_to_vtu end
+
+#Definitions are in ext/ReadVTKExt.jl
+function VoronoiMesh_VTU end
 
 end # Module

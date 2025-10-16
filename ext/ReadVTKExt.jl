@@ -17,7 +17,7 @@ using ReadVTK.VTKBase
 
 
 #Wrapper to load a VoronoiMesh from VTU files with a single filename
-function VoronoiMeshes.VoronoiMesh(filename::String)
+function VoronoiMeshes.VoronoiMesh_VTU(filename::String)
     # If a single filename was given, search for the 2 associated grids (vor and tri)
     println("Attempt to read VTU file with base name: ", filename)
     name, ext = Base.Filesystem.splitext(filename)

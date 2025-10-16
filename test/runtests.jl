@@ -1,6 +1,6 @@
 using VoronoiMeshes, TensorsLite, SmallCollections, TensorsLiteGeometry, NCDatasets, LinearAlgebra, DelaunayTriangulation
 using Test
-using WriteVTK     # For saving meshes in VTU format
+using WriteVTK, ReadVTK     # For saving meshes in VTU format
 
 function my_approx(a, b; atol = 0.0, rtol = sqrt(eps(Float64)))
     all(x -> isapprox(x[1], x[2], atol = atol, rtol = rtol), zip(a, b))
@@ -202,7 +202,7 @@ end
 
     save("test_save.vtu", mesh)
 
-    test_mesh = VoronoiMesh("test_save.vtu");
+    test_mesh = VoronoiMesh_VTU("test_save.vtu");
 
     for p in Base.propertynames(mesh.cells)
         @test getproperty(mesh.cells, p) == getproperty(test_mesh.cells, p)

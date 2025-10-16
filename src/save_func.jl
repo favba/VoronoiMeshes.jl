@@ -26,8 +26,11 @@ function save(filename::String, obj::T; kwds...) where {T<:Union{<:AbstractVoron
         save_to_netcdf(filename, obj; kwds...)
         T<:AbstractVoronoiMesh && write(name*".graph.info", String(take!(graph_partition(obj))))
     elseif ext == ".vtu" #Save to VTU using VTKExt
-        save_voronoi_to_vtu(name*"_vor"*ext, obj)
-        save_triangulation_to_vtu(name*"_tri"*ext, obj)
+        name_vor = name*"_vor"*ext
+        name_tri = name*"_tri"*ext
+        println("Saving to VTU $name : " , name_vor, ", ", name_tri)
+        save_voronoi_to_vtu(name_vor, obj)
+        save_triangulation_to_vtu(name_tri, obj)
     else
         error("Unsupported file extension: $filename")
     end

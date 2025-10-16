@@ -17,7 +17,7 @@ export save
 export circular_refinement_function, y_refinement_function, x_refinement_function
 export fix_diagram!, create_planar_hex_mesh
 
-# VTKExt functions
+# WriteVTKExt functions
 export save_voronoi_to_vtu, save_triangulation_to_vtu   
 
 const VecMaybe1DxArray{TX, TYZ, N} = TensorsLite.TensorArray{Tensor{Union{TX, TYZ}, 1, TX, TYZ, TYZ}, N, Array{TX, N}, Array{TYZ, N}, Array{TYZ, N}}

@@ -53,6 +53,7 @@ cd test
 julia --project=. -e 'import Pkg; Pkg.develop([Pkg.PackageSpec(path="../../TensorsLite.jl"), Pkg.PackageSpec(path="../../TensorsLiteGeometry.jl"), Pkg.PackageSpec(path="../../VoronoiMeshes.jl")]); Pkg.add("DelaunayTriangulation"); Pkg.add("GeometryBasics"); Pkg.add("GLMakie"); Pkg.add("LinearAlgebra"); Pkg.add("VTKBase"); Pkg.add("ReadVTK"); Pkg.add("WriteVTK"); Pkg.add("NCDatasets"); Pkg.add("SmallCollections"); Pkg.add("Test"); Pkg.instantiate(); Pkg.status()'
 ```
 
+The same manifest can be used for the examples folder.
 
 ## Quick usage guide
 

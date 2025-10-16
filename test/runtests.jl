@@ -201,17 +201,18 @@ end
     end
 
     save("test_save.vtu", mesh)
-    # test_mesh = VoronoiMesh("test_save.vtu");
 
-    # for p in Base.propertynames(mesh.cells)
-    #     @test getproperty(mesh.cells, p) == getproperty(test_mesh.cells, p)
-    # end
-    # for p in Base.propertynames(mesh.vertices)
-    #     @test getproperty(mesh.vertices, p) == getproperty(test_mesh.vertices, p)
-    # end
-    # for p in Base.propertynames(mesh.edges)
-    #     @test getproperty(mesh.edges, p) == getproperty(test_mesh.edges, p)
-    # end
+    test_mesh = VoronoiMesh("test_save.vtu");
+
+    for p in Base.propertynames(mesh.cells)
+        @test getproperty(mesh.cells, p) == getproperty(test_mesh.cells, p)
+    end
+    for p in Base.propertynames(mesh.vertices)
+        @test getproperty(mesh.vertices, p) == getproperty(test_mesh.vertices, p)
+    end
+    for p in Base.propertynames(mesh.edges)
+        @test getproperty(mesh.edges, p) == getproperty(test_mesh.edges, p)
+    end
 
     Base.Filesystem.rm("test_save_tri.vtu")
     Base.Filesystem.rm("test_save_vor.vtu")

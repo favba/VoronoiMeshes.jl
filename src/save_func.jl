@@ -1,5 +1,5 @@
 """
-        save(filename::String, mesh::AbstractVoronoiMesh; format=:netcdf5_64bit_data, write_computed=false)
+    save(filename::String, mesh::AbstractVoronoiMesh; format=:netcdf5_64bit_data, write_computed=false)
 
 Save a Voronoi mesh or diagram to disk in either NetCDF or VTU (VTK) format, based on the file extension:
 
@@ -8,15 +8,16 @@ Save a Voronoi mesh or diagram to disk in either NetCDF or VTU (VTK) format, bas
     - Only the base fields are stored by default. To write computed fields, use `write_computed=true`.
     - For meshes, also writes a graph partition file (`.graph.info`).
 
-* If `filename` ends with `.vtu`, saves the mesh in VTK Unstructured Grid (VTU) format using the VTKExt extension (WriteVTK/VTKBase required).
-    - Two files are written: one for the Voronoi grid and one for the Delaunay triangulation, with `_vor_` and `_tri_` in the filenames.
+* If `filename` ends with `.vtu`, saves the mesh in VTK Unstructured Grid (VTU) format using WriteVTK.jl.
+    - Two files are written: one for the Voronoi grid and one for the Delaunay triangulation, with `_vor` and `_tri` in the filenames.
     - Handles periodic ghost vertices automatically for correct visualization in VTK/ParaView.
 
 * If the extension is not recognized, an error is thrown.
 
 ---
 
-        save(filename::String, diagram::VoronoiDiagram; format=:netcdf5_64bit_data)
+
+    save(filename::String, diagram::VoronoiDiagram; format=:netcdf5_64bit_data)
 
 Save the `diagram` in a NetCDF file named `filename` (see above for options).
 """

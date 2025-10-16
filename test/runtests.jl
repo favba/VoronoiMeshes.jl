@@ -189,20 +189,9 @@ end
 @testset "Save and read from VTU" begin
     mesh = VoronoiMesh(VoronoiDiagram("mesh_distorted.nc"))
 
-
-    for p in Base.propertynames(mesh.cells)
-        getproperty(mesh.cells, p);
-    end
-    for p in Base.propertynames(mesh.vertices)
-        getproperty(mesh.vertices, p);
-    end
-    for p in Base.propertynames(mesh.edges)
-        getproperty(mesh.edges, p);
-    end
-
     save("test_save.vtu", mesh)
 
-    test_mesh = VoronoiMesh_VTU("test_save.vtu");
+    test_mesh = VoronoiMesh("test_save.vtu");
 
     for p in Base.propertynames(mesh.cells)
         @test getproperty(mesh.cells, p) == getproperty(test_mesh.cells, p)

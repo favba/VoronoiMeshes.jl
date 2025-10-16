@@ -17,8 +17,11 @@ export save
 export circular_refinement_function, y_refinement_function, x_refinement_function
 export fix_diagram!, create_planar_hex_mesh
 
-# WriteVTKExt functions
-export save_voronoi_to_vtu, save_triangulation_to_vtu, VoronoiMesh_VTU   
+# NCDatasetsKExt functions
+export save_to_netcdf, save_to_netcdf!, read_from_netcdf   
+
+# WriteVTKExt and ReadVTKExt functions
+export save_voronoi_to_vtu, save_triangulation_to_vtu, read_from_vtu   
 
 const VecMaybe1DxArray{TX, TYZ, N} = TensorsLite.TensorArray{Tensor{Union{TX, TYZ}, 1, TX, TYZ, TYZ}, N, Array{TX, N}, Array{TYZ, N}, Array{TYZ, N}}
 const Vec1DxOr2DxyArray{TX, TXY, N} = TensorsLite.TensorArray{Tensor{Union{TX, Zero}, 1, TX, TXY, Zero}, N, Array{TX, N}, Array{TXY, N}, Array{Zero, N}}
@@ -78,8 +81,8 @@ present in the Voronoi cells of the mesh.
 
     VoronoiMesh(filename::String)
 
-The `NCDatasets` package must be loaded to use this constructor.
-Read the mesh from a NetCDF file.
+The `NCDatasets` or the `ReadVTK` package must be loaded to use this constructor.
+Read the mesh from a NetCDF/VTU file.
 
 ---
 
@@ -209,9 +212,12 @@ include("save_func.jl")
 
 include("refinement_functions.jl")
 
+include("read_func.jl")
+
 #Definitions are in ext/NCDatasetsExt.jl
 function save_to_netcdf end
 function save_to_netcdf! end
+function read_from_netcdf end
 
 #Definitions are in ext/DelaunayTriangulationExt.jl
 function create_planar_hex_mesh end
@@ -240,6 +246,6 @@ function save_voronoi_to_vtu end
 function save_triangulation_to_vtu end
 
 #Definitions are in ext/ReadVTKExt.jl
-function VoronoiMesh_VTU end
+function read_from_vtu end
 
 end # Module

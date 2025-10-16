@@ -19,7 +19,7 @@ using ReadVTK.VTKBase
 
 
 #Wrapper to load a VoronoiMesh from VTU files with a single filename
-function VoronoiMeshes.VoronoiMesh_VTU(filename::String)
+function VoronoiMeshes.read_from_vtu(filename::String)
 
     # If a single filename was given, search for the 2 associated grids (vor and tri)
     println("Attempt to read VTU file with base name: ", filename)
@@ -33,11 +33,11 @@ function VoronoiMeshes.VoronoiMesh_VTU(filename::String)
         error("Unsupported file extension: $filename")
     end
 
-    return VoronoiMeshes.VoronoiMesh(name_vor, name_tri)
+    return VoronoiMeshes.read_from_vtu(name_vor, name_tri)
 end
 
 # Function to load a VoronoiMesh from VTU files (2 files must be given)
-function VoronoiMeshes.VoronoiMesh(filename_vor::String, filename_tri::String)
+function VoronoiMeshes.read_from_vtu(filename_vor::String, filename_tri::String)
 
     if isfile(filename_vor) && isfile(filename_tri)
         println("Loading files: ", filename_vor, " and ", filename_tri)

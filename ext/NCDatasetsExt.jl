@@ -482,7 +482,7 @@ for func in (:Cells, :Vertices, :Edges)
 end
 
 
-function VoronoiMeshes.VoronoiMesh(file_name::String; warn_issues::Bool = true, read_computed::Bool = true)
+function VoronoiMeshes.read_from_netcdf(file_name::String; warn_issues::Bool = true, read_computed::Bool = true)
     f = NCDataset(file_name)
     try
         VoronoiMeshes.VoronoiMesh(f; warn_issues = warn_issues, read_computed = read_computed)
@@ -490,7 +490,7 @@ function VoronoiMeshes.VoronoiMesh(file_name::String; warn_issues::Bool = true, 
         close(f)
     end
 end
-function VoronoiMeshes.VoronoiMesh(v::Val, file_name::String; warn_issues::Bool = true, read_computed::Bool = true)
+function VoronoiMeshes.read_from_netcdf(v::Val, file_name::String; warn_issues::Bool = true, read_computed::Bool = true)
     f = NCDataset(file_name)
     try
         VoronoiMeshes.VoronoiMesh(v, f; warn_issues = warn_issues, read_computed = read_computed)

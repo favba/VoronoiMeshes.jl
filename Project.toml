@@ -12,6 +12,10 @@ TensorsLite = "1a1b94bd-d244-45e0-965a-8acfeb92b70f"
 TensorsLiteGeometry = "f9cc0174-84f8-4243-a119-6cf6c33db921"
 Zeros = "bd1ec220-6eb4-527a-9b49-e79c3db6233b"
 
+[sources]
+TensorsLite = {url = "https://github.com/favba/TensorsLite.jl"}
+TensorsLiteGeometry = {url = "https://github.com/favba/TensorsLiteGeometry.jl"}
+
 [weakdeps]
 DelaunayTriangulation = "927a84f5-c5f4-47a5-9785-b46e178433df"
 GeometryBasics = "5c1252a2-5f33-56bf-86c9-59e7332b4326"

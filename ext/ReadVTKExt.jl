@@ -1,8 +1,10 @@
+"""
+    ReadVTKExt
 
-
-# ReadVTKExt: Import a VoronoiMesh meshes from VTU (VTK Unstructured Grid) format.
-# - Provides functions to import Voronoi and Delaunay meshes with periodic ghost vertices.
-# - Uses ReadVTK for file input
+Import a VoronoiMesh meshes from VTU (VTK Unstructured Grid) format.
+- Provides functions to import Voronoi and Delaunay meshes with periodic ghost vertices.
+- Uses ReadVTK for file input
+"""
 module ReadVTKExt
 
 using VoronoiMeshes, TensorsLite, TensorsLiteGeometry, Zeros, LinearAlgebra

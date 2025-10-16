@@ -1,9 +1,11 @@
+"""
+    WriteVTKExt
 
-
-# WriteVTKExt: Export VoronoiMeshes.jl meshes to VTU (VTK Unstructured Grid) format.
-# - Provides functions to export Voronoi and Delaunay meshes with periodic ghost vertices.
-# - Uses WriteVTK for file output; supports mesh metadata and ghost marking.
-# - Includes both specific and generic mesh export helpers for flexible usage.
+Export VoronoiMeshes.jl meshes to VTU (VTK Unstructured Grid) format.
+- Provides functions to export Voronoi and Delaunay meshes with periodic ghost vertices.
+- Uses WriteVTK for file output; supports mesh metadata and ghost marking.
+- Includes both specific and generic mesh export helpers for flexible usage.
+"""
 module WriteVTKExt
 
 using VoronoiMeshes, TensorsLite, TensorsLiteGeometry, Zeros, SmallCollections, LinearAlgebra

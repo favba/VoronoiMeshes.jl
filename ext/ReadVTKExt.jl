@@ -20,15 +20,19 @@ using ReadVTK.VTKBase
 
 #Wrapper to load a VoronoiMesh from VTU files with a single filename
 function VoronoiMeshes.VoronoiMesh_VTU(filename::String)
+
     # If a single filename was given, search for the 2 associated grids (vor and tri)
     println("Attempt to read VTU file with base name: ", filename)
+
     name, ext = Base.Filesystem.splitext(filename)
+
     if ext == ".vtu" #Save to VTU using VTKExt
         name_vor = name * "_vor" * ext
         name_tri = name * "_tri" * ext
     else
         error("Unsupported file extension: $filename")
     end
+
     return VoronoiMeshes.VoronoiMesh(name_vor, name_tri)
 end
 
@@ -40,6 +44,7 @@ function VoronoiMeshes.VoronoiMesh(filename_vor::String, filename_tri::String)
     else
         error("Couldn't find files: ", filename_vor, " and ", filename_tri)
     end
+
     vtk_tri = VTKFile(filename_tri)
     vtk_vor = VTKFile(filename_vor)
 
@@ -49,23 +54,30 @@ end
 
 function read_mesh_from_vtu_data(vtk_vor, vtk_tri)
 
+    offsets = get_cells(vtk_vor).offsets
+    maxEdges = maximum((offsets[i] - (i == 1 ? 0 : offsets[i-1])) for i in eachindex(offsets))
+
+    return read_mesh_from_vtu_data(Val(maxEdges), vtk_vor, vtk_tri)
+end
+
+function read_mesh_from_vtu_data(::Val{maxEdges}, vtk_vor, vtk_tri) where {maxEdges}
+
     # Extract metadata from field data
     #--------------------
     fd_vor = get_field_data(vtk_vor)
+
     num_cells = only(get_data(fd_vor["NumCells"]))
     num_vertices = only(get_data(fd_vor["NumVertices"]))
-    num_edges = only(get_data(fd_vor["NumEdges"]))
-    num_periodic_ghosts = only(get_data(fd_vor["NumPeriodicGhosts"]))
+
     x_period = only(get_data(fd_vor["XPeriod"]))
     y_period = only(get_data(fd_vor["YPeriod"]))
 
     fd_tri = get_field_data(vtk_tri)
+
     num_vertices_from_tri = only(get_data(fd_tri["NumCells"]))
-    num_cells_from_tri = only(get_data(fd_tri["NumVertices"]))
-    num_edges_from_tri = only(get_data(fd_tri["NumEdges"]))
-    num_periodic_ghosts_from_tri = only(get_data(fd_tri["NumPeriodicGhosts"]))
-    x_period_from_tri = only(get_data(fd_tri["XPeriod"]))
-    y_period_from_tri = only(get_data(fd_tri["YPeriod"]))
+
+    @assert only(get_data(fd_tri["XPeriod"])) == x_period
+    @assert only(get_data(fd_tri["YPeriod"])) == y_period
 
     # Get Voronoi vertices (these are triangle circumcenters)
     vert_coords_vtk = ReadVTK.get_points(vtk_vor)
@@ -87,9 +99,9 @@ function read_mesh_from_vtu_data(vtk_vor, vtk_tri)
     vertex_indx_with_ghosts = get_data(ReadVTK.get_point_data(vtk_vor)["Index"])
 
     # Convert to SmVecArray and fix ghost indices
-    maxEdges = maximum(length(v) for v in verticesOnCell_raw)
     nEdges = Int16[length(v) for v in verticesOnCell_raw]
     verticesOnCell_data = Vector{FixedVector{maxEdges,Int32}}(undef, num_cells)
+
     for i in 1:num_cells
         cell_verts = verticesOnCell_raw[i]
         n_verts = length(cell_verts)

@@ -147,7 +147,7 @@ end
 @testset "DelaunayTriangulation.jl VoronoiMesh creation" begin
     mesh_dist = VoronoiMesh("mesh_distorted.nc")
     mesh_iso = VoronoiMesh("mesh.nc")
-    mesh = VoronoiMesh(mesh_dist.cells.position, mesh_dist.x_period, mesh_dist.y_period)
+    mesh = VoronoiMesh(mesh_dist.cells.position, mesh_dist.x_period, mesh_dist.y_period, rtol=1e-6)
     @test my_approx(mesh.cells.area, mesh_iso.cells.area, rtol=1e-6)
     @test my_approx(mesh.vertices.area, mesh_iso.vertices.area, rtol=1e-4)
     @test my_approx(mesh.edges.length, mesh_iso.edges.length, rtol=1e-4)
@@ -186,7 +186,7 @@ end
     end
 end
 
-@testset "Save to VTU" begin
+@testset "Save and read from VTU" begin
     mesh = VoronoiMesh(VoronoiDiagram("mesh_distorted.nc"))
 
 

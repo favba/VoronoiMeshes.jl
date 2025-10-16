@@ -24,9 +24,7 @@ using GLMakie      # For plotting (if Makie is installed)
 using NCDatasets   # For saving/loading meshes in NetCDF format
 
 # Required for VTU export/import (loads extensions automatically)
-using VTKBase      # For VTK cell types
 using WriteVTK     # For saving meshes in VTU format
-using ReadVTK      # For reading meshes in VTU format
 
 # Create a centroidal Voronoi mesh with 40 cells on a 1×1 periodic domain
 mesh = VoronoiMesh(40, 1.0, 1.0)

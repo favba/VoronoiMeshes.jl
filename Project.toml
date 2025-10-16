@@ -1,8 +1,7 @@
-
 name = "VoronoiMeshes"
 uuid = "978c199f-fe38-4011-9fe6-317bc1cdd350"
-authors = ["Felipe A. V. de Bragança Alves <favbalves@gmail.com> and contributors"]
 version = "1.0.0-DEV"
+authors = ["Felipe A. V. de Bragança Alves <favbalves@gmail.com> and contributors"]
 
 [deps]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
@@ -13,22 +12,21 @@ TensorsLite = "1a1b94bd-d244-45e0-965a-8acfeb92b70f"
 TensorsLiteGeometry = "f9cc0174-84f8-4243-a119-6cf6c33db921"
 Zeros = "bd1ec220-6eb4-527a-9b49-e79c3db6233b"
 
-
 [weakdeps]
 DelaunayTriangulation = "927a84f5-c5f4-47a5-9785-b46e178433df"
 GeometryBasics = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 NCDatasets = "85f8d34a-cbdd-5861-8df4-14fed0d494ab"
-VTKBase = "7a694f1a-29be-5364-9a16-c6f7b9e6edd9"
-WriteVTK = "c4b6d8b7-9a7d-4b7e-8c7c-2c1e2b2c5c3c"
-ReadVTK = "8e6b5c1b-7a4a-4e7e-8c7c-2c1e2b2c5c3c"
+WriteVTK = "64499a7a-5c06-52f2-abe2-ccb03c286192"
+ReadVTK = "dc215faf-f008-4882-a9f7-a79a826fadc3"
 
 [extensions]
 DelaunayTriangulationExt = ["DelaunayTriangulation"]
 GeometryBasicsExt = ["GeometryBasics"]
 MakieExt = "Makie"
 NCDatasetsExt = ["NCDatasets"]
-VTKExt = ["WriteVTK", "ReadVTK", "VTKBase"]
+ReadVTKExt = ["ReadVTK"]
+WriteVTKExt = ["WriteVTK"]
 
 [compat]
 DelaunayTriangulation = "1.6.0"
@@ -46,6 +44,7 @@ julia = "1.10"
 [extras]
 NCDatasets = "85f8d34a-cbdd-5861-8df4-14fed0d494ab"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+WriteVTK = "c4b6d8b7-9a7d-4b7e-8c7c-2c1e2b2c5c3c"
 
 [targets]
-test = ["Test", "NCDatasets"]
+test = ["Test", "NCDatasets", "WriteVTK"]

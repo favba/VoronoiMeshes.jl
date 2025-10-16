@@ -1,8 +1,6 @@
 using VoronoiMeshes, TensorsLite, SmallCollections, TensorsLiteGeometry, NCDatasets, LinearAlgebra, DelaunayTriangulation
 using Test
-using VTKBase      # For VTK cell types
 using WriteVTK     # For saving meshes in VTU format
-using ReadVTK      # For reading meshes in VTU format
 
 function my_approx(a, b; atol = 0.0, rtol = sqrt(eps(Float64)))
     all(x -> isapprox(x[1], x[2], atol = atol, rtol = rtol), zip(a, b))

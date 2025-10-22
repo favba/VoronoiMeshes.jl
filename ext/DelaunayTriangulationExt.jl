@@ -104,7 +104,7 @@ end
 
 @inline const_density(𝐱) = 1
 
-@inline TensorsLiteGeometry.mass_centroid(::typeof(const_density), points::AbstractVector{T}) where {T <: AbstractVec} = TensorsLiteGeometry.centroid(points)
+@inline TensorsLiteGeometry.mass_centroid(::typeof(const_density), points::AbstractVector{T}) where {T <: Vec} = TensorsLiteGeometry.centroid(points)
 
 function fill_with_polygon_mass_centroids!(new_points, pol_length, N::Integer, lx::Number, ly::Number, voro, ρ::F = const_density) where {F <: Function}
     polygons = voro.polygons

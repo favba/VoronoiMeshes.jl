@@ -42,7 +42,7 @@ PrecompileTools = "1.2.1"
 SmallCollections = "0.4.1, 0.5"
 TensorsLite = "1.0.0"
 TensorsLiteGeometry = "1.0.0"
-Zeros = "0.3.0"
+Zeros = "0.4"
 julia = "1.10"
 
 [extras]

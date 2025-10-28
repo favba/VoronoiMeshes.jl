@@ -26,7 +26,7 @@ using WriteVTK     # For saving meshes in VTU format
 using ReadVTK     # For reading meshes in VTU format
 
 # Create a centroidal Voronoi mesh with 40 cells on a 1×1 periodic domain
-mesh = VoronoiMesh(40, 1.0, 1.0)
+mesh = VoronoiMesh(20, 1.0, 1.0)
 
 # --- Export Voronoi (dual) grid to VTU ---
 # This will handle periodic ghost vertices automatically
@@ -43,5 +43,5 @@ VoronoiMeshes.save("mesh.vtu", mesh)
 
 # This function will actually read two files named "mesh_vor.vtu" and "mesh_tri.vtu"
 # In order to construct the VoronoiMesh
-mesh_read =  VoronoiMesh("mesh.vtu")
+mesh_read = VoronoiMesh("mesh.vtu")
 

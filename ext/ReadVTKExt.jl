@@ -109,9 +109,9 @@ function read_mesh_from_vtu_data(::Val{maxEdges}, vtk_vor, vtk_tri) where {maxEd
         for j in 1:n_verts
             idx = cell_verts[j]
             # Check if index points to a ghost cell
-            if idx > num_vertices
-                tmp[j] = -vertex_indx_with_ghosts[idx]  # Get correct index from ghost indices
-            else
+            if idx > num_vertices # Ghost vertex - convert index from 0-based to 1-based and negative
+                tmp[j] = -vertex_indx_with_ghosts[idx] + 1  # Get correct index from ghost indices
+            else # no need to convert, only vertex_indx_with_ghosts has ghost indices with 0-based
                 tmp[j] = idx  # Keep positive (regular vertex)
             end
         end
@@ -140,13 +140,13 @@ function read_mesh_from_vtu_data(::Val{maxEdges}, vtk_vor, vtk_tri) where {maxEd
         tmp = Vector{Int32}(undef, 3)
         for j in 1:3
             idx = cell_inds[j]
-            if idx > num_cells
-                tmp[j] = -cell_indx_with_ghosts[idx]  # Get correct index from ghost indices
+            if idx > num_cells #adjust indexing from 0-base to 1-base and negative
+                tmp[j] = -cell_indx_with_ghosts[idx] + 1  # Get correct index from ghost indices
             else
                 tmp[j] = idx  # Keep original index
             end
         end
-        cellsOnVertex[i] = FixedVector{3, Int32}(tmp)
+        cellsOnVertex[i] = FixedVector{3,Int32}(tmp)
     end
 
     # Get mesh density (constant for now)

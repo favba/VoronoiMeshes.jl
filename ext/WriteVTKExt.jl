@@ -66,7 +66,7 @@ function create_ghost_periodic_points(vert_pos, polygon_pos, verticesOnPolygon, 
 
     verticesOnPolygon_with_ghosts = [Vector(v) for v in verticesOnPolygon]
 
-    ghost_dict = Dict{Int, Vector{Int}}() # Save ghost index for each original vertex
+    ghost_dict = Dict{Int,Vector{Int}}() # Save ghost index for each original vertex
 
     for i in eachindex(polygon_pos)
 
@@ -79,7 +79,7 @@ function create_ghost_periodic_points(vert_pos, polygon_pos, verticesOnPolygon, 
             original_index = vert_on_pol[j]
             vpos = closest(ppos, vert_pos[original_index], x_period, y_period)
 
-            if norm(vpos-vert_pos[original_index]) > 0.4*min(x_period, y_period)
+            if norm(vpos - vert_pos[original_index]) > 0.4 * min(x_period, y_period)
                 if !haskey(ghost_dict, original_index) #first time we see this ghost
 
                     ghost_dict[original_index] = [ivertices_with_ghosts]
@@ -92,7 +92,7 @@ function create_ghost_periodic_points(vert_pos, polygon_pos, verticesOnPolygon, 
 
                     ghost_exists = false
                     for k in ghost_dict[original_index]
-                        if norm(vpos-vertices_with_ghosts[k]) < 1e-8*min(x_period, y_period)
+                        if norm(vpos - vertices_with_ghosts[k]) < 1e-8 * min(x_period, y_period)
 
                             # use the existing ghost vertex
                             vert_on_pol_w_ghost[j] = k
@@ -140,7 +140,7 @@ function save_voronoi_to_vtu(file_name::String, mesh::AbstractVoronoiMesh{false}
     n_polys = mesh.cells.n #number of Voronoi cells
     n_vertices = mesh.vertices.n #number of Voronoi cell vertices (matches number of triangles)
 
-    points_mat = hcat((v[1:2] for v in vertices_with_ghosts)...)        
+    points_mat = hcat((v[1:2] for v in vertices_with_ghosts)...)
 
     cells = Vector{MeshCell}(undef, n_polys)
 
@@ -148,7 +148,7 @@ function save_voronoi_to_vtu(file_name::String, mesh::AbstractVoronoiMesh{false}
         links = collect(verticesOnPolygon_with_ghosts[i])
         cells[i] = MeshCell(VTKCellTypes.VTK_POLYGON, links)
     end
-        # Save ghost periodicity information
+    # Save ghost periodicity information
 
     # Vertices from 1:n_polys will save their index 1:n_polys
     # Ghost vertices will save the index of the original vertex they correspond to, negative
@@ -163,9 +163,19 @@ function save_voronoi_to_vtu(file_name::String, mesh::AbstractVoronoiMesh{false}
             end
         end
     end
-    
+
+    # Match VTK's 0-based convention for stored indices
+    @inbounds for k in eachindex(ghost_idx)
+        v = ghost_idx[k]
+        if v > 0 #positive index : subtract one
+            ghost_idx[k] = v - 1
+        else # negative index (ghost) : sum one
+            ghost_idx[k] = v + 1
+        end
+    end
+
     # add mesh metadata
-    saved_file = vtk_grid(file_name, points_mat, cells) do vtk 
+    saved_file = vtk_grid(file_name, points_mat, cells) do vtk
         vtk["Index", VTKPointData()] = ghost_idx
         vtk["NumCells"] = mesh.cells.n
         vtk["NumVertices"] = mesh.vertices.n
@@ -174,7 +184,7 @@ function save_voronoi_to_vtu(file_name::String, mesh::AbstractVoronoiMesh{false}
         vtk["YPeriod"] = mesh.y_period
         vtk["NumPeriodicGhosts"] = n_ghosts
     end
-    
+
     return saved_file
 end
 
@@ -193,7 +203,7 @@ function save_triangulation_to_vtu(file_name::String, mesh::AbstractVoronoiMesh{
     n_polys = mesh.vertices.n #number of mesh triangles
     n_vertices = mesh.cells.n #number of triangle vertices
 
-    points_mat = hcat((v[1:2] for v in vertices_with_ghosts)...)        
+    points_mat = hcat((v[1:2] for v in vertices_with_ghosts)...)
 
     cells = Vector{MeshCell}(undef, n_polys)
 
@@ -217,9 +227,19 @@ function save_triangulation_to_vtu(file_name::String, mesh::AbstractVoronoiMesh{
             end
         end
     end
-    
+
+    # Match VTK's 0-based convention for stored indices
+    @inbounds for k in eachindex(ghost_idx)
+        v = ghost_idx[k]
+        if v > 0 #positive index : subtract one
+            ghost_idx[k] = v - 1
+        else # negative index (ghost) : sum one
+            ghost_idx[k] = v + 1
+        end
+    end
+
     # add mesh metadata
-    saved_file = vtk_grid(file_name, points_mat, cells) do vtk 
+    saved_file = vtk_grid(file_name, points_mat, cells) do vtk
         vtk["Index", VTKPointData()] = ghost_idx
         vtk["NumCells"] = mesh.cells.n
         vtk["NumVertices"] = mesh.vertices.n
@@ -228,7 +248,7 @@ function save_triangulation_to_vtu(file_name::String, mesh::AbstractVoronoiMesh{
         vtk["YPeriod"] = mesh.y_period
         vtk["NumPeriodicGhosts"] = n_ghosts
     end
-    
+
     return saved_file
 end
 

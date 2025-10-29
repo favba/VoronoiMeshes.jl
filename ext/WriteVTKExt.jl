@@ -97,7 +97,6 @@ function create_ghost_periodic_points(vert_pos, polygon_pos, verticesOnPolygon, 
                             # use the existing ghost vertex
                             vert_on_pol_w_ghost[j] = k
                             ghost_exists = true
-                            #println(i, " ", j, " Ghost already existed:", vpos, " for original vertex ", original_index, " at ", vert_pos[original_index], " Dict:", d[original_index])
 
                         end
                     end
@@ -110,7 +109,6 @@ function create_ghost_periodic_points(vert_pos, polygon_pos, verticesOnPolygon, 
                         vert_on_pol_w_ghost[j] = ivertices_with_ghosts
                         push!(vertices_with_ghosts, vpos)
                         ivertices_with_ghosts += 1
-                        #println(i, " ", j, " New repeated ghost found:", vpos, " for original vertex ", original_index, " at ", vert_pos[original_index], " Dict:", d[original_index])
 
                     end
                 end
@@ -151,7 +149,7 @@ function save_voronoi_to_vtu(file_name::String, mesh::AbstractVoronoiMesh{false}
     # Save ghost periodicity information
 
     # Vertices from 1:n_polys will save their index 1:n_polys
-    # Ghost vertices will save the index of the original vertex they correspond to, negative
+    # Ghost vertices will save the index of the original vertex they correspond to
     n_vertices_with_ghosts = length(vertices_with_ghosts)
 
     ghost_idx = collect(1:n_vertices_with_ghosts)
@@ -159,20 +157,13 @@ function save_voronoi_to_vtu(file_name::String, mesh::AbstractVoronoiMesh{false}
     for i in 1:n_vertices
         if haskey(ghost_dict, i)
             for j in ghost_dict[i]
-                ghost_idx[j] = -i
+                ghost_idx[j] = i
             end
         end
     end
 
-    # Match VTK's 0-based convention for stored indices
-    @inbounds for k in eachindex(ghost_idx)
-        v = ghost_idx[k]
-        if v > 0 #positive index : subtract one
-            ghost_idx[k] = v - 1
-        else # negative index (ghost) : sum one
-            ghost_idx[k] = v + 1
-        end
-    end
+    # Shift indices by -1 for storage convention (0-based in VTK)
+    @inbounds ghost_idx .-= 1
 
     # add mesh metadata
     saved_file = vtk_grid(file_name, points_mat, cells) do vtk
@@ -215,7 +206,7 @@ function save_triangulation_to_vtu(file_name::String, mesh::AbstractVoronoiMesh{
     # Save ghost periodicity information
 
     # Vertices from 1:n_polys will save their index 1:n_polys
-    # Ghost vertices will save the index of the original vertex they correspond to, negative
+    # Ghost vertices will save the index of the original vertex they correspond to
     n_vertices_with_ghosts = length(vertices_with_ghosts)
 
     ghost_idx = collect(1:n_vertices_with_ghosts)
@@ -223,20 +214,13 @@ function save_triangulation_to_vtu(file_name::String, mesh::AbstractVoronoiMesh{
     for i in 1:n_vertices
         if haskey(ghost_dict, i)
             for j in ghost_dict[i]
-                ghost_idx[j] = -i
+                ghost_idx[j] = i
             end
         end
     end
 
-    # Match VTK's 0-based convention for stored indices
-    @inbounds for k in eachindex(ghost_idx)
-        v = ghost_idx[k]
-        if v > 0 #positive index : subtract one
-            ghost_idx[k] = v - 1
-        else # negative index (ghost) : sum one
-            ghost_idx[k] = v + 1
-        end
-    end
+    # Shift indices by -1 for storage convention (VTK uses 0-based indexing)
+    ghost_idx .-= 1
 
     # add mesh metadata
     saved_file = vtk_grid(file_name, points_mat, cells) do vtk

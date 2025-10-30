@@ -11,46 +11,72 @@ Main developer: Felipe A. V. de Bragança Alves <favbalves@gmail.com>
 
 ## Install Guide 
 
-Assuming Julia already installed (for instance via juliaup). 
+Assuming Julia already installed (for instance via juliaup).
 
-The package, and the dependencies, will be ported into registered packages soon. 
-
+Using Julia version 1.11 or higher:
 ```julia
 import Pkg
 Pkg.activate(temp=true)
+Pkg.add(url="https://github.com/favba/VoronoiMeshes.jl.git")
+
+# Optional packages, for grid creation; plotting; import / export to NetCDF; and import / export to VTK.
 Pkg.add("DelaunayTriangulation")
+Pkg.add("GLMakie")
+Pkg.add("NCDatasets")
+Pkg.add("ReadVTK")
+Pkg.add("WriteVTK")
+```
+
+If using Julia v1.10, then the unregistered dependencies must be explicitly installed before installing this package:
+```julia
+import Pkg
+Pkg.activate(temp=true)
 Pkg.add(url="https://github.com/favba/TensorsLite.jl.git")
 Pkg.add(url="https://github.com/favba/TensorsLiteGeometry.jl.git")
 Pkg.add(url="https://github.com/favba/VoronoiMeshes.jl.git")
-```
 
+# Optional packages, for grid creation; plotting; import / export to NetCDF; and import / export to VTK.
+Pkg.add("DelaunayTriangulation")
+Pkg.add("GLMakie")
+Pkg.add("NCDatasets")
+Pkg.add("ReadVTK")
+Pkg.add("WriteVTK")
+```
+The package and the dependencies will be ported into registered packages soon.
 
 ## Developer's Guide 
 
-Assuming Julia already installed (for instance via juliaup). 
+With Julia v1.11 or higher is sufficient to simply clone the repository:
 
-The package, and the dependencies, will be ported into registered packages soon. For current developers, the enviroment can be constructed in the following way.
+```bash
+git clone git@github.com:favba/VoronoiMeshes.jl.git
+```
 
-Assuming a comom folder for the packages and the dependencies:
+The package and the dependencies will be ported into registered packages soon.
+For developers using Julia v1.10, the environment must be explicitly constructed in the following way:
+
+Assuming a common folder for the packages and the dependencies:
 ```bash
 git clone git@github.com:favba/VoronoiMeshes.jl.git
 git clone git@github.com:favba/TensorsLite.jl.git
 git clone git@github.com:favba/TensorsLiteGeometry.jl.git
 ```
 
-Create project (manisfests) for VoronoiMeshes
+Create project (manifests) for `VoronoiMeshes` and its unregistered dependencies in the following order:
 
-```
+```bash
 cd TensorsLite.jl
 julia --project=. -e 'import Pkg; Pkg.instantiate(); Pkg.status()'
+
 cd ../TensorsLiteGeometry.jl
 julia --project=. -e 'import Pkg; Pkg.develop(path="../TensorsLite.jl"); Pkg.instantiate(); Pkg.status()'
+
 cd ../VoronoiMeshes.jl
 julia --project=. -e 'import Pkg; Pkg.develop([Pkg.PackageSpec(path="../TensorsLite.jl"), Pkg.PackageSpec(path="../TensorsLiteGeometry.jl")]); Pkg.instantiate(); Pkg.status()'
 ```
 
 Create project (manifests) for 'test'
-```
+```bash
 cd test
 
 julia --project=. -e 'import Pkg; Pkg.develop([Pkg.PackageSpec(path="../../TensorsLite.jl"), Pkg.PackageSpec(path="../../TensorsLiteGeometry.jl"), Pkg.PackageSpec(path="../../VoronoiMeshes.jl")]); Pkg.add("DelaunayTriangulation"); Pkg.add("GeometryBasics"); Pkg.add("GLMakie"); Pkg.add("LinearAlgebra"); Pkg.add("VTKBase"); Pkg.add("ReadVTK"); Pkg.add("WriteVTK"); Pkg.add("NCDatasets"); Pkg.add("SmallCollections"); Pkg.add("Test"); Pkg.instantiate(); Pkg.status()'
@@ -68,17 +94,17 @@ import Pkg
 Pkg.add("DelaunayTriangulation") 
 using VoronoiMeshes, DelaunayTriangulation
 
-# Create a centroidal Voronoi mesh with 200 cells on a 1×1 periodic domain
-mesh = VoronoiMesh(20, 1.0, 1.0)
+# Create a centroidal Voronoi mesh with 20 cells on a 1.0 × 1.2 periodic domain
+mesh = VoronoiMesh(20, 1.0, 1.2)
 println(mesh)
 
 #Mesh plotting
 using GLMakie
-plotmesh(mesh)
-plotdualmesh!(mesh) # Plot on top of the previous plot
+plotmesh(mesh) #Plot the Voronoi mesh
+plotdualmesh!(mesh) # Plot the dual triangular mesh on top of the previous plot
 ```
 
-Create a mesh from a given set of generator points (VecArray of x,y coordinates):
+Create a mesh from a given set of generator points (`VecArray` of `x`,`y` coordinates):
 
 ```julia
 using VoronoiMeshes, DelaunayTriangulation, TensorsLite
@@ -88,12 +114,13 @@ mesh = VoronoiMesh(generators, 1.0, 1.0)
 println(mesh)
 ```
 
-Create a regular hexagonal planar mesh (utility provided in the Delaunay extension):
+Create a regular hexagonal planar mesh:
 
 ```julia
 using DelaunayTriangulation, VoronoiMeshes
 
-# dx ~ target cell spacing
-hexmesh = create_planar_hex_mesh(1.0, 1.0, 0.05)
+# Target x period = 1.0
+# Target y period = 1.2
+# cell spacing = 0.05
+hexmesh = create_planar_hex_mesh(1.0, 1.2, 0.05)
 ```
-

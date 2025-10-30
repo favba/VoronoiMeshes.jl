@@ -2,3 +2,5 @@
 /test/Project.toml
 /test/Manifest.toml
 /examples/Manifest.toml
+.vscode
+

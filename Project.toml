@@ -33,15 +33,18 @@ ReadVTKExt = ["ReadVTK"]
 WriteVTKExt = ["WriteVTK"]
 
 [compat]
-DelaunayTriangulation = "1"
-GeometryBasics = "0.4, 0.5"
 LinearAlgebra = "1"
-NCDatasets = "0.14"
 Polyester = "0.7"
 PrecompileTools = "1"
 SmallCollections = "0.4.1, 0.5"
 Zeros = "0.4"
 julia = "1.10"
+DelaunayTriangulation = "1"
+GeometryBasics = "0.4, 0.5"
+Makie = "0.23, 0.24"
+NCDatasets = "0.14"
+WriteVTK = "1"
+ReadVTK = "0.2"
 
 [extras]
 NCDatasets = "85f8d34a-cbdd-5861-8df4-14fed0d494ab"

@@ -370,8 +370,8 @@ function VoronoiMeshes.create_planar_hex_mesh(lx::Number, ly::Number, dc::Number
 end
 
 @compile_workload begin
-    m = VoronoiMesh(17, 1.0, 1.0)
-    m2 = VoronoiMesh(17, 1.0, 1.0, density=VoronoiMeshes.circular_refinement_function(1.0, 1.0), rtol=1e-4, max_time = 0.2)
+    m = VoronoiMesh(17, 1.0, 1.0, max_time = 0.1)
+    m2 = VoronoiMesh(17, 1.0, 1.0, density=VoronoiMeshes.circular_refinement_function(1.0, 1.0), rtol=1e-4, max_time = 0.1)
     m3 = create_planar_hex_mesh(1.0, 1.0, 0.1)
 end
 

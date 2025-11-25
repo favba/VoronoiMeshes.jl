@@ -2,6 +2,7 @@ mutable struct CellInfo{S, max_nEdges, TI, TF, Tz}
     const diagram::VoronoiDiagram{S, max_nEdges, TI, TF, Tz}
     centroid::TensorsLite.VecMaybe2DxyArray{TF, Tz, 1}
     area::Vector{TF}
+    areaMimetic::Vector{TF}
     longitude::Vector{TF}
     latitude::Vector{TF}
     normal::TensorsLite.VecMaybe2DxyArray{Tz, TF, 1} # The same as Maybe1DzArray{TF, Tz, 1}
@@ -55,12 +56,13 @@ We refer to those as the "Computed Data".
   meshes with constant density function this should virtually be the same as the `position` vector.
 - `edgesSign::SmallVectorArray`: A vector of vectors associated with the edges that form the cell.
    Has value of 1 if the edge normal points outward the cell and -1 otherwise.
-- `longitude::Vector`(Spherical meshes only): The longitude in radians of the cell `position` vector.
-- `latitude::Vector`(Spherical meshes only): The latitude in radians of the cell `position` vector.
-- `normal::TensorArray`(Spherical meshes only): The unit vector perpendicular to the plane tangent to the
+- `longitude::Vector` (Spherical meshes only): The longitude in radians of the cell `position` vector.
+- `latitude::Vector` (Spherical meshes only): The latitude in radians of the cell `position` vector.
+- `normal::TensorArray` (Spherical meshes only): The unit vector perpendicular to the plane tangent to the
   sphere at the cell `position`.
-- `zonalVector::TensorArray`(Spherical meshes only): The unit vector tangent to the sphere and pointing eastward.
-- `meridionalVector::TensorArray`(Spherical meshes only): The unit vector tangent to the sphere and pointing northward.
+- `zonalVector::TensorArray` (Spherical meshes only): The unit vector tangent to the sphere and pointing eastward.
+- `meridionalVector::TensorArray` (Spherical meshes only): The unit vector tangent to the sphere and pointing northward.
+- `areaMimetic::Vector` (Spherical meshes only): An array with an area value for each Voronoi cell suitable for the mimetic TRiSK scheme.
 
 """
 struct Cells{S, max_nEdges, TI, TF, Tz}

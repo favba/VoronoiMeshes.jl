@@ -54,3 +54,36 @@ function compute_cell_edgesSign(cells::Cells{S, N_MAX, TI, TF}) where {S, N_MAX,
     cellsOnEdge = getfield(getfield(cells, :info), :cellsOnEdge)
     return compute_cell_edgesSign!(edgesSign, cells.edges, cellsOnEdge)
 end
+
+function compute_cell_areaMimetic_spherical!(output::AbstractVector, cpos::VecArray, cellsOnCell, verticesOnCell, vpos, R::Number)
+
+    @parallel for c in eachindex(output)
+        @inbounds begin
+
+            coc = cellsOnCell[c]
+            voc = verticesOnCell[c]
+            n = length(coc)
+
+            cp1 = cpos[c]
+            vp1 = vpos[voc[n]]
+            r = zero(eltype(output))
+            for i in 1:n
+                vp2 = vpos[voc[i]]
+                cp2 = cpos[coc[i]]
+                dc = arc_length(R, cp1, cp2)
+                le = arc_length(R, vp1, vp2)
+                r += le * dc / 4
+
+                vp1 = vp2
+            end
+
+            output[c] = r
+        end
+    end
+
+    return output
+end
+
+compute_cell_areaMimetic!(output, cells::Cells{false}) = compute_polygon_area_periodic!(output, cells.info.diagram.vertices, cells.vertices, cells.x_period, cells.y_period)
+compute_cell_areaMimetic!(output, cells::Cells{true}) = compute_cell_areaMimetic_spherical!(output, cells.position, cells.cells, cells.vertices, cells.info.diagram.vertices, cells.sphere_radius)
+compute_cell_areaMimetic(cells::Cells) = compute_cell_areaMimetic!(similar(cells.position.x), cells)

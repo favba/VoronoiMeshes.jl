@@ -137,6 +137,32 @@ end
     )
 end
 
+function test_cell_spherical_mimetic_area(areaMimetic::AbstractVector, mesh)
+    le = VoronoiMeshes.compute_edge_length(mesh.edges)
+    dc = VoronoiMeshes.compute_edge_lengthDual(mesh.edges)
+    edgesOnCell = mesh.cells.edges
+    areatest = map(edges -> sum(le[edges] .* dc[edges]) / 4, edgesOnCell)
+    return my_approx(areaMimetic, areatest)
+end
+
+
+@testset "Mimetic Areas" begin
+    mesh_spherical = VoronoiMesh("spherical_grid_500km.nc")
+
+    @test test_cell_spherical_mimetic_area(mesh_spherical.cells.areaMimetic, mesh_spherical)
+
+    @test sum(mesh_spherical.cells.areaMimetic) ≈ sum(mesh_spherical.vertices.areaMimetic)
+
+    @test my_approx(mesh_spherical.vertices.areaMimetic, map(sum, mesh_spherical.vertices.kiteAreasMimetic))
+
+    mesh_dist = VoronoiMesh("mesh_distorted.nc")
+
+    @test my_approx(mesh_dist.cells.area, mesh_dist.cells.areaMimetic)
+    @test my_approx(mesh_dist.vertices.area, mesh_dist.vertices.areaMimetic)
+    @test my_approx(mesh_dist.vertices.kiteAreas, mesh_dist.vertices.kiteAreasMimetic)
+
+end
+
 @testset "Mesh checks" begin
     @test !isnothing(check_mesh(VoronoiMesh("x1.4002.grid.nc")))
     @test !isnothing(check_mesh(VoronoiMesh("mesh_issues.nc")))

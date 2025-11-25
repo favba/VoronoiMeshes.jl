@@ -2,7 +2,9 @@ mutable struct VertexInfo{S, NE, TI, TF, Tz}
     const diagram::VoronoiDiagram{S, NE, TI, TF, Tz}
     centroid::TensorsLite.VecMaybe2DxyArray{TF, Tz, 1}
     area::Vector{TF}
+    areaMimetic::Vector{TF}
     kiteAreas::Vector{FixedVector{3, TF}}
+    kiteAreasMimetic::Vector{FixedVector{3, TF}}
     edgesSign::Vector{FixedVector{3, TF}}
     longitude::Vector{TF}
     latitude::Vector{TF}
@@ -46,8 +48,10 @@ We refer to those as the "Computed Data".
 - `centroid::TensorArray`: A vector with each Delaunay triangle centroid position vector.
 - `edgesSign::Vector`: A vector of tuples associated with the edges that meet at the vertex.
   Has value of 1 if the edge normal is oriented in the counter-clockwise direction and -1 otherwise.
-- `longitude::Vector`(Spherical meshes only): The longitude in radians of the vertex `position` vector.
-- `latitude::Vector`(Spherical meshes only): The latitude in radians of the vertex `position` vector.
+- `longitude::Vector` (Spherical meshes only): The longitude in radians of the vertex `position` vector.
+- `latitude::Vector` (Spherical meshes only): The latitude in radians of the vertex `position` vector.
+- `areaMimetic::Vector` (Spherical meshes only): A vector with an area value for each Delaunay triangle suitable for the mimetic TRiSK scheme.
+- `kiteAreasMimetic::Vector` (Spherical meshes only): A vector of tuples with values related to the intersection areas between primal (Voronoi) and dual (triangular) cells, calculated in a manner consistent with `areaMimetic`.
 """
 struct Vertices{S, NE, TI, TF, Tz}
     n::Int

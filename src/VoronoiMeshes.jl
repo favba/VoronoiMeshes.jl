@@ -2,6 +2,7 @@ module VoronoiMeshes
 
 using LinearAlgebra
 using Zeros, TensorsLite, SmallCollections, TensorsLiteGeometry
+using PrecompileTools
 
 export @parallel
 
@@ -247,5 +248,7 @@ function save_triangulation_to_vtu end
 
 #Definitions are in ext/ReadVTKExt.jl
 function read_from_vtu end
+
+include("precompile.jl")
 
 end # Module

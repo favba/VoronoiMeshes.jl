@@ -22,6 +22,11 @@ verticesOnCellData = FixedVector{6, Int32}[[21, 47, 31, 44, 48, 0], [12, 56, 17,
 
 verticesOnCellLength = Int16[5, 5, 5, 5, 6, 5, 5, 5, 6, 6, 5, 6, 5, 6, 5, 6, 6, 6, 6, 6, 6, 6, 5, 6, 6, 6, 6, 5, 6, 6]
 
-verticesOnCell = SmallVectorArray(verticesOnCellData, verticesOnCellLength)
+verticesOnCell6 = SmallVectorArray(verticesOnCellData, verticesOnCellLength)
+
+verticesOnCell7 = SmallVectorArray(similar(verticesOnCellData, FixedVector{7,Int32}), similar(verticesOnCellLength))
+verticesOnCell7 .= verticesOnCell6
+verticesOnCell8 = SmallVectorArray(similar(verticesOnCellData, FixedVector{8,Int32}), similar(verticesOnCellLength))
+verticesOnCell8 .= verticesOnCell7
 
 cellsOnVertex = FixedVector{3, Int32}[[6, 20, 22], [14, 18, 19], [29, 5, 16], [4, 29, 9], [28, 29, 4], [27, 28, 26], [4, 9, 30], [20, 6, 25], [25, 13, 20], [12, 21, 10], [28, 4, 26], [30, 2, 25], [21, 9, 15], [27, 22, 23], [22, 27, 6], [19, 7, 14], [2, 21, 12], [26, 4, 30], [2, 13, 25], [24, 10, 15], [24, 1, 11], [26, 6, 27], [14, 8, 18], [28, 27, 5], [23, 7, 17], [17, 5, 23], [24, 3, 16], [15, 10, 21], [10, 11, 18], [15, 9, 3], [17, 1, 16], [30, 9, 21], [17, 7, 19], [20, 8, 14], [13, 12, 8], [29, 3, 9], [8, 20, 13], [22, 20, 14], [11, 19, 18], [3, 24, 15], [25, 26, 30], [8, 12, 18], [29, 28, 5], [19, 1, 17], [16, 3, 29], [12, 13, 2], [16, 1, 24], [1, 19, 11], [23, 5, 27], [25, 6, 26], [11, 10, 24], [18, 12, 10], [22, 7, 23], [16, 5, 17], [14, 7, 22], [21, 2, 30]]

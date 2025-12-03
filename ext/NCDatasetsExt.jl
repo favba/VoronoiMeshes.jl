@@ -182,7 +182,7 @@ function VoronoiMeshes.CellInfo(voro::VoronoiDiagram{S, NE, TI, TF, Tz}, ncfile:
     haskey(ncfile, "latCell") && (cell_info.latitude = ncfile["latCell"][:]::Vector{Float64})
 
     if haskey(ncfile, "localVerticalUnitVectors")
-        lvuva = ncfile["localVerticalUnitVectors"]
+        lvuva = ncfile["localVerticalUnitVectors"][:,:]::Matrix{Float64}
         n_z = lvuva[3, :]
         if S
             n_x = lvuva[1, :]
@@ -194,7 +194,7 @@ function VoronoiMeshes.CellInfo(voro::VoronoiDiagram{S, NE, TI, TF, Tz}, ncfile:
     end
 
     if haskey(ncfile, "cellTangentPlane")
-        ctp = ncfile["cellTangentPlane"]
+        ctp = ncfile["cellTangentPlane"][:,:,:]::Array{Float64,3}
         tux = ctp[1, 1, :]
         tvy = ctp[2, 2, :]
         if S
@@ -245,7 +245,7 @@ function VoronoiMeshes.VertexInfo(voro::VoronoiDiagram{S, NE, TI, TF, Tz}, ncfil
     haskey(ncfile, "latVertex") && (vertex_info.latitude = ncfile["latVertex"][:]::Vector{Float64})
 
     if haskey(ncfile, "kiteAreasOnVertex")
-        kiteAreasArray = ncfile["kiteAreasOnVertex"][:, :]
+        kiteAreasArray = ncfile["kiteAreasOnVertex"][:, :]::Matrix{Float64}
         kiteAreas = [(kiteAreasArray[1, k], kiteAreasArray[2, k], kiteAreasArray[3, k]) for k in axes(kiteAreasArray, 2)]
         vertex_info.kiteAreas = kiteAreas
     end
@@ -282,7 +282,7 @@ function VoronoiMeshes.EdgeInfo(voro::VoronoiDiagram{S, NE, TI, TF, Tz}, ncfile:
     haskey(ncfile, "latEdge") && (edge_info.latitude = ncfile["latEdge"][:]::Vector{Float64})
 
     if haskey(ncfile, "edgeNormalVectors")
-        env = ncfile["edgeNormalVectors"]
+        env = ncfile["edgeNormalVectors"][:,:]::Matrix{Float64}
         if S
             edge_info.normal = VecArray(x = env[1, :], y = env[2, :], z = env[3, :])
         else
@@ -291,7 +291,7 @@ function VoronoiMeshes.EdgeInfo(voro::VoronoiDiagram{S, NE, TI, TF, Tz}, ncfile:
     end
 
     if haskey(ncfile, "edgeTangentialVectors")
-        etv = ncfile["edgeTangentialVectors"]
+        etv = ncfile["edgeTangentialVectors"][:,:]::Matrix{Float64}
         if S
             edge_info.tangent = VecArray(x = etv[1, :], y = etv[2, :], z = etv[3, :])
         else

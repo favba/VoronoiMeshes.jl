@@ -1,95 +1,130 @@
 using NCDatasets.CommonDataModel
 
-function write_dim_diagram!(ds::NCDataset, diag::AbstractVoronoiDiagram{S, maxEdges}) where {S, maxEdges}
-    dim = ds.dim
-    dim["nCells"] = length(diag.generators)
-    dim["nVertices"] = length(diag.vertices)
-    dim["maxEdges"] = maxEdges
-    dim["vertexDegree"] = 3
-    dim["R3"] = 3
-    dim["TWO"] = 2
+import VoronoiMeshes: write_field_to_netcdf!
+
+function write_field_to_netcdf!(ds::NCDataset, data::AbstractVector{T}, name::String, dim_name::String, attrib::AbstractVector{Pair{String,String}}) where {T<:Number}
+
+    if !haskey(ds.dim, dim_name)
+        ds.dim[dim_name] = length(data)
+    end
+
+    fdata = T === Int16 ? Int32.(data) : data
+    if !haskey(ds, name)
+        defVar(ds, name, fdata, (dim_name,); attrib = attrib)
+    else
+        throw(ArgumentError("Field \"$name\" already present in the NetCDF file"))
+    end
+
+    return ds
+end
+
+function write_field_to_netcdf!(ds::NCDataset, vec_data::VecArray{T,1}, names::NTuple{N,String}, dim_name::String, attrib::NTuple{N, AbstractVector{Pair{String,String}}}) where {T<:Number, N}
+
+    write_field_to_netcdf!(ds, vec_data.x, names[1], dim_name, attrib[1])
+    write_field_to_netcdf!(ds, vec_data.y, names[2], dim_name, attrib[2])
+
+    if N == 3
+        if eltype(vec_data.z) == Zero
+            write_field_to_netcdf!(ds, zeros(eltype(vec_data.x), length(vec_data)), names[3], dim_name, attrib[3])
+        else
+            write_field_to_netcdf!(ds, vec_data.z, names[3], dim_name, attrib[3])
+        end
+    end
+
+    return ds
+end
+
+function write_field_to_netcdf!(ds::NCDataset, vec_data::VecArray{T,1}, name::String, dim_names::NTuple{2, String}, attrib::AbstractVector{Pair{String,String}}) where {T}
+
+    if !haskey(ds.dim, dim_names[1])
+        ds.dim[dim_names[1]] = 3
+    end
+    if !haskey(ds.dim, dim_names[2])
+        ds.dim[dim_names[2]] = length(vec_data)
+    end
+
+    if haskey(ds, name)
+        throw(ArgumentError("Field \"$name\" already present in the NetCDF file"))
+    end
+
+    TF = nonzero_eltype(eltype(vec_data))
+
+    dataArray = zeros(TF, 3, length(vec_data))
+
+    @inbounds for i in eachindex(vec_data)
+        v = vec_data[i]
+        dataArray[1, i] = v.x
+        dataArray[2, i] = v.y
+        dataArray[3, i] = v.z
+    end
+
+    defVar(ds, name, dataArray, dim_names; attrib = attrib)
+
+    return ds
+end
+
+base_data(d) = d
+base_data(d::SmallVectorArray) = d.data
+
+function write_field_to_netcdf!(ds::NCDataset, data::AbstractVector{T}, name::String, dim_names::NTuple{2,String}, attrib::AbstractVector{Pair{String,String}}) where {T<:Union{<:Tuple,<:AbstractVector}}
+
+    TI = eltype(T)
+    fdata = reinterpret(reshape, TI, base_data(data))
+
+    if !haskey(ds.dim, dim_names[1])
+        ds.dim[dim_names[1]] = size(fdata,1)
+    end
+
+    if !haskey(ds.dim, dim_names[2])
+        ds.dim[dim_names[2]] = size(fdata,2)
+    end
+
+    if !haskey(ds, name)
+        defVar(ds, name, fdata, dim_names; attrib = attrib)
+    else
+        throw(ArgumentError("Field \"$name\" already present in the NetCDF file"))
+    end
+
     return ds
 end
 
 function write_diagram_fields!(ds::NCDataset, cpos, vpos, meshDensity, force3D::Bool = false)
 
     is3D = eltype(cpos.z) !== Zeros.Zero
-    TF = eltype(cpos.x)
 
-    defVar(ds, "xCell", cpos.x, ("nCells",); attrib = [
-        "units" => "m",
-        "long_name" => "Cartesian x-coordinate of cells"
-    ])
+    xcattr = ["units" => "m", "long_name" => "Cartesian x-coordinate of cells"]
+    ycattr = ["units" => "m", "long_name" => "Cartesian y-coordinate of cells"]
+    zcattr = ["units" => "m", "long_name" => "Cartesian z-coordinate of cells"]
 
-    defVar(ds, "yCell", cpos.y, ("nCells",); attrib = [
-        "units" => "m",
-        "long_name" => "Cartesian y-coordinate of cells"
-    ])
+    xvattr = ["units" => "m", "long_name" => "Cartesian x-coordinate of vertices"]
+    yvattr = ["units" => "m", "long_name" => "Cartesian y-coordinate of vertices"]
+    zvattr = ["units" => "m", "long_name" => "Cartesian z-coordinate of vertices"]
 
     if (is3D | force3D)
-        cposz = is3D ? cpos.z : zeros(TF,length(cpos))
-
-        defVar(ds, "zCell", cposz, ("nCells",); attrib = [
-            "units" => "m",
-            "long_name" => "Cartesian z-coordinate of cells"
-        ])
+        write_field_to_netcdf!(ds, cpos, ("xCell", "yCell", "zCell"), "nCells", (xcattr, ycattr, zcattr))
+        write_field_to_netcdf!(ds, vpos, ("xVertex", "yVertex", "zVertex"), "nVertices", (xvattr, yvattr, zvattr))
+    else
+        write_field_to_netcdf!(ds, cpos, ("xCell", "yCell"), "nCells", (xcattr, ycattr))
+        write_field_to_netcdf!(ds, vpos, ("xVertex", "yVertex"), "nVertices", (xvattr, yvattr))
     end
 
-    defVar(ds, "xVertex", vpos.x, ("nVertices",); attrib = [
-        "units" => "m",
-        "long_name" => "Cartesian x-coordinate of vertices"
-    ])
-    defVar(ds, "yVertex", vpos.y, ("nVertices",); attrib = [
-        "units" => "m",
-        "long_name" => "Cartesian y-coordinate of vertices"
-    ])
-
-    if (is3D | force3D)
-        vposz = is3D ? vpos.z : zeros(TF,length(vpos))
-
-        defVar(ds, "zVertex", vposz, ("nVertices",); attrib = [
-            "units" => "m",
-            "long_name" => "Cartesian z-coordinate of vertices"
-        ])
-    end
-
-    defVar(ds, "meshDensity", meshDensity, ("nCells",); attrib = [
-        "units" => "-",
-        "long_name" => "Mesh density function (used when generating the mesh) evaluated at a cell"
-    ])
+    write_field_to_netcdf!(ds, meshDensity, "meshDensity", "nCells", ["units" => "-", "long_name" => "Mesh density function (used when generating the mesh) evaluated at a cell"])
 
     return ds
 end
 
 function write_diagram_indexing_fields!(ds, diag::AbstractVoronoiDiagram{S, mE, TI, TF}) where {S, mE, TI, TF}
-    defVar(
-        ds, "cellsOnVertex", reinterpret(reshape, TI, diag.cellsOnVertex),
-        ("vertexDegree", "nVertices"), attrib = 
-        [
-            "units" => "-",
-            "long_name" => "IDs of the cells that meet at a vertex"
-        ]
-    )
 
-    defVar(
-        ds, "verticesOnCell", reinterpret(reshape, TI, diag.verticesOnCell.data),
-        ("maxEdges", "nCells"), attrib = [
-            "units" => "-",
-            "long_name" => "IDs of vertices (corner points) of a cell"
-        ]
-    )
-    defVar(
-        ds, "nEdgesOnCell", TI.(diag.verticesOnCell.length),
-        ("nCells",), attrib = [
-            "units" => "-",
-            "long_name" => "Number of edges forming the boundary of a cell"
-        ]
-    )
+    write_field_to_netcdf!(ds, diag.cellsOnVertex, "cellsOnVertex", ("vertexDegree", "nVertices"), ["units" => "-", "long_name" => "IDs of the cells that meet at a vertex"])
+
+    write_field_to_netcdf!(ds, diag.verticesOnCell, "verticesOnCell", ("maxEdges", "nCells"), ["units" => "-", "long_name" => "IDs of vertices (corner points) of a cell"])
+
+    write_field_to_netcdf!(ds, diag.verticesOnCell.length, "nEdgesOnCell", "nCells", ["units" => "-", "long_name" => "Number of edges forming the boundary of a cell"])
+
     return ds
 end
 
 function write_diagram_data!(ds::NCDataset, diag::AbstractVoronoiDiagram, force3D::Bool = false)
-    write_dim_diagram!(ds, diag)
     cpos = diag.generators
     vpos = diag.vertices
     mD = diag.meshDensity
@@ -122,20 +157,11 @@ function save_to_netcdf(filename::String, diag::AbstractVoronoiDiagram; format =
 end
 
 function write_base_cell_data!(ds::NCDataset, cells::Cells{S, mE, TI}) where {S, mE, TI}
-    defVar(
-        ds, "edgesOnCell", reinterpret(reshape, TI, cells.edges.data),
-        ("maxEdges", "nCells"), attrib = [
-            "units" => "-",
-            "long_name" => "IDs of edges forming the boundary of a cell"
-        ]
-    )
-     defVar(
-        ds, "cellsOnCell", reinterpret(reshape, TI, cells.cells.data),
-        ("maxEdges", "nCells"), attrib = [
-            "units" => "-",
-            "long_name" => "IDs of cells neighboring a cell"
-        ]
-    )
+
+    write_field_to_netcdf!(ds, cells.edges, "edgesOnCell", ("maxEdges", "nCells"), ["units" => "-", "long_name" => "IDs of edges forming the boundary of a cell"])
+
+    write_field_to_netcdf!(ds, cells.cells, "cellsOnCell", ("maxEdges", "nCells"), ["units" => "-", "long_name" => "IDs of cells neighboring a cell"])
+
      return ds
 end
 
@@ -144,56 +170,33 @@ function write_computed_cell_data!(ds::NCDataset, cells::Cells{S, mE, TI, TF}, f
     ncells = cells.n
 
     if isdefined(cinfo, :centroid)
-        defVar(ds, "xCellCentroid", cinfo.centroid.x, ("nCells",); attrib = [
-            "units" => "m",
-            "long_name" => "Cartesian x-coordinate of cells centroid"
-        ])
-        defVar(ds, "yCellCentroid", cinfo.centroid.y, ("nCells",); attrib = [
-            "units" => "m",
-            "long_name" => "Cartesian y-coordinate of cells centroid"
-        ])
+        xattrib = ["units" => "m", "long_name" => "Cartesian x-coordinate of cells centroid"]
+        yattrib = ["units" => "m", "long_name" => "Cartesian y-coordinate of cells centroid"]
+        zattrib = ["units" => "m", "long_name" => "Cartesian z-coordinate of cells centroid"]
+
         if (S | force3D)
-            ccz = S ? cinfo.centroid.z : zeros(TF, ncells)
-            defVar(ds, "zCellCentroid", ccz, ("nCells",); attrib = [
-                "units" => "m",
-                "long_name" => "Cartesian z-coordinate of cells centroid"
-            ])
+            write_field_to_netcdf!(ds, cinfo.centroid, ("xCellCentroid", "yCellCentroid", "zCellCentroid"), "nCells", (xattrib, yattrib, zattrib))
+        else
+            write_field_to_netcdf!(ds, cinfo.centroid, ("xCellCentroid", "yCellCentroid"), "nCells", (xattrib, yattrib))
         end
     end
 
     if isdefined(cinfo, :area)
-        defVar(ds, "areaCell", cinfo.area, ("nCells",); attrib = [
-            "units" => "m^2",
-            "long_name" => ( S ? "Spherical area of a Voronoi cell" : "Area of a Voronoi cell")
-        ])
+        write_field_to_netcdf!(ds, cinfo.area, "areaCell", "nCells", ["units" => "m^2", "long_name" => ( S ? "Spherical area of a Voronoi cell" : "Area of a Voronoi cell")])
     end
 
     if isdefined(cinfo, :longitude)
-        defVar(ds, "lonCell", cinfo.longitude, ("nCells",); attrib = [
-            "units" => "rad",
-            "long_name" => "Longitude of cells"
-        ])
+        write_field_to_netcdf!(ds, cinfo.longitude, "lonCell", "nCells", ["units" => "rad", "long_name" => "Longitude of cells"])
     end
+
     if isdefined(cinfo, :latitude)
-        defVar(ds, "latCell", cinfo.latitude, ("nCells",); attrib = [
-            "units" => "rad",
-            "long_name" => "Latitude of cells"
-        ])
+        write_field_to_netcdf!(ds, cinfo.latitude, "latCell", "nCells", ["units" => "rad", "long_name" => "Latitude of cells"])
     end
+
     if isdefined(cinfo, :normal)
-        cellNormal = zeros(TF, 3, ncells)
-        normal = cinfo.normal
-        @inbounds for c in 1:ncells
-            n = normal[c]
-            cellNormal[1,c] = n.x
-            cellNormal[2,c] = n.y
-            cellNormal[3,c] = n.z
-        end
-        defVar(ds, "localVerticalUnitVectors", cellNormal, ("R3", "nCells"); attrib = [
-            "units" => "unitless",
-            "long_name" => "Cartesian components of the vector pointing in the local vertical direction for a cell"
-        ])
+        write_field_to_netcdf!(ds, cinfo.normal, "localVerticalUnitVectors", ("R3", "nCells"), ["units" => "unitless", "long_name" => "Cartesian components of the vector pointing in the local vertical direction for a cell"])
     end
+
     if (isdefined(cinfo, :zonalVector) & isdefined(cinfo, :meridionalVector))
         cellTangent = zeros(TF, 3, 2, ncells)
         zVector = cinfo.zonalVector
@@ -223,64 +226,39 @@ function write_cell_data!(ds::NCDataset, cells::Cells; force3D::Bool=false, writ
 end
 
 function write_base_vertex_data!(ds::NCDataset, vertices::Vertices{S, mE, TI}) where {S, mE, TI}
-    defVar(
-        ds, "edgesOnVertex", reinterpret(reshape, TI, vertices.edges),
-        ("vertexDegree", "nVertices"), attrib = [
-            "units" => "-",
-            "long_name" => "IDs of the edges that meet at a vertex"
-        ]
-    )
+    write_field_to_netcdf!(ds,  vertices.edges, "edgesOnVertex", ("vertexDegree", "nVertices"), ["units" => "-", "long_name" => "IDs of the edges that meet at a vertex"])
      return ds
 end
 
 function write_computed_vertex_data!(ds::NCDataset, vertices::Vertices{S, mE, TI, TF}, force3D::Bool = false) where {S, mE, TI, TF}
     vinfo = vertices.info
-    nvertices = vertices.n
 
     if isdefined(vinfo, :centroid)
-        defVar(ds, "xVertexCentroid", vinfo.centroid.x, ("nVertices",); attrib = [
-            "units" => "m",
-            "long_name" => "Cartesian x-coordinate of triangles centroid"
-        ])
+        xattrib = ["units" => "m", "long_name" => "Cartesian x-coordinate of triangles centroid"]
+        yattrib = ["units" => "m", "long_name" => "Cartesian y-coordinate of triangles centroid"]
+        zattrib = ["units" => "m", "long_name" => "Cartesian z-coordinate of triangles centroid"]
 
-        defVar(ds, "yVertexCentroid", vinfo.centroid.y, ("nVertices",); attrib = [
-            "units" => "m",
-            "long_name" => "Cartesian y-coordinate of triangles centroid"
-        ])
         if (S | force3D)
-            cz = S ? vinfo.centroid.z : zeros(TF, nvertices)
-            defVar(ds, "zVertexCentroid", cz, ("nVertices",); attrib = [
-                "units" => "m",
-                "long_name" => "Cartesian z-coordinate of triangles centroid"
-            ])
+            write_field_to_netcdf!(ds, vinfo.centroid, ("xVertexCentroid", "yVertexCentroid", "zVertexCentroid"), "nVertices", (xattrib, yattrib, zattrib))
+        else
+            write_field_to_netcdf!(ds, vinfo.centroid, ("xVertexCentroid", "yVertexCentroid"), "nVertices", (xattrib, yattrib))
         end
     end
 
     if isdefined(vinfo, :area)
-        defVar(ds, "areaTriangle", vinfo.area, ("nVertices",); attrib = [
-            "units" => "m^2",
-            "long_name" => ( S ? "Spherical area of Delaunay Triangle" : "Area of a Delaunay Triangle")
-        ])
+        write_field_to_netcdf!(ds, vinfo.area, "areaTriangle", "nVertices", ["units" => "m^2", "long_name" => ( S ? "Spherical area of Delaunay Triangle" : "Area of a Delaunay Triangle")])
     end
 
     if isdefined(vinfo, :kiteAreas)
-        defVar(ds, "kiteAreasOnVertex", reinterpret(reshape, TF, vinfo.kiteAreas), ("vertexDegree", "nVertices"); attrib = [
-            "units" => "m^2",
-            "long_name" => "Intersection areas between primal (Voronoi) and dual (triangular) mesh cells"
-        ])
+        write_field_to_netcdf!(ds, vinfo.kiteAreas, "kiteAreasOnVertex", ("vertexDegree", "nVertices"), ["units" => "m^2", "long_name" => "Intersection areas between primal (Voronoi) and dual (triangular) mesh cells"])
     end
 
     if isdefined(vinfo, :longitude)
-        defVar(ds, "lonVertex", vinfo.longitude, ("nVertices",); attrib = [
-            "units" => "rad",
-            "long_name" => "Longitude of vertices"
-        ])
+        write_field_to_netcdf!(ds, vinfo.longitude, "lonVertex", "nVertices", ["units" => "rad", "long_name" => "Longitude of vertices"])
     end
+
     if isdefined(vinfo, :latitude)
-        defVar(ds, "latVertex", vinfo.latitude, ("nVertices",); attrib = [
-            "units" => "rad",
-            "long_name" => "Latitude of vertices"
-        ])
+        write_field_to_netcdf!(ds, vinfo.latitude, "latVertex", "nVertices", ["units" => "rad", "long_name" => "Latitude of vertices"])
     end
 
 end
@@ -292,132 +270,66 @@ function write_vertex_data!(ds::NCDataset, vertices::Vertices; force3D::Bool=fal
 end
 
 function write_base_edge_data!(ds::NCDataset, edges::Edges{S, mE, TI, TF}, force3D::Bool = false) where {S, mE, TI, TF}
-    defVar(
-        ds, "verticesOnEdge", reinterpret(reshape, TI, edges.vertices),
-        ("TWO", "nEdges"), attrib = [
-            "units" => "-",
-            "long_name" => "IDs of the two vertex endpoints of an edge"
-        ]
-    )
 
-    defVar(
-        ds, "cellsOnEdge", reinterpret(reshape, TI, edges.cells),
-        ("TWO", "nEdges"), attrib = [
-            "units" => "-",
-            "long_name" => "IDs of cells divided by an edge"
-        ]
-    )
+    write_field_to_netcdf!(ds, edges.vertices, "verticesOnEdge", ("TWO", "nEdges"), ["units" => "-", "long_name" => "IDs of the two vertex endpoints of an edge"])
 
-    defVar(ds, "xEdge", edges.position.x, ("nEdges",); attrib = [
-        "units" => "m",
-        "long_name" => "Cartesian x-coordinate of edges"
-    ])
+    write_field_to_netcdf!(ds, edges.cells, "cellsOnEdge", ("TWO", "nEdges"), ["units" => "-", "long_name" => "IDs of cells divided by an edge"])
 
-    defVar(ds, "yEdge", edges.position.y, ("nEdges",); attrib = [
-        "units" => "m",
-        "long_name" => "Cartesian y-coordinate of edges"
-    ])
+    xattrib = ["units" => "m", "long_name" => "Cartesian x-coordinate of edges"]
+    yattrib = ["units" => "m", "long_name" => "Cartesian y-coordinate of edges"]
+    zattrib = ["units" => "m", "long_name" => "Cartesian z-coordinate of edges"]
 
     if (S | force3D)
-        eposz = S ? edges.position.z : zeros(TF,length(edges.position))
-
-        defVar(ds, "zEdge", eposz, ("nEdges",); attrib = [
-            "units" => "m",
-            "long_name" => "Cartesian z-coordinate of edges"
-        ])
+        write_field_to_netcdf!(ds, edges.position, ("xEdge", "yEdge", "zEdge"), "nEdges", (xattrib, yattrib, zattrib))
+    else
+        write_field_to_netcdf!(ds, edges.position, ("xEdge", "yEdge"), "nEdges", (xattrib, yattrib))
     end
 
-     return ds
+    return ds
 end
 
 function write_computed_edge_data!(ds::NCDataset, edges::Edges{S, mE, TI, TF}, force3D::Bool = false) where {S, mE, TI, TF}
 
     einfo = edges.info
-    nEdges = edges.n
 
     if isdefined(einfo, :midpoint)
-        defVar(ds, "xEdgeMidpoint", einfo.midpoint.x, ("nEdges",); attrib = [
-            "units" => "m",
-            "long_name" => "Cartesian x-coordinate of edges midpoint"
-        ])
-
-        defVar(ds, "yEdgeMidpoint", einfo.midpoint.y, ("nEdges",); attrib = [
-            "units" => "m",
-            "long_name" => "Cartesian y-coordinate of edges midpoint"
-        ])
+        xattrib = ["units" => "m", "long_name" => "Cartesian x-coordinate of edges midpoint"]
+        yattrib = ["units" => "m", "long_name" => "Cartesian y-coordinate of edges midpoint"]
+        zattrib = ["units" => "m", "long_name" => "Cartesian z-coordinate of edges midpoint"]
 
         if (S | force3D)
-            eposz = S ? einfo.midpoint.z : zeros(TF, nEdges)
-
-            defVar(ds, "zEdgeMidpoint", eposz, ("nEdges",); attrib = [
-                "units" => "m",
-                "long_name" => "Cartesian z-coordinate of edges midpoint"
-            ])
+            write_field_to_netcdf!(ds, edges.midpoint, ("xEdgeMidpoint", "yEdgeMidpoint", "zEdgeMidpoint"), "nEdges", (xattrib, yattrib, zattrib))
+        else
+            write_field_to_netcdf!(ds, edges.midpoint, ("xEdgeMidpoint", "yEdgeMidpoint"), "nEdges", (xattrib, yattrib))
         end
     end
 
     if isdefined(einfo, :length)
-        defVar(ds, "dvEdge", einfo.length, ("nEdges",); attrib = [
-            "units" => "m",
-            "long_name" => (S ? "Spherical distance between vertex endpoints of an edge" : "Distance between vertex endpoints of an edge")
-        ])
+        write_field_to_netcdf!(ds, einfo.length, "dvEdge", "nEdges", ["units" => "m", "long_name" => (S ? "Spherical distance between vertex endpoints of an edge" : "Distance between vertex endpoints of an edge")])
     end
 
     if isdefined(einfo, :lengthDual)
-        defVar(ds, "dcEdge", einfo.lengthDual, ("nEdges",); attrib = [
-            "units" => "m",
-            "long_name" => (S ? "Spherical distance between cells separated by an edge" : "Distance between cells separated by an edge")
-        ])
+        write_field_to_netcdf!(ds, einfo.lengthDual, "dcEdge", "nEdges", ["units" => "m", "long_name" => (S ? "Spherical distance between cells separated by an edge" : "Distance between cells separated by an edge")])
     end
 
     if isdefined(einfo, :angle)
-        defVar(ds, "angleEdge", einfo.angle, ("nEdges",); attrib = [
-            "units" => "rad",
-            "long_name" => "Angle between local north and the positive tangential direction of an edge"
-        ])
+        write_field_to_netcdf!(ds, einfo.angle, "angleEdge", "nEdges", ["units" => "rad", "long_name" => "Angle between local north and the positive tangential direction of an edge"])
     end
 
     if isdefined(einfo, :longitude)
-        defVar(ds, "lonEdge", einfo.longitude, ("nEdges",); attrib = [
-            "units" => "rad",
-            "long_name" => "Longitude of edges"
-        ])
+        write_field_to_netcdf!(ds, einfo.longitude, "lonEdge", "nEdges", ["units" => "rad", "long_name" => "Longitude of edges"])
     end
+
     if isdefined(einfo, :latitude)
-        defVar(ds, "latEdge", einfo.latitude, ("nEdges",); attrib = [
-            "units" => "rad",
-            "long_name" => "Latitude of edges"
-        ])
+        write_field_to_netcdf!(ds, einfo.latitude, "latEdge", "nEdges", ["units" => "rad", "long_name" => "Latitude of edges"])
     end
 
     if isdefined(einfo, :normal)
-        edgeNormal = zeros(TF, 3, nEdges)
-        normal = einfo.normal
-        @inbounds for e in 1:nEdges
-            n = normal[e]
-            edgeNormal[1,e] = n.x
-            edgeNormal[2,e] = n.y
-            edgeNormal[3,e] = n.z
-        end
-        defVar(ds, "edgeNormalVectors", edgeNormal, ("R3", "nEdges"); attrib = [
-            "units" => "unitless",
-            "long_name" => "Cartesian components of the vector normal to an edge and tangential to the surface of the sphere"
-        ])
+        write_field_to_netcdf!(ds, einfo.normal, "edgeNormalVectors", ("R3", "nEdges"), ["units" => "unitless", "long_name" => "Cartesian components of the vector normal to an edge and tangential to the surface of the sphere"])
     end
 
     if isdefined(einfo, :tangent)
-        edgeTangent = zeros(TF, 3, nEdges)
-        tangent = einfo.tangent
-        @inbounds for e in 1:nEdges
-            t = tangent[e]
-            edgeTangent[1,e] = t.x
-            edgeTangent[2,e] = t.y
-            edgeTangent[3,e] = t.z
-        end
-        defVar(ds, "edgeTangentialVectors", edgeTangent, ("R3", "nEdges"); attrib = [
-            "units" => "unitless",
-            "long_name" => "Cartesian components of the vector tangential to an edge and tangential to the surface of the sphere"
-        ])
+        write_field_to_netcdf!(ds, einfo.tangent, "edgeTangentialVectors", ("R3", "nEdges"), ["units" => "unitless", "long_name" => "Cartesian components of the vector tangential to an edge and tangential to the surface of the sphere"])
     end
 
     return ds

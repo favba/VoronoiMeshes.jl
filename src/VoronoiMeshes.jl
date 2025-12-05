@@ -19,7 +19,7 @@ export circular_refinement_function, y_refinement_function, x_refinement_functio
 export fix_diagram!, create_planar_hex_mesh
 
 # NCDatasetsKExt functions
-export save_to_netcdf, save_to_netcdf!, read_from_netcdf, write_field_to_netcdf!
+export save_to_netcdf, save_to_netcdf!, read_from_netcdf, write_field_to_netcdf!, write_field_to_netcdf
 
 # WriteVTKExt and ReadVTKExt functions
 export save_voronoi_to_vtu, save_triangulation_to_vtu, read_from_vtu   
@@ -219,6 +219,7 @@ include("read_func.jl")
 function save_to_netcdf end
 function save_to_netcdf! end
 function write_field_to_netcdf! end
+function write_field_to_netcdf end
 function read_from_netcdf end
 
 #Definitions are in ext/DelaunayTriangulationExt.jl

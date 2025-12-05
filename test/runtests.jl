@@ -210,6 +210,20 @@ end
         Base.Filesystem.rm("test_save.nc")
         Base.Filesystem.rm("test_save.graph.info")
     end
+
+    normalEdgesOnCelldata = map(e->fixedvector(mesh_spherical.edges.normal[e]), mesh_spherical.cells.edges)
+    normalEdgesOnCell = SmallVectorArray(normalEdgesOnCelldata, mesh_spherical.cells.nEdges)
+
+    write_field_to_netcdf("test_field.nc", normalEdgesOnCell, "normalEdgesOnCell", ("R3","maxEdges","nCells"), ["unit" => "-", "long_name" => "This is a long description"])
+
+    normalEdgesOnCellArray = NCDataset("test_field.nc") do ds
+        ds["normalEdgesOnCell"][:,:,:]::Array{Float64,3}
+    end
+
+    Base.Filesystem.rm("test_field.nc")
+
+    @test all(normalEdgesOnCellArray[:, j, k] == normalEdgesOnCell.data[k][j] for k in axes(normalEdgesOnCellArray, 3), j in axes(normalEdgesOnCellArray, 2))
+
 end
 
 @testset "Save and read from VTU" begin

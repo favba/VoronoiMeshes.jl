@@ -1,6 +1,6 @@
 using NCDatasets.CommonDataModel
 
-import VoronoiMeshes: write_field_to_netcdf!
+import VoronoiMeshes: write_field_to_netcdf!, write_field_to_netcdf
 
 function write_field_to_netcdf!(ds::NCDataset, data::AbstractVector{T}, name::String, dim_name::String, attrib::AbstractVector{Pair{String,String}}) where {T<:Number}
 
@@ -86,6 +86,54 @@ function write_field_to_netcdf!(ds::NCDataset, data::AbstractVector{T}, name::St
     end
 
     return ds
+end
+
+function write_field_to_netcdf!(ds::NCDataset, data::AbstractVector{T}, name::String, dim_names::NTuple{3,String}, attrib::AbstractVector{Pair{String,String}}) where {T<:Union{<:NTuple, <:AbstractVector}}
+
+    TV = eltype(T)
+    fdata = reinterpret(reshape, TV, base_data(data))
+
+    if !haskey(ds.dim, dim_names[1])
+        ds.dim[dim_names[1]] = 3
+    end
+
+    if !haskey(ds.dim, dim_names[2])
+        ds.dim[dim_names[2]] = size(fdata, 1)
+    end
+
+    if !haskey(ds.dim, dim_names[3])
+        ds.dim[dim_names[3]] = size(fdata, 2)
+    end
+
+    TF = nonzero_eltype(TV)
+
+    dataArray = zeros(TF, 3, size(fdata, 1), size(fdata, 2))
+
+    @inbounds for k in axes(dataArray, 3)
+        for j in axes(dataArray, 2)
+            v = fdata[j, k]
+            dataArray[1, j, k] = v.x
+            dataArray[2, j, k] = v.y
+            dataArray[3, j, k] = v.z
+        end
+    end
+
+    if !haskey(ds, name)
+        defVar(ds, name, dataArray, dim_names; attrib=attrib)
+    else
+        throw(ArgumentError("Field \"$name\" already present in the NetCDF file"))
+    end
+
+    return ds
+end
+
+function write_field_to_netcdf(filename::String, data::AbstractArray, names, dim_names, attrib; format = :netcdf5_64bit_data)
+
+    mode = isfile(filename) ? "a" : "c"
+
+    NCDataset(filename, mode, format = format) do ds
+        write_field_to_netcdf!(ds, data, names, dim_names, attrib)
+    end
 end
 
 function write_diagram_fields!(ds::NCDataset, cpos, vpos, meshDensity, force3D::Bool = false)

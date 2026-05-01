@@ -80,7 +80,8 @@ function write_field_to_netcdf!(ds::NCDataset, data::AbstractVector{T}, name::St
     end
 
     if !haskey(ds, name)
-        defVar(ds, name, fdata, dim_names; attrib = attrib)
+        #Use unsafe_wrap to bypass issues with DiskArrays for NetCDF versions >= 0.14.9
+        defVar(ds, name, unsafe_wrap(Array, pointer(fdata), size(fdata)), dim_names; attrib = attrib)
     else
         throw(ArgumentError("Field \"$name\" already present in the NetCDF file"))
     end

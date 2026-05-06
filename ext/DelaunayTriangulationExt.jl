@@ -179,7 +179,7 @@ function check_and_fix_periodicity_points(points, lx::Number, ly::Number)
     y_max, _ = findmax(v -> v.y, points)
     y_min, _ = findmin(v -> v.y, points)
 
-    if ((x_max - x_min) >= lx) || ((y_max - y_min) >= ly)
+    if ((x_max - x_min) > lx) || ((y_max - y_min) > ly)
         throw(DomainError((lx, ly), "Points cannot be cast to periodic domain [0, $lx) × [0, $ly)"))
     end
 

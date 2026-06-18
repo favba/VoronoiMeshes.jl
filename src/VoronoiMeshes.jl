@@ -24,9 +24,9 @@ export save_to_netcdf, save_to_netcdf!, read_from_netcdf, write_field_to_netcdf!
 # WriteVTKExt and ReadVTKExt functions
 export save_voronoi_to_vtu, save_triangulation_to_vtu, read_from_vtu   
 
-const VecMaybe1DxArray{TX, TYZ, N} = TensorsLite.TensorArray{Tensor{Union{TX, TYZ}, 1, TX, TYZ, TYZ}, N, Array{TX, N}, Array{TYZ, N}, Array{TYZ, N}}
-const Vec1DxOr2DxyArray{TX, TXY, N} = TensorsLite.TensorArray{Tensor{Union{TX, Zero}, 1, TX, TXY, Zero}, N, Array{TX, N}, Array{TXY, N}, Array{Zero, N}}
-const VecMaybe1DyArray{TY, TXZ, N} = TensorsLite.TensorArray{Tensor{Union{TY, TXZ}, 1, TXZ, TY, TXZ}, N, Array{TXZ, N}, Array{TY, N}, Array{TXZ, N}}
+const VecMaybe1DxArray{TX, TYZ, N} = TensorsLite.TensorArray{Tensor{1, Union{TX, TYZ}, TX, TYZ, TYZ}, N, Array{TX, N}, Array{TYZ, N}, Array{TYZ, N}}
+const Vec1DxOr2DxyArray{TX, TXY, N} = TensorsLite.TensorArray{Tensor{1, Union{TX, Zero}, TX, TXY, Zero}, N, Array{TX, N}, Array{TXY, N}, Array{Zero, N}}
+const VecMaybe1DyArray{TY, TXZ, N} = TensorsLite.TensorArray{Tensor{1, Union{TY, TXZ}, TXZ, TY, TXZ}, N, Array{TXZ, N}, Array{TY, N}, Array{TXZ, N}}
 
 include("imvecarray.jl")
 

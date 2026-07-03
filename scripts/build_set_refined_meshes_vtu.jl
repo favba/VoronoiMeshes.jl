@@ -42,18 +42,8 @@ for i in ini_scale:(num_scales-1)
     # Create a centroidal Voronoi mesh with num_cells cells on a 1×1 periodic domain
     mesh = VoronoiMesh(num_cells, 1.0, 1.0, rtol=1e-4, max_iter=10000) #, max_iter=10)
 
-    # Create filenames with the power index
-    voronoi_filename = "output/mesh_periodic_refined_p$(i)_voronoi.vtu"
-    triangulation_filename = "output/mesh_periodic_refined_p$(i)_triangulation.vtu"
+    # Create filename with the power index
     base_filename = "output/mesh_periodic_refined_p$(i).vtu"
-
-    # --- Export Voronoi (dual) grid to VTU ---
-    save_voronoi_to_vtu(voronoi_filename, mesh)
-    println("  Saved: $voronoi_filename")
-
-    # --- Export Delaunay triangulation (primal) grid to VTU ---
-    save_triangulation_to_vtu(triangulation_filename, mesh)
-    println("  Saved: $triangulation_filename")
 
     # --- Use high-level save function ---
     # This will create two vtu files with _vor and _tri suffixes

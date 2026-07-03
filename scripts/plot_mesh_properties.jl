@@ -1,8 +1,9 @@
 # plot_mesh_properties.jl
 #
 # Reads one or more previously-saved Voronoi meshes (VTU format) and, for each
-# one, computes per-cell area, distortion and diameter, then plots each
-# property as a colored Voronoi diagram saved to a PNG.
+# one, computes per-cell metrics (see mesh_metrics.jl: area, distortion,
+# diameter, ...), then plots each property as a colored Voronoi diagram saved
+# to a PNG.
 #
 # Usage:
 #   julia --project=. plot_mesh_properties.jl [manifest.txt | mesh_vor.vtu]
@@ -19,8 +20,10 @@
 #                    matching "<base>_tri.vtu" is derived automatically) or
 #                    as a bare "<base>.vtu" base name.
 #
-# Output: for each mesh "<base>", writes "<base>_area.png",
-# "<base>_distortion.png" and "<base>_diameter.png" next to the input file.
+# Output: for each mesh "<base>" and each metric in MeshMetrics.METRICS,
+# writes "<base>_<metric>.png". Once all meshes are processed, a summary
+# table (grid name, resolution and mean/min/max of each metric) is printed
+# and saved as "mesh_properties_summary.csv" next to the first processed mesh.
 #
 # Note: PNG export uses GLMakie. On headless servers swap to CairoMakie
 # (add it to the environment and replace `using GLMakie` below).
@@ -31,57 +34,10 @@ using TensorsLiteGeometry
 using ReadVTK
 using GLMakie
 using Statistics
+using Printf
 
-# Per-cell area, already computed by the package.
-cell_area(mesh) = mesh.cells.area
-
-# Per-cell irregularity: (max_edge - min_edge) / mean_edge over each cell's edges.
-function cell_distortion(mesh)
-    edge_lengths    = mesh.edges.length
-    cells_edges     = mesh.cells.edges
-    nEdges_per_cell = mesh.cells.nEdges
-    nc = length(nEdges_per_cell)
-
-    d = Vector{Float64}(undef, nc)
-    for c in 1:nc
-        ne   = Int(nEdges_per_cell[c])
-        lmin = Inf; lmax = -Inf; lsum = 0.0
-        for j in 1:ne
-            l    = edge_lengths[cells_edges[c][j]]
-            lmin = min(lmin, l)
-            lmax = max(lmax, l)
-            lsum += l
-        end
-        d[c] = (lmax - lmin) / (lsum / ne)
-    end
-    return d
-end
-
-# Per-cell diameter: max distance between any two of the cell's vertices,
-# using their periodic images closest to the cell center.
-function cell_diameter(mesh)
-    vert_pos     = mesh.vertices.position
-    cell_pos     = mesh.cells.position
-    verticesOnCell = mesh.cells.vertices
-    nEdges_per_cell = mesh.cells.nEdges
-    xp, yp = mesh.x_period, mesh.y_period
-    nc = length(cell_pos)
-
-    diam = Vector{Float64}(undef, nc)
-    for c in 1:nc
-        ne = Int(nEdges_per_cell[c])
-        cp = cell_pos[c]
-        vs = verticesOnCell[c]
-        local_vertices = ntuple(j -> closest(cp, vert_pos[vs[j]], xp, yp), ne)
-        dmax = 0.0
-        for i in 1:ne, j in (i + 1):ne
-            dv = local_vertices[i] - local_vertices[j]
-            dmax = max(dmax, sqrt(dv.x^2 + dv.y^2))
-        end
-        diam[c] = dmax
-    end
-    return diam
-end
+include("mesh_metrics.jl")
+using .MeshMetrics
 
 function load_mesh(path)
     if endswith(path, "_vor.vtu")
@@ -109,26 +65,29 @@ function save_property_png(filename, mesh, values, title)
     return nothing
 end
 
+# Returns a Dict{Symbol,Any} summary row: :name, :nc, and <metric>_mean/min/max
+# for every metric registered in MeshMetrics.METRICS.
 function process_mesh(path)
     println("Reading: $path")
     mesh = load_mesh(path)
     nc = length(mesh.cells.position)
     println("  nc = $nc")
 
-    properties = (
-        ("area", cell_area(mesh)),
-        ("distortion", cell_distortion(mesh)),
-        ("diameter", cell_diameter(mesh)),
-    )
-
     label = base_label(path)
-    for (name, values) in properties
-        println("  $name: mean = $(round(mean(values), digits=5)), min = $(round(minimum(values), digits=5)), max = $(round(maximum(values), digits=5))")
-        filename = "$(label)_$(name).png"
-        save_property_png(filename, mesh, values, "$(basename(label)) — $name")
+    row = Dict{Symbol, Any}(:name => basename(label), :nc => nc)
+    for (mname, mfunc) in MeshMetrics.METRICS
+        values = mfunc(mesh)
+        m, mn, mx = mean(values), minimum(values), maximum(values)
+        println("  $mname: mean = $(round(m, digits=5)), min = $(round(mn, digits=5)), max = $(round(mx, digits=5))")
+        row[Symbol(mname, "_mean")] = m
+        row[Symbol(mname, "_min")] = mn
+        row[Symbol(mname, "_max")] = mx
+
+        filename = "$(label)_$(mname).png"
+        save_property_png(filename, mesh, values, "$(basename(label)) — $mname")
         println("  Saved: $filename")
     end
-    return nothing
+    return row
 end
 
 function resolve_mesh_paths(input_path)
@@ -161,8 +120,48 @@ else
     manifests
 end
 
-for input_path in input_paths, path in resolve_mesh_paths(input_path)
-    process_mesh(path)
+# Column order: name, nc, then <metric>_mean/min/max for each registered metric.
+const SUMMARY_COLUMNS = (
+    :name, :nc,
+    (Symbol(mname, suffix) for (mname, _) in MeshMetrics.METRICS for suffix in ("_mean", "_min", "_max"))...,
+)
+
+fmt_value(val::AbstractString) = val
+fmt_value(val::Integer) = string(val)
+fmt_value(val::AbstractFloat) = @sprintf("%.5g", val)
+
+function print_summary_table(rows)
+    headers = string.(SUMMARY_COLUMNS)
+    strs = [[fmt_value(row[key]) for key in SUMMARY_COLUMNS] for row in rows]
+    widths = [max(length(headers[i]), maximum(r -> length(r[i]), strs)) for i in eachindex(SUMMARY_COLUMNS)]
+
+    println()
+    println(join([rpad(headers[i], widths[i]) for i in eachindex(SUMMARY_COLUMNS)], "  "))
+    println(join(["-"^widths[i] for i in eachindex(SUMMARY_COLUMNS)], "  "))
+    for s in strs
+        println(join([rpad(s[i], widths[i]) for i in eachindex(SUMMARY_COLUMNS)], "  "))
+    end
+    return nothing
+end
+
+function save_summary_csv(filename, rows)
+    open(filename, "w") do io
+        println(io, join(string.(SUMMARY_COLUMNS), ","))
+        for row in rows
+            println(io, join((string(row[key]) for key in SUMMARY_COLUMNS), ","))
+        end
+    end
+    return nothing
+end
+
+rows = [process_mesh(path) for input_path in input_paths for path in resolve_mesh_paths(input_path)]
+
+if !isempty(rows)
+    print_summary_table(rows)
+    outdir = dirname(resolve_mesh_paths(input_paths[1])[1])
+    csv_path = joinpath(isempty(outdir) ? "." : outdir, "mesh_properties_summary.csv")
+    save_summary_csv(csv_path, rows)
+    println("\nSaved summary table: $csv_path")
 end
 
 println("\nDone!")

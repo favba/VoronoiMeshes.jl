@@ -2,5 +2,7 @@
 /test/Project.toml
 /test/Manifest.toml
 /examples/Manifest.toml
+/scripts/Manifest.toml
+/scripts/output/
 .vscode
 

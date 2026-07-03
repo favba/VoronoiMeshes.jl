@@ -49,7 +49,7 @@ end
 function print_metrics(mesh, level)
     d  = distortion_metric(mesh)
     nc = length(mesh.cells.position)
-    println("  Metrics (level $level): nc = $nc, mean cell irregularity = $(round(d, digits=4))")
+    println("  Metrics (level $level): nc = $nc, mean cell irregularity = $(round(d, digits=4)), x_period = $(mesh.x_period), y_period = $(mesh.y_period)")
 end
 
 function save_mesh_png(filename, mesh, label)
@@ -78,7 +78,12 @@ function main(nc_ref, num_levels)
 
     dc = sqrt(X_PERIOD * Y_PERIOD / nc_ref)
     println("Level 0: creating regular hex mesh (reference nc≈$nc_ref, dc=$(round(dc, digits=4)))...")
-    mesh = create_planar_hex_mesh(X_PERIOD, Y_PERIOD, dc)
+    hex_mesh = create_planar_hex_mesh(X_PERIOD, Y_PERIOD, dc)
+    # create_planar_hex_mesh rounds the cell counts to fit an integer number of hex
+    # rows/columns, so its returned domain isn't exactly X_PERIOD x Y_PERIOD. Reuse its
+    # generators (same count) but rebuild against the exact periodic domain, which lets
+    # Lloyd relaxation (the default) spread them to fill it.
+    mesh = VoronoiMesh(hex_mesh.cells.position, X_PERIOD, Y_PERIOD)
     save_level(outdir, mesh, 0)
 
     for i in 1:num_levels

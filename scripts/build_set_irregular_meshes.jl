@@ -32,13 +32,13 @@ const Y_PERIOD = 1.0
 
 # Perturbation band: only cells within BAND_WIDTH of the line y = LINE_SLOPE*x + LINE_INTERCEPT
 # are perturbed. Cells outside the band keep their positions unchanged.
-const LINE_SLOPE     = 0.3
+const LINE_SLOPE = 0.3
 const LINE_INTERCEPT = 0.3
-const BAND_WIDTH     = 0.05
+const BAND_WIDTH = 0.12
 
 # Extra Lloyd iterations applied one at a time after perturbation to eliminate
 # obtuse Delaunay triangles (circumcenter outside triangle). Set to 0 to skip.
-const MAX_FIX_ITERS  = 20
+const MAX_FIX_ITERS = 10
 
 # Per-cell irregularity: (max_edge - min_edge) / mean_edge for each cell,
 # then averaged globally. Zero for perfectly regular cells, grows with distortion.
@@ -66,9 +66,9 @@ function distortion_metric(mesh)
 end
 
 function print_metrics(mesh, level)
-    d        = distortion_metric(mesh)
+    d = distortion_metric(mesh)
     n_obtuse = length(find_obtuse_triangles(mesh))
-    n_tri    = length(mesh.vertices.cells)
+    n_tri = length(mesh.vertices.cells)
     println("  Distortion (level $level): mean cell irregularity = $(round(d, digits=4)), obtuse triangles = $n_obtuse / $n_tri, x_period = $(mesh.x_period), y_period = $(mesh.y_period)")
 end
 
@@ -94,7 +94,7 @@ function perturb_positions(mesh, strength)
     x_new = copy(pos.x)
     y_new = copy(pos.y)
     for c in 1:nc
-        p    = pos[c]
+        p = pos[c]
         dist = abs(p.y - LINE_SLOPE * p.x - LINE_INTERCEPT) / norm_factor
         if dist < BAND_WIDTH
             x_new[c] = mod(p.x + strength * dc * randn(), X_PERIOD)
@@ -136,7 +136,7 @@ function main(nc, num_levels, base_strength)
         # Fix any obtuse triangles with extra Lloyd iterations (one at a time)
         extra = 0
         while !isempty(find_obtuse_triangles(mesh)) && extra < MAX_FIX_ITERS
-            mesh = VoronoiMesh(mesh.cells.position, X_PERIOD, Y_PERIOD; max_iter=1)
+            mesh = VoronoiMesh(mesh.cells.position, X_PERIOD, Y_PERIOD; max_iter=4)
             extra += 1
         end
         extra > 0 && println("  Applied $extra extra Lloyd iteration(s) to remove obtuse triangles.")

@@ -20,8 +20,8 @@ using GLMakie  # swap for CairoMakie on headless servers
 
 # Create meshes with cell counts in powers of 2, starting with 20
 # Powers: 20*2^0=20, 20*2^1=40, 20*2^2=80, 20*2^3=160, etc.
-base_cells = 20
-num_scales = 13  # Number of different scales to generate
+base_cells = 16
+num_scales = 8  # Number of different scales to generate
 ini_scale = 0     # Starting power index (0 corresponds to base_cells)
 
 function save_mesh_png(filename, mesh, label)
@@ -40,7 +40,7 @@ for i in ini_scale:(num_scales-1)
     println("Creating periodic mesh with $num_cells cells...")
 
     # Create a centroidal Voronoi mesh with num_cells cells on a 1×1 periodic domain
-    mesh = VoronoiMesh(num_cells, 1.0, 1.0, rtol=1e-4, max_iter=10000) #, max_iter=10)
+    mesh = VoronoiMesh(num_cells, 1.0, 1.0, rtol=1e-5, max_iter=100000) #, max_iter=10)
 
     # Create filename with the power index
     base_filename = "output/mesh_periodic_refined_p$(i).vtu"

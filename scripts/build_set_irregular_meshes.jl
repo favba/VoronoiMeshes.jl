@@ -7,14 +7,27 @@
 #              Lloyd steps — enough to fix degenerate cells without erasing
 #              the introduced irregularity.
 #
+# Per-cell displacement is capped at MAX_DISPLACEMENT_FRAC * dc (absolute, not
+# scaled by strength) so a single cell can't be flung far enough to overlap or
+# invert a neighbor. If that still isn't enough to avoid obtuse Delaunay
+# triangles, the whole band's perturbation is redrawn from scratch (fresh
+# random numbers, up to MAX_REDRAWS times) rather than papering over the
+# defect with extra global Lloyd iterations — the latter used to smooth the
+# rest of the band back toward near-regular while leaving one severe,
+# unrepaired local defect behind (see git history for the full writeup).
+#
 # Usage:
 #   julia --project=. build_set_irregular_meshes.jl [nc] [num_levels] [base_strength]
+#   julia --project=. build_set_irregular_meshes.jl [nc] 0 [strength]   # single perturbed mesh
 #
 # Defaults: nc=80, num_levels=5, base_strength=0.15
 #
 # base_strength is the perturbation amplitude at level 1, expressed as a
 # fraction of the average cell spacing dc ≈ 1/√nc.  It scales linearly:
 # level i uses strength = base_strength * i.
+#
+# Use num_levels=0 to build only the Level 0 mesh plus a single perturbation
+# at exactly base_strength (no multi-level sweep).
 #
 # Note: PNG export uses GLMakie. On headless servers swap to CairoMakie
 # (add it to the environment and replace `using GLMakie` below).
@@ -24,11 +37,14 @@ using DelaunayTriangulation
 using TensorsLite
 using WriteVTK
 using GLMakie
-using Statistics
 
-const PERTURB_ITERS = 5
+include("mesh_tools.jl")
+using .MeshTools
+
 const X_PERIOD = 1.0
 const Y_PERIOD = 1.0
+
+const PERTURB_ITERS = 5
 
 # Perturbation band: only cells within BAND_WIDTH of the line y = LINE_SLOPE*x + LINE_INTERCEPT
 # are perturbed. Cells outside the band keep their positions unchanged.
@@ -36,56 +52,38 @@ const LINE_SLOPE = 0.3
 const LINE_INTERCEPT = 0.3
 const BAND_WIDTH = 0.12
 
-# Extra Lloyd iterations applied one at a time after perturbation to eliminate
-# obtuse Delaunay triangles (circumcenter outside triangle). Set to 0 to skip.
-const MAX_FIX_ITERS = 10
+# Per-cell displacement is clamped to this fraction of dc, in absolute terms —
+# not a multiple of strength*dc, since that would keep scaling up with strength
+# and never actually bound anything. Without this cap, a displacement
+# comparable to a cell's own radius (not just a rare tail draw) is what
+# actually causes overlap/inversion (obtuse Delaunay triangles / localized
+# defects), and that starts happening for *typical* draws once strength alone
+# gets large — clamping the Gaussian's sigma multiplier doesn't help since it
+# scales right along with strength.
+const MAX_DISPLACEMENT_FRAC = 0.3
 
-# Per-cell irregularity: (max_edge - min_edge) / mean_edge for each cell,
-# then averaged globally. Zero for perfectly regular cells, grows with distortion.
-function distortion_metric(mesh)
-    edge_lengths = mesh.edges.length
-    cells_edges = mesh.cells.edges
-    nEdges_per_cell = mesh.cells.nEdges
-    nc = length(nEdges_per_cell)
+# If a perturbation still produces obtuse Delaunay triangles (circumcenter
+# outside triangle) despite the clamp above, redraw the whole band's random
+# perturbation from scratch (fresh random numbers) rather than trying to
+# Lloyd-relax the defect away — up to this many attempts.
+const MAX_REDRAWS = 10
 
-    cell_d = Vector{Float64}(undef, nc)
-    for c in 1:nc
-        ne = Int(nEdges_per_cell[c])
-        lmin = Inf;
-        lmax = -Inf;
-        lsum = 0.0
-        for j in 1:ne
-            l = edge_lengths[cells_edges[c][j]]
-            lmin = min(lmin, l)
-            lmax = max(lmax, l)
-            lsum += l
-        end
-        cell_d[c] = (lmax - lmin) / (lsum / ne)
-    end
-    return mean(cell_d)
-end
+const MESH_PATTERN = r"^mesh_periodic_irregular_L(\d+)_nc\d+_d[\d.]+_vor\.vtu$"
 
-function print_metrics(mesh, level)
-    d = distortion_metric(mesh)
+# Obtuse-triangle count, printed after the shared metrics summary (already
+# printed by MeshTools.save_mesh_level) — specific to this script's
+# redraw-on-defect loop.
+function print_obtuse_triangles(mesh)
     n_obtuse = length(find_obtuse_triangles(mesh))
     n_tri = length(mesh.vertices.cells)
-    println("  Distortion (level $level): mean cell irregularity = $(round(d, digits=4)), obtuse triangles = $n_obtuse / $n_tri, x_period = $(mesh.x_period), y_period = $(mesh.y_period)")
-end
-
-function save_mesh_png(filename, mesh, label)
-    fig = Figure(size=(700, 700))
-    ax = Axis(fig[1, 1], title=label, aspect=DataAspect())
-    plotdualmesh!(ax, mesh)  # triangulation (orange) underneath
-    plotmesh!(ax, mesh)      # Voronoi (blue) on top
-    hidedecorations!(ax)
-    GLMakie.save(filename, fig)
-    return nothing
+    println("    obtuse triangles = $n_obtuse / $n_tri")
 end
 
 function perturb_positions(mesh, strength)
     pos = mesh.cells.position
     nc = length(pos)
     dc = sqrt(X_PERIOD * Y_PERIOD / nc)
+    max_disp = MAX_DISPLACEMENT_FRAC * dc
 
     # Perpendicular distance from (x,y) to line y = LINE_SLOPE*x + LINE_INTERCEPT,
     # i.e. -LINE_SLOPE*x + y - LINE_INTERCEPT = 0
@@ -97,66 +95,79 @@ function perturb_positions(mesh, strength)
         p = pos[c]
         dist = abs(p.y - LINE_SLOPE * p.x - LINE_INTERCEPT) / norm_factor
         if dist < BAND_WIDTH
-            x_new[c] = mod(p.x + strength * dc * randn(), X_PERIOD)
-            y_new[c] = mod(p.y + strength * dc * randn(), Y_PERIOD)
+            dx = clamp(strength * dc * randn(), -max_disp, max_disp)
+            dy = clamp(strength * dc * randn(), -max_disp, max_disp)
+            x_new[c] = mod(p.x + dx, X_PERIOD)
+            y_new[c] = mod(p.y + dy, Y_PERIOD)
         end
     end
     return VecArray(x=x_new, y=y_new)
+end
+
+function build_reference_mesh(nc, outdir)
+    mesh, dc = MeshTools.build_hex_reference(nc, X_PERIOD, Y_PERIOD)
+    actual_nc = length(mesh.cells.position)
+    println("Level 0: creating regular hex mesh (reference nc≈$nc, actual=$actual_nc, dc=$(round(dc, digits=4)))...")
+
+    label = "mesh_periodic_irregular_L0_nc$(actual_nc)_d0.0"
+    row = MeshTools.save_mesh_level(outdir, mesh, label)
+    print_obtuse_triangles(mesh)
+
+    return mesh, actual_nc, row
+end
+
+function perturb_level(prev_mesh, strength, level, actual_nc, outdir)
+    println("Level $level: perturbing (strength=$(round(strength, digits=3))), $PERTURB_ITERS Lloyd iterations...")
+
+    mesh = nothing
+    n_obtuse = 0
+    redraws = 0
+    while true
+        generators = perturb_positions(prev_mesh, strength)
+        mesh = VoronoiMesh(generators, X_PERIOD, Y_PERIOD; max_iter=PERTURB_ITERS)
+        n_obtuse = length(find_obtuse_triangles(mesh))
+        (n_obtuse == 0 || redraws >= MAX_REDRAWS) && break
+        redraws += 1
+    end
+    if redraws > 0
+        status = n_obtuse == 0 ? "resolved" : "still $n_obtuse remaining after $MAX_REDRAWS attempts"
+        println("  Redrew perturbation $redraws time(s) to avoid obtuse triangles ($status).")
+    end
+
+    label = "mesh_periodic_irregular_L$(level)_nc$(actual_nc)_d$(round(strength, digits=3))"
+    row = MeshTools.save_mesh_level(outdir, mesh, label)
+    print_obtuse_triangles(mesh)
+
+    return mesh, row
 end
 
 function main(nc, num_levels, base_strength)
     outdir = "output"
     mkpath(outdir)
 
-    dc = sqrt(X_PERIOD * Y_PERIOD / nc)
-    println("Level 0: creating regular hex mesh (reference nc≈$nc, dc=$(round(dc, digits=4)))...")
-    hex_mesh = create_planar_hex_mesh(X_PERIOD, Y_PERIOD, dc)
-    # create_planar_hex_mesh rounds the cell counts to fit an integer number of hex
-    # rows/columns, so its returned domain isn't exactly X_PERIOD x Y_PERIOD. Reuse its
-    # generators (same count) but rebuild against the exact periodic domain, which lets
-    # Lloyd relaxation (the default) spread them to fill it.
-    mesh = VoronoiMesh(hex_mesh.cells.position, X_PERIOD, Y_PERIOD)
-    actual_nc = length(mesh.cells.position)
-    println("  Actual cell count: $actual_nc")
+    mesh, actual_nc, row0 = build_reference_mesh(nc, outdir)
+    rows = [row0]
 
-    label = "mesh_periodic_irregular_L0_nc$(actual_nc)_d0.0"
-    save_voronoi_to_vtu(joinpath(outdir, "$(label)_vor.vtu"), mesh)
-    save_triangulation_to_vtu(joinpath(outdir, "$(label)_tri.vtu"), mesh)
-    save_mesh_png(joinpath(outdir, "$(label).png"), mesh, label)
-    println("  Saved: $label")
-    print_metrics(mesh, 0)
-
-    prev_mesh = mesh
-    for i in 1:num_levels
-        strength = base_strength * i
-        println("Level $i: perturbing (strength=$(round(strength, digits=3))), $PERTURB_ITERS Lloyd iterations...")
-        generators = perturb_positions(prev_mesh, strength)
-        mesh = VoronoiMesh(generators, X_PERIOD, Y_PERIOD; max_iter=PERTURB_ITERS)
-
-        # Fix any obtuse triangles with extra Lloyd iterations (one at a time)
-        extra = 0
-        while !isempty(find_obtuse_triangles(mesh)) && extra < MAX_FIX_ITERS
-            mesh = VoronoiMesh(mesh.cells.position, X_PERIOD, Y_PERIOD; max_iter=4)
-            extra += 1
-        end
-        extra > 0 && println("  Applied $extra extra Lloyd iteration(s) to remove obtuse triangles.")
-
-        label = "mesh_periodic_irregular_L$(i)_nc$(actual_nc)_d$(round(strength, digits=3))"
-        save_voronoi_to_vtu(joinpath(outdir, "$(label)_vor.vtu"), mesh)
-        save_triangulation_to_vtu(joinpath(outdir, "$(label)_tri.vtu"), mesh)
-        save_mesh_png(joinpath(outdir, "$(label).png"), mesh, label)
-        println("  Saved: $label")
-        print_metrics(mesh, i)
-
+    if num_levels == 0
+        # Single mesh, single perturbation at exactly base_strength.
+        _, row = perturb_level(mesh, base_strength, 1, actual_nc, outdir)
+        push!(rows, row)
+    else
         prev_mesh = mesh
+        for i in 1:num_levels
+            strength = base_strength * i
+            prev_mesh, row = perturb_level(prev_mesh, strength, i, actual_nc, outdir)
+            push!(rows, row)
+        end
     end
 
-    println("\nDone! Output written to $(abspath(outdir))/")
+    MeshTools.finalize_mesh_set(outdir, "irregular", rows, MESH_PATTERN, MeshTools.numeric_sort_key(MESH_PATTERN))
     return nothing
 end
 
 nc = length(ARGS) >= 1 ? parse(Int, ARGS[1]) : 80
 num_levels = length(ARGS) >= 2 ? parse(Int, ARGS[2]) : 5
 base_strength = length(ARGS) >= 3 ? parse(Float64, ARGS[3]) : 0.15
+base_strength < 0 && error("base_strength must be >= 0 (got $base_strength)")
 
 main(nc, num_levels, base_strength)

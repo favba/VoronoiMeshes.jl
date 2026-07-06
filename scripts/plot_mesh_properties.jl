@@ -1,7 +1,7 @@
 # plot_mesh_properties.jl
 #
 # Reads one or more previously-saved Voronoi meshes (VTU format) and, for each
-# one, computes per-cell metrics (see mesh_metrics.jl: area, distortion,
+# one, computes per-cell metrics (see mesh_tools.jl: area, distortion,
 # diameter, ...), then plots each property as a colored Voronoi diagram saved
 # to a PNG.
 #
@@ -20,10 +20,12 @@
 #                    matching "<base>_tri.vtu" is derived automatically) or
 #                    as a bare "<base>.vtu" base name.
 #
-# Output: for each mesh "<base>" and each metric in MeshMetrics.METRICS,
-# writes "<base>_<metric>.png". Once all meshes are processed, a summary
-# table (grid name, resolution and mean/min/max of each metric) is printed
-# and saved as "mesh_properties_summary.csv" next to the first processed mesh.
+# Output: for each mesh "<base>" and each metric in MeshTools.METRICS,
+# writes "<base>_<metric>.png". Each input (one manifest, or one bare mesh) is
+# summarized separately: a table is printed and a CSV is saved next to the
+# processed mesh(es), named after the manifest — "<kind>_voronoi_meshes.txt"
+# produces "<kind>_metrics_summary.csv" (matching the name the build_set_*.jl
+# scripts themselves use); a bare mesh path produces "mesh_properties_summary.csv".
 #
 # Note: PNG export uses GLMakie. On headless servers swap to CairoMakie
 # (add it to the environment and replace `using GLMakie` below).
@@ -36,8 +38,8 @@ using GLMakie
 using Statistics
 using Printf
 
-include("mesh_metrics.jl")
-using .MeshMetrics
+include("mesh_tools.jl")
+using .MeshTools
 
 function load_mesh(path)
     if endswith(path, "_vor.vtu")
@@ -54,40 +56,18 @@ function base_label(path)
     return joinpath(dirname(path), name)
 end
 
-function save_property_png(filename, mesh, values, title)
-    polygons = VoronoiMeshes.create_cell_polygons(mesh)
-    fig = Figure(size = (750, 700))
-    ax  = Axis(fig[1, 1], title = title, aspect = DataAspect())
-    plt = poly!(ax, polygons, color = values, colormap = :viridis, strokewidth = 0.5, strokecolor = (:black, 0.3))
-    Colorbar(fig[1, 2], plt)
-    hidedecorations!(ax)
-    GLMakie.save(filename, fig)
-    return nothing
-end
-
 # Returns a Dict{Symbol,Any} summary row: :name, :nc, and <metric>_mean/min/max
-# for every metric registered in MeshMetrics.METRICS.
+# for every metric registered in MeshTools.METRICS.
 function process_mesh(path)
     println("Reading: $path")
     mesh = load_mesh(path)
-    nc = length(mesh.cells.position)
-    println("  nc = $nc")
-
     label = base_label(path)
-    row = Dict{Symbol, Any}(:name => basename(label), :nc => nc)
-    for (mname, mfunc) in MeshMetrics.METRICS
-        values = mfunc(mesh)
-        m, mn, mx = mean(values), minimum(values), maximum(values)
-        println("  $mname: mean = $(round(m, digits=5)), min = $(round(mn, digits=5)), max = $(round(mx, digits=5))")
-        row[Symbol(mname, "_mean")] = m
-        row[Symbol(mname, "_min")] = mn
-        row[Symbol(mname, "_max")] = mx
 
-        filename = "$(label)_$(mname).png"
-        save_property_png(filename, mesh, values, "$(basename(label)) — $mname")
-        println("  Saved: $filename")
-    end
-    return row
+    values = MeshTools.compute_metrics(mesh)
+    MeshTools.print_metrics_summary(mesh, values, basename(label))
+    MeshTools.save_all_metric_pngs(label, mesh, values)
+
+    return MeshTools.metrics_summary_row(mesh, values, basename(label))
 end
 
 function resolve_mesh_paths(input_path)
@@ -111,6 +91,15 @@ default_manifests() = filter(isfile, joinpath.("output", (
     "regular_voronoi_meshes.txt", "irregular_voronoi_meshes.txt", "refined_voronoi_meshes.txt",
 )))
 
+# Derives this input's own summary CSV name: "<kind>_voronoi_meshes.txt" (the
+# convention the build_set_*.jl scripts write) -> "<kind>_metrics_summary.csv";
+# any other ".txt" -> "<name>_summary.csv"; a bare mesh path -> the generic name.
+function summary_csv_name(input_path)
+    endswith(input_path, ".txt") || return "mesh_properties_summary.csv"
+    base = replace(basename(input_path), "_voronoi_meshes.txt" => "", ".txt" => "")
+    return "$(base)_metrics_summary.csv"
+end
+
 input_paths = if length(ARGS) >= 1
     [ARGS[1]]
 else
@@ -120,47 +109,15 @@ else
     manifests
 end
 
-# Column order: name, nc, then <metric>_mean/min/max for each registered metric.
-const SUMMARY_COLUMNS = (
-    :name, :nc,
-    (Symbol(mname, suffix) for (mname, _) in MeshMetrics.METRICS for suffix in ("_mean", "_min", "_max"))...,
-)
+for input_path in input_paths
+    paths = resolve_mesh_paths(input_path)
+    rows = [process_mesh(path) for path in paths]
+    isempty(rows) && continue
 
-fmt_value(val::AbstractString) = val
-fmt_value(val::Integer) = string(val)
-fmt_value(val::AbstractFloat) = @sprintf("%.5g", val)
-
-function print_summary_table(rows)
-    headers = string.(SUMMARY_COLUMNS)
-    strs = [[fmt_value(row[key]) for key in SUMMARY_COLUMNS] for row in rows]
-    widths = [max(length(headers[i]), maximum(r -> length(r[i]), strs)) for i in eachindex(SUMMARY_COLUMNS)]
-
-    println()
-    println(join([rpad(headers[i], widths[i]) for i in eachindex(SUMMARY_COLUMNS)], "  "))
-    println(join(["-"^widths[i] for i in eachindex(SUMMARY_COLUMNS)], "  "))
-    for s in strs
-        println(join([rpad(s[i], widths[i]) for i in eachindex(SUMMARY_COLUMNS)], "  "))
-    end
-    return nothing
-end
-
-function save_summary_csv(filename, rows)
-    open(filename, "w") do io
-        println(io, join(string.(SUMMARY_COLUMNS), ","))
-        for row in rows
-            println(io, join((string(row[key]) for key in SUMMARY_COLUMNS), ","))
-        end
-    end
-    return nothing
-end
-
-rows = [process_mesh(path) for input_path in input_paths for path in resolve_mesh_paths(input_path)]
-
-if !isempty(rows)
-    print_summary_table(rows)
-    outdir = dirname(resolve_mesh_paths(input_paths[1])[1])
-    csv_path = joinpath(isempty(outdir) ? "." : outdir, "mesh_properties_summary.csv")
-    save_summary_csv(csv_path, rows)
+    MeshTools.print_summary_table(rows)
+    outdir = dirname(paths[1])
+    csv_path = joinpath(isempty(outdir) ? "." : outdir, summary_csv_name(input_path))
+    MeshTools.save_summary_csv(csv_path, rows)
     println("\nSaved summary table: $csv_path")
 end
 

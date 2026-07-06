@@ -4,57 +4,57 @@
 # each generated independently from random initial points and converged via
 # Lloyd's algorithm. Cell counts grow as base_cells * 2^i.
 #
-# Usage: run interactively or adjust base_cells / num_scales / ini_scale below.
+# Usage:
+#   julia --project=. build_set_refined_meshes_vtu.jl [base_cells] [num_scales] [ini_scale]
 #
-# Requirements: VoronoiMeshes.jl, WriteVTK, DelaunayTriangulation, GLMakie
+# Defaults: base_cells=16, num_scales=11, ini_scale=0
+#
+# Cell counts: base_cells*2^ini_scale, base_cells*2^(ini_scale+1), ...,
+# base_cells*2^(ini_scale+num_scales-1). E.g. defaults give 16, 32, 64, ..., 16384.
+#
+# Note: PNG export uses GLMakie. On headless servers swap to CairoMakie
+# (add it to the environment and replace `using GLMakie` below).
 
-# Basic modules for mesh construction and manipulation
 using VoronoiMeshes
 using DelaunayTriangulation
 using TensorsLite
-using LinearAlgebra
-
-# Required for VTU export (loads extensions automatically)
 using WriteVTK
-using GLMakie  # swap for CairoMakie on headless servers
+using GLMakie
 
-# Create meshes with cell counts in powers of 2, starting with 20
-# Powers: 20*2^0=20, 20*2^1=40, 20*2^2=80, 20*2^3=160, etc.
-base_cells = 16
-num_scales = 11  # Number of different scales to generate
-ini_scale = 0     # Starting power index (0 corresponds to base_cells)
+include("mesh_tools.jl")
+using .MeshTools
 
-function save_mesh_png(filename, mesh, label)
-    fig = Figure(size=(700, 700))
-    ax = Axis(fig[1, 1], title=label, aspect=DataAspect())
-    plotdualmesh!(ax, mesh)
-    plotmesh!(ax, mesh)
-    hidedecorations!(ax)
-    GLMakie.save(filename, fig)
+const X_PERIOD = 1.0
+const Y_PERIOD = 1.0
+
+# Includes nc (not just the scale index p) so that two runs with different
+# base_cells don't collide on the same filename at a shared scale index and
+# silently overwrite each other's meshes.
+const MESH_PATTERN = r"^mesh_periodic_refined_p(\d+)_nc(\d+)_vor\.vtu$"
+
+function main(base_cells, num_scales, ini_scale)
+    outdir = "output"
+    mkpath(outdir)
+
+    rows = []
+    for i in ini_scale:(ini_scale + num_scales - 1)
+        num_cells = base_cells * (2^i)
+        println("Scale p$i: creating centroidal mesh ($num_cells cells)...")
+
+        # Independently-generated centroidal Voronoi mesh (converged via Lloyd's
+        # algorithm), not derived from the previous scale's generators.
+        mesh = VoronoiMesh(num_cells, X_PERIOD, Y_PERIOD, rtol=1e-5, max_iter=100000)
+
+        label = "mesh_periodic_refined_p$(i)_nc$(num_cells)"
+        push!(rows, MeshTools.save_mesh_level(outdir, mesh, label, "p$i — $num_cells cells"))
+    end
+
+    MeshTools.finalize_mesh_set(outdir, "refined", rows, MESH_PATTERN, MeshTools.numeric_sort_key(MESH_PATTERN))
     return nothing
 end
 
-for i in ini_scale:(num_scales-1)
-    num_cells = base_cells * (2^i)
+base_cells = length(ARGS) >= 1 ? parse(Int, ARGS[1]) : 16
+num_scales = length(ARGS) >= 2 ? parse(Int, ARGS[2]) : 11
+ini_scale  = length(ARGS) >= 3 ? parse(Int, ARGS[3]) : 0
 
-    println("Creating periodic mesh with $num_cells cells...")
-
-    # Create a centroidal Voronoi mesh with num_cells cells on a 1×1 periodic domain
-    mesh = VoronoiMesh(num_cells, 1.0, 1.0, rtol=1e-5, max_iter=100000) #, max_iter=10)
-
-    # Create filename with the power index
-    base_filename = "output/mesh_periodic_refined_p$(i).vtu"
-
-    # --- Use high-level save function ---
-    # This will create two vtu files with _vor and _tri suffixes
-    VoronoiMeshes.save(base_filename, mesh)
-    println("  Saved: output/mesh_periodic_refined_p$(i)_vor.vtu and output/mesh_periodic_refined_p$(i)_tri.vtu")
-
-    # --- PNG plot (Voronoi + triangulation overlaid) ---
-    label = "p$i — $(num_cells) cells"
-    save_mesh_png("output/mesh_periodic_refined_p$(i).png", mesh, label)
-    println("  Saved: output/mesh_periodic_refined_p$(i).png")
-    println()
-end
-
-println("All meshes created successfully!")
+main(base_cells, num_scales, ini_scale)

@@ -7,15 +7,6 @@
 #              Lloyd steps — enough to fix degenerate cells without erasing
 #              the introduced irregularity.
 #
-# Per-cell displacement is capped at MAX_DISPLACEMENT_FRAC * dc (absolute, not
-# scaled by strength) so a single cell can't be flung far enough to overlap or
-# invert a neighbor. If that still isn't enough to avoid obtuse Delaunay
-# triangles, the whole band's perturbation is redrawn from scratch (fresh
-# random numbers, up to MAX_REDRAWS times) rather than papering over the
-# defect with extra global Lloyd iterations — the latter used to smooth the
-# rest of the band back toward near-regular while leaving one severe,
-# unrepaired local defect behind (see git history for the full writeup).
-#
 # Usage:
 #   julia --project=. build_set_irregular_meshes.jl [nc] [num_levels] [base_strength]
 #   julia --project=. build_set_irregular_meshes.jl [nc] 0 [strength]   # single perturbed mesh
@@ -68,7 +59,7 @@ const MAX_DISPLACEMENT_FRAC = 0.3
 # Lloyd-relax the defect away — up to this many attempts.
 const MAX_REDRAWS = 10
 
-const MESH_PATTERN = r"^mesh_periodic_irregular_L(\d+)_nc\d+_d[\d.]+_vor\.vtu$"
+const MESH_PATTERN = r"^mesh_periodic_irregular_nc\d+_d([\d.]+)_vor\.vtu$"
 
 # Obtuse-triangle count, printed after the shared metrics summary (already
 # printed by MeshTools.save_mesh_level) — specific to this script's
@@ -109,7 +100,7 @@ function build_reference_mesh(nc, outdir)
     actual_nc = length(mesh.cells.position)
     println("Level 0: creating regular hex mesh (reference nc≈$nc, actual=$actual_nc, dc=$(round(dc, digits=4)))...")
 
-    label = "mesh_periodic_irregular_L0_nc$(actual_nc)_d0.0"
+    label = "mesh_periodic_irregular_nc$(actual_nc)_d0.0"
     row = MeshTools.save_mesh_level(outdir, mesh, label)
     print_obtuse_triangles(mesh)
 
@@ -134,7 +125,7 @@ function perturb_level(prev_mesh, strength, level, actual_nc, outdir)
         println("  Redrew perturbation $redraws time(s) to avoid obtuse triangles ($status).")
     end
 
-    label = "mesh_periodic_irregular_L$(level)_nc$(actual_nc)_d$(round(strength, digits=3))"
+    label = "mesh_periodic_irregular_nc$(actual_nc)_d$(round(strength, digits=3))"
     row = MeshTools.save_mesh_level(outdir, mesh, label)
     print_obtuse_triangles(mesh)
 

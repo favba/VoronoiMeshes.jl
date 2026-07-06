@@ -25,12 +25,12 @@ using .MeshTools
 const X_PERIOD = 1.0
 const Y_PERIOD = 1.0
 
-const MESH_PATTERN = r"^mesh_periodic_regular_L(\d+)_nc(\d+)_vor\.vtu$"
+const MESH_PATTERN = r"^mesh_periodic_regular_nc(\d+)_vor\.vtu$"
 
-function build_level(outdir, mesh, level)
+function build_level(outdir, mesh)
     nc = length(mesh.cells.position)
-    label = "mesh_periodic_regular_L$(level)_nc$(nc)"
-    return MeshTools.save_mesh_level(outdir, mesh, label, "L$level — $nc cells")
+    label = "mesh_periodic_regular_nc$(nc)"
+    return MeshTools.save_mesh_level(outdir, mesh, label, "$nc cells")
 end
 
 function main(nc_ref, num_levels)
@@ -39,14 +39,14 @@ function main(nc_ref, num_levels)
 
     mesh, dc = MeshTools.build_hex_reference(nc_ref, X_PERIOD, Y_PERIOD)
     println("Level 0: creating regular hex mesh (reference nc≈$nc_ref, dc=$(round(dc, digits=4)))...")
-    rows = [build_level(outdir, mesh, 0)]
+    rows = [build_level(outdir, mesh)]
 
     for i in 1:num_levels
         nc_prev = length(mesh.cells.position)
         println("Level $i: refining from $nc_prev cells (cells + edge midpoints as generators)...")
         generators = vcat(mesh.cells.position, mesh.edges.position)
         mesh = VoronoiMesh(generators, X_PERIOD, Y_PERIOD)
-        push!(rows, build_level(outdir, mesh, i))
+        push!(rows, build_level(outdir, mesh))
     end
 
     MeshTools.finalize_mesh_set(outdir, "regular", rows, MESH_PATTERN, MeshTools.numeric_sort_key(MESH_PATTERN))

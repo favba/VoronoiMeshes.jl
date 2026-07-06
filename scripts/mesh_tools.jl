@@ -164,8 +164,11 @@ function cell_alignment(mesh)
 end
 
 # Ordered (name, function) pairs used by scripts to compute and report
-# every available per-cell metric without hardcoding the list.
+# every available per-cell metric without hardcoding the list. "diameter_dim"
+# comes first since it's the one dimensional (non-normalized) metric and
+# directly indicates the mesh resolution; the rest are dimensionless ratios.
 const METRICS = (
+    ("diameter_dim", cell_diameter),
     ("area", cell_area_normalized),
     ("distortion", cell_distortion),
     ("distortion_rms", cell_distortion_rms),
@@ -270,9 +273,16 @@ end
 # `filename` is caller-supplied (not hardcoded here) so each script can pick a
 # name that won't collide with the other build_set_*.jl / plot_mesh_properties.jl
 # summaries sharing the same output directory.
+#
+# If `filename` already exists (e.g. from an earlier run that built other
+# levels/scales), `rows` are appended to it rather than overwriting — that way
+# a later run adding just one new scale doesn't wipe out the rows already on
+# disk. A fresh file gets a header; an existing one does not (its header is
+# already there).
 function save_summary_csv(filename, rows)
-    open(filename, "w") do io
-        println(io, join(string.(SUMMARY_COLUMNS), ","))
+    write_header = !isfile(filename)
+    open(filename, write_header ? "w" : "a") do io
+        write_header && println(io, join(string.(SUMMARY_COLUMNS), ","))
         for row in rows
             println(io, join((string(row[key]) for key in SUMMARY_COLUMNS), ","))
         end
@@ -293,29 +303,47 @@ function save_manifest(filename, vtu_names)
     return nothing
 end
 
-# Scans `outdir` for "*_vor.vtu" filenames matching `pattern` and (re)writes
-# "<outdir>/<manifest_name>" listing all of them, ordered by `sort_key`
-# (typically the level/scale index parsed out of the filename, e.g.
-# `f -> parse(Int, match(pattern, f)[1])`).
+# Scans `outdir` for "*_vor.vtu" filenames matching `pattern` and appends to
+# "<outdir>/<manifest_name>" any that aren't already listed there, ordered by
+# `sort_key` (typically the level/scale index parsed out of the filename,
+# e.g. `f -> parse(Int, match(pattern, f)[1])`). Creates the file (with all
+# matches) if it doesn't exist yet.
 #
-# Rebuilding from whatever mesh files are actually on disk — rather than only
-# the ones a single run just produced — means the manifest stays complete even
-# when it should include meshes left over from an earlier run (different nc,
-# different random seed, or built before manifest-writing existed).
+# Scanning whatever mesh files are actually on disk — rather than only the
+# ones a single run just produced — means new entries are picked up even when
+# they're leftovers from an earlier run (different nc, different random seed,
+# or built before manifest-writing existed). Appending only the delta, rather
+# than overwriting, preserves manual edits to the existing manifest.
 function rebuild_manifest(outdir, manifest_name, pattern, sort_key)
     files = filter(f -> occursin(pattern, f), readdir(outdir))
     isempty(files) && return 0
     sort!(files, by=sort_key)
-    save_manifest(joinpath(outdir, manifest_name), files)
-    return length(files)
+
+    manifest_path = joinpath(outdir, manifest_name)
+    if !isfile(manifest_path)
+        save_manifest(manifest_path, files)
+        return length(files)
+    end
+
+    existing = Set(readlines(manifest_path))
+    new_files = filter(f -> !(f in existing), files)
+    if !isempty(new_files)
+        open(manifest_path, "a") do io
+            for f in new_files
+                println(io, f)
+            end
+        end
+    end
+    return length(existing) + length(new_files)
 end
 
 # Builds a sort_key function for rebuild_manifest/finalize_mesh_set: matches
 # `pattern` against a filename and returns its captured groups, parsed as
-# Ints, as a tuple (in capture-group order). Centralizes the "regex match +
-# parse capture groups" idiom so each build script only needs to supply its
-# own naming pattern, not re-derive a matching closure by hand.
-numeric_sort_key(pattern) = f -> Tuple(parse(Int, g) for g in match(pattern, f).captures)
+# Float64s (works for both integer captures like nc and decimal ones like a
+# distortion strength), as a tuple (in capture-group order). Centralizes the
+# "regex match + parse capture groups" idiom so each build script only needs
+# to supply its own naming pattern, not re-derive a matching closure by hand.
+numeric_sort_key(pattern) = f -> Tuple(parse(Float64, g) for g in match(pattern, f).captures)
 
 # Builds the regular hex-mesh reference shared by the regular and irregular
 # build scripts (their common "Level 0"): a hex mesh at ~nc cells, rebuilt

@@ -27,17 +27,14 @@ using .MeshTools
 const X_PERIOD = 1.0
 const Y_PERIOD = 1.0
 
-# Includes nc (not just the scale index p) so that two runs with different
-# base_cells don't collide on the same filename at a shared scale index and
-# silently overwrite each other's meshes.
-const MESH_PATTERN = r"^mesh_periodic_refined_p(\d+)_nc(\d+)_vor\.vtu$"
+const MESH_PATTERN = r"^mesh_periodic_refined_nc(\d+)_vor\.vtu$"
 
 function main(base_cells, num_scales, ini_scale)
     outdir = "output"
     mkpath(outdir)
 
     rows = []
-    for i in ini_scale:(ini_scale + num_scales - 1)
+    for i in ini_scale:(ini_scale+num_scales-1)
         num_cells = base_cells * (2^i)
         println("Scale p$i: creating centroidal mesh ($num_cells cells)...")
 
@@ -45,7 +42,7 @@ function main(base_cells, num_scales, ini_scale)
         # algorithm), not derived from the previous scale's generators.
         mesh = VoronoiMesh(num_cells, X_PERIOD, Y_PERIOD, rtol=1e-5, max_iter=100000)
 
-        label = "mesh_periodic_refined_p$(i)_nc$(num_cells)"
+        label = "mesh_periodic_refined_nc$(num_cells)"
         push!(rows, MeshTools.save_mesh_level(outdir, mesh, label, "p$i — $num_cells cells"))
     end
 
@@ -55,6 +52,6 @@ end
 
 base_cells = length(ARGS) >= 1 ? parse(Int, ARGS[1]) : 16
 num_scales = length(ARGS) >= 2 ? parse(Int, ARGS[2]) : 11
-ini_scale  = length(ARGS) >= 3 ? parse(Int, ARGS[3]) : 0
+ini_scale = length(ARGS) >= 3 ? parse(Int, ARGS[3]) : 0
 
 main(base_cells, num_scales, ini_scale)

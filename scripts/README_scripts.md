@@ -150,3 +150,9 @@ julia --project=. build_set_irregular_meshes.jl
 julia --project=. build_set_refined_meshes_vtu.jl
 julia --project=. plot_mesh_properties.jl        # metric plots + summary CSV for everything above
 ```
+
+## Intensive runs for high-resolution grids
+
+```
+julia -O3 --threads=2 --project=. build_set_regular_meshes.jl 16 6
+```

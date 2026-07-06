@@ -39,8 +39,13 @@ function main(base_cells, num_scales, ini_scale)
         println("Scale p$i: creating centroidal mesh ($num_cells cells)...")
 
         # Independently-generated centroidal Voronoi mesh (converged via Lloyd's
-        # algorithm), not derived from the previous scale's generators.
-        mesh = VoronoiMesh(num_cells, X_PERIOD, Y_PERIOD, rtol=1e-5, max_iter=100000)
+        # algorithm), not derived from the previous scale's generators. max_time
+        # raised from the package default of 4 minutes: at larger cell counts
+        # Lloyd's iteration needs more time to reach rtol, and an early
+        # time-cap cutoff leaves a still-shifting, near-degenerate generator
+        # set that can crash mesh construction downstream (e.g. a KeyError in
+        # compute_edgesOnVertex!).
+        mesh = VoronoiMesh(num_cells, X_PERIOD, Y_PERIOD, rtol=1e-5, max_iter=100000, max_time=10.0)
 
         label = "mesh_periodic_refined_nc$(num_cells)"
         push!(rows, MeshTools.save_mesh_level(outdir, mesh, label, "p$i — $num_cells cells"))

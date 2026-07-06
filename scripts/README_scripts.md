@@ -134,17 +134,28 @@ printed table and `output/mesh_properties_summary.csv`.
 ### `plot_metrics_summary.jl`
 
 Reads one `<kind>_metrics_summary.csv` (as written by the build_set_*.jl
-scripts / `MeshTools.save_summary_csv`) and plots a paper-ready convergence
-figure: number of cells (resolution, log-scaled bottom x-axis, with a linked
-top x-axis relabeled in the corresponding dimensional mean cell diameter)
-against a shared y-axis of normalized metrics — `distortion_rms`,
-`alignment`, and the min/max ratio (min divided by max, a measure of spread)
-of `area` and `diameter`.
+scripts / `MeshTools.save_summary_csv`) and plots a paper-ready figure of a
+shared y-axis of normalized metrics — `distortion_rms`, `alignment`, and the
+min/max ratio (min divided by max, a measure of spread) of `area` and
+`diameter`. The x-axis is auto-detected from the CSV:
+
+- **Resolution sweep** (`regular`/`refined` sets, nc varies row to row):
+  number of cells (log-scaled bottom x-axis), with a linked top x-axis
+  relabeled in the corresponding mean cell diameter in km — the periodic
+  domain's unit length scaled by `2*pi*earth_radius`, treating it as a
+  great-circle circumference, matching how these meshes are meant to be used.
+- **Perturbation sweep** (`irregular` sets, nc constant, "name" column
+  encodes `..._d<strength>`): perturbation strength `d` on the x-axis
+  instead, with the (fixed) resolution noted in the axis label.
 
 ```
 julia --project=. plot_metrics_summary.jl output/regular_metrics_summary.csv
 julia --project=. plot_metrics_summary.jl output/refined_metrics_summary.csv
+julia --project=. plot_metrics_summary.jl output/irregular_metrics_summary.csv
 ```
+
+Output: `<csv_basename>_convergence.pdf` and `..._convergence.eps` (both
+vector formats) next to the input CSV.
 
 Output: `<csv_basename>_convergence.pdf` next to the input CSV. Uses
 CairoMakie (vector PDF) rather than GLMakie, since this is a static

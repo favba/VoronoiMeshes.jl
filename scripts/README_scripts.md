@@ -131,6 +131,25 @@ everything currently in `output/` without hunting down individual files.
 Output: `output/<mesh>_<metric>.png` for every mesh/metric pair, plus a
 printed table and `output/mesh_properties_summary.csv`.
 
+### `plot_metrics_summary.jl`
+
+Reads one `<kind>_metrics_summary.csv` (as written by the build_set_*.jl
+scripts / `MeshTools.save_summary_csv`) and plots a paper-ready convergence
+figure: number of cells (resolution, log-scaled bottom x-axis, with a linked
+top x-axis relabeled in the corresponding dimensional mean cell diameter)
+against a shared y-axis of normalized metrics — `distortion_rms`,
+`alignment`, and the min/max ratio (min divided by max, a measure of spread)
+of `area` and `diameter`.
+
+```
+julia --project=. plot_metrics_summary.jl output/regular_metrics_summary.csv
+julia --project=. plot_metrics_summary.jl output/refined_metrics_summary.csv
+```
+
+Output: `<csv_basename>_convergence.pdf` next to the input CSV. Uses
+CairoMakie (vector PDF) rather than GLMakie, since this is a static
+publication figure rather than a rendered mesh view.
+
 ## Other scripts
 
 - `save_regular_mesh_vtu.jl` — minimal worked example of building a small

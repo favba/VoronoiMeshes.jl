@@ -76,16 +76,11 @@ function perturb_positions(mesh, strength)
     dc = sqrt(X_PERIOD * Y_PERIOD / nc)
     max_disp = MAX_DISPLACEMENT_FRAC * dc
 
-    # Perpendicular distance from (x,y) to line y = LINE_SLOPE*x + LINE_INTERCEPT,
-    # i.e. -LINE_SLOPE*x + y - LINE_INTERCEPT = 0
-    norm_factor = sqrt(1 + LINE_SLOPE^2)
-
     x_new = copy(pos.x)
     y_new = copy(pos.y)
     for c in 1:nc
         p = pos[c]
-        dist = abs(p.y - LINE_SLOPE * p.x - LINE_INTERCEPT) / norm_factor
-        if dist < BAND_WIDTH
+        if MeshTools.line_distance(p, LINE_SLOPE, LINE_INTERCEPT) < BAND_WIDTH
             dx = clamp(strength * dc * randn(), -max_disp, max_disp)
             dy = clamp(strength * dc * randn(), -max_disp, max_disp)
             x_new[c] = mod(p.x + dx, X_PERIOD)

@@ -75,7 +75,45 @@ julia --project=. build_set_refined_meshes_vtu.jl [base_cells] [num_scales] [ini
 Same per-mesh outputs as above, under `output/refined_metrics_summary.csv` /
 `output/refined_voronoi_meshes.txt`.
 
-All three build scripts above share the same structure: a `main(...)`
+### `build_set_localref_meshes.jl`
+
+Builds a sequence of locally-refined variable-resolution meshes: cell density
+is ~16x higher (`RIDGE_RATIO`) along the same diagonal band used by
+`build_set_irregular_meshes.jl` (`LINE_SLOPE`/`LINE_INTERCEPT`) than in the
+background, smoothly (Gaussian) tapering over `RIDGE_SIGMA`, using
+`VoronoiMesh`'s `density` keyword. Like `build_set_regular_meshes.jl`, each
+level refines from the previous one's cells + edge midpoints, quadrupling
+`nc` — this doubles both the ridge and background resolution each level while
+the fixed density-function shape keeps their 2x ratio constant.
+
+`RIDGE_RATIO = 16` comes from Du, Faber & Gunzburger (1999), *Centroidal
+Voronoi Tessellations: Applications and Algorithms* (SIAM Review): in 2D,
+`dc(x) ∝ ρ(x)^(-1/4)` asymptotically, so a target 2x resolution
+(`dc_ridge/dc_background = 1/2`) needs a density ratio `R = 2^4 = 16`. This is
+an asymptotic result, not exact at finite resolution, so each level prints
+the actual measured ridge/background `dc` ratio (via the `diameter_dim`
+metric) rather than trusting the formula blindly.
+
+```
+julia --project=. build_set_localref_meshes.jl [nc_ref] [num_levels]
+```
+
+- `nc_ref` (default 80): target cell count for the Level 0 mesh.
+- `num_levels` (default 5): number of levels (Level 0 + refinements).
+
+**Much slower than the other build scripts.** Density-weighted Lloyd
+relaxation at this contrast (16x) converges far more slowly than uniform
+relaxation — observed to exhaust a 20,000-iteration budget without reaching
+`rtol=1e-3` even at nc~50-200. `rtol`/`max_iter`/`max_time` are loosened well
+beyond the package defaults (`LOCALREF_RTOL=1e-3`, `LOCALREF_MAX_ITER=50_000`,
+`LOCALREF_MAX_TIME=60` minutes/level) to compensate; expect each level,
+especially the finer ones, to take substantially longer than the equivalent
+`build_set_regular_meshes.jl` level.
+
+Same outputs as above, under `output/localref_metrics_summary.csv` /
+`output/localref_voronoi_meshes.txt`.
+
+All four build scripts above share the same structure: a `main(...)`
 function driven by positional CLI args (with the same defaults as running
 with no args), building each level/scale through the shared helpers below,
 then a single call to `MeshTools.finalize_mesh_set` to print/save the summary
@@ -103,11 +141,15 @@ build scripts above and by `plot_mesh_properties.jl`. Defines:
   current run produced — so a manifest stays complete even when it should
   include meshes left over from an earlier run).
 - Shared build-script helpers, factored out of what used to be duplicated
-  across the three build scripts: `build_hex_reference` (the common Level-0
-  regular hex mesh, rebuilt against the exact periodic domain),
+  across the build scripts: `build_hex_reference` (the common Level-0 regular
+  hex mesh, rebuilt against the exact periodic domain; accepts an optional
+  `density` keyword for non-uniform-resolution meshes),
   `save_mesh_level` (saves one mesh's VTU + overlay PNG + per-metric PNGs +
-  metrics summary, returning its summary row), and `finalize_mesh_set` (the
-  common end-of-build step: summary table + CSV + manifest rebuild).
+  metrics summary, returning its summary row), `finalize_mesh_set` (the
+  common end-of-build step: summary table + CSV + manifest rebuild), and
+  `line_distance` (perpendicular distance from a point to a line — shared by
+  `build_set_irregular_meshes.jl`'s perturbation band and
+  `build_set_localref_meshes.jl`'s density ridge).
 
 ### `plot_mesh_properties.jl`
 
@@ -178,6 +220,7 @@ publication figure rather than a rendered mesh view.
 julia --project=. build_set_regular_meshes.jl
 julia --project=. build_set_irregular_meshes.jl
 julia --project=. build_set_refined_meshes_vtu.jl
+julia --project=. build_set_localref_meshes.jl
 julia --project=. plot_mesh_properties.jl        # metric plots + summary CSV for everything above
 ```
 

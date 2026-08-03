@@ -27,7 +27,13 @@ export METRICS, cell_area, cell_area_normalized, cell_distortion, cell_distortio
        print_metrics_summary, save_mesh_png, save_property_png, save_all_metric_pngs,
        SUMMARY_COLUMNS, metrics_summary_row, print_summary_table, save_summary_csv,
        save_manifest, rebuild_manifest, numeric_sort_key,
-       build_hex_reference, save_mesh_level, finalize_mesh_set
+       build_hex_reference, save_mesh_level, finalize_mesh_set, line_distance
+
+# Perpendicular distance from `p` to the line y = slope*x + intercept, i.e.
+# -slope*x + y - intercept = 0. Shared by build_set_irregular_meshes.jl (its
+# perturbation band) and build_set_localref_meshes.jl (its density ridge) —
+# both define a region relative to the same kind of diagonal line.
+line_distance(p, slope, intercept) = abs(p.y - slope * p.x - intercept) / sqrt(1 + slope^2)
 
 # Cell area, already computed and cached by VoronoiMeshes.
 cell_area(mesh) = mesh.cells.area
@@ -345,17 +351,25 @@ end
 # to supply its own naming pattern, not re-derive a matching closure by hand.
 numeric_sort_key(pattern) = f -> Tuple(parse(Float64, g) for g in match(pattern, f).captures)
 
-# Builds the regular hex-mesh reference shared by the regular and irregular
-# build scripts (their common "Level 0"): a hex mesh at ~nc cells, rebuilt
-# against the exact periodic domain. create_planar_hex_mesh rounds the cell
-# count to fit an integer number of hex rows/columns, so its own returned
+# Builds the regular hex-mesh reference shared by the regular, irregular, and
+# localref build scripts (their common "Level 0"): a hex mesh at ~nc cells,
+# rebuilt against the exact periodic domain. create_planar_hex_mesh rounds the
+# cell count to fit an integer number of hex rows/columns, so its own returned
 # domain isn't exactly xperiod x yperiod; reusing its generator count (same
 # cell count) against the exact domain lets Lloyd relaxation (VoronoiMesh's
-# default) spread the generators to fill it precisely.
-function build_hex_reference(nc, xperiod, yperiod)
+# default) spread the generators to fill it precisely. `density`, if given, is
+# forwarded to VoronoiMesh for density-weighted (non-uniform-resolution)
+# relaxation; the default `nothing` reproduces the original uniform behavior.
+# Extra `kwargs` (e.g. `rtol`, `max_iter`) are forwarded to VoronoiMesh —
+# density-weighted relaxation with a high-contrast density converges much
+# more slowly than the uniform case, so callers using `density` typically
+# need a looser `rtol` and/or larger `max_iter` than the package defaults.
+function build_hex_reference(nc, xperiod, yperiod; density=nothing, kwargs...)
     dc = sqrt(xperiod * yperiod / nc)
     hex_mesh = create_planar_hex_mesh(xperiod, yperiod, dc)
-    mesh = VoronoiMesh(hex_mesh.cells.position, xperiod, yperiod)
+    mesh = density === nothing ?
+        VoronoiMesh(hex_mesh.cells.position, xperiod, yperiod; kwargs...) :
+        VoronoiMesh(hex_mesh.cells.position, xperiod, yperiod; density, kwargs...)
     return mesh, dc
 end
 

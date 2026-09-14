@@ -1,16 +1,6 @@
-# mesh_tools.jl
-#
 # Shared build/report pipeline for the build_set_*.jl scripts and
-# plot_mesh_properties.jl: per-cell quality metrics, the plotting helpers that
-# render them, and the printing/CSV/manifest bookkeeping every mesh-building
-# script needs.
-#
-# Each metric function takes a VoronoiMesh and returns a Vector with one
-# value per cell. Add new metrics here and register them in `METRICS` so
-# they automatically show up in scripts that iterate over it.
-#
-# Note: the plotting helpers below need a Makie backend (GLMakie/CairoMakie)
-# already loaded by the including script before `include("mesh_tools.jl")`.
+# plot_mesh_properties.jl. Needs a Makie backend (GLMakie/CairoMakie) loaded
+# by the including script before `include("mesh_tools.jl")`.
 
 module MeshTools
 
@@ -18,6 +8,7 @@ using VoronoiMeshes: create_cell_polygons, plotmesh!, plotdualmesh!, create_plan
                       VoronoiMesh, save_voronoi_to_vtu, save_triangulation_to_vtu
 using TensorsLiteGeometry: closest
 using Statistics: mean
+using Dates: now
 using Makie: Figure, Axis, Colorbar, poly!, DataAspect, hidedecorations!
 using Printf: @sprintf
 import Makie
@@ -27,27 +18,76 @@ export METRICS, cell_area, cell_area_normalized, cell_distortion, cell_distortio
        print_metrics_summary, save_mesh_png, save_property_png, save_all_metric_pngs,
        SUMMARY_COLUMNS, metrics_summary_row, print_summary_table, save_summary_csv,
        save_manifest, rebuild_manifest, numeric_sort_key,
-       build_hex_reference, save_mesh_level, finalize_mesh_set, line_distance
+       build_hex_reference, save_mesh_level, finalize_mesh_set,
+       center_distance, region_masks, report_region_summary, handle_help, run_outdir,
+       save_run_info
 
-# Perpendicular distance from `p` to the line y = slope*x + intercept, i.e.
-# -slope*x + y - intercept = 0. Shared by build_set_irregular_meshes.jl (its
-# perturbation band) and build_set_localref_meshes.jl (its density ridge) —
-# both define a region relative to the same kind of diagonal line.
-line_distance(p, slope, intercept) = abs(p.y - slope * p.x - intercept) / sqrt(1 + slope^2)
+function handle_help(args, usage)
+    if "--help" in args || "-h" in args
+        println(usage)
+        exit(0)
+    end
+    return nothing
+end
 
-# Cell area, already computed and cached by VoronoiMeshes.
+function run_outdir(label)
+    outdir = joinpath("output", label)
+    mkpath(outdir)
+    return outdir
+end
+
+function save_run_info(outdir, lines)
+    open(joinpath(outdir, "run_info.txt"), "w") do io
+        println(io, "Generated: ", now())
+        println(io)
+        for line in lines
+            println(io, line)
+        end
+    end
+    return nothing
+end
+
+# Periodic distance from `p` to `center`, correct regardless of where
+# `center` sits in the domain (unlike periodic_to_base_point, which only
+# wraps `p` itself).
+center_distance(p, center, xp, yp) = (v = closest(center, p, xp, yp) - center; hypot(v.x, v.y))
+
+function region_masks(mesh, center, inner_radius, buffer_radius)
+    xp, yp = mesh.x_period, mesh.y_period
+    d = [center_distance(p, center, xp, yp) for p in mesh.cells.position]
+    inner = d .<= inner_radius
+    outer = d .> buffer_radius
+    buffer = .!inner .& .!outer
+    return inner, buffer, outer
+end
+
+# dc(x) ∝ ρ(x)^(-1/4) in 2D (Du, Faber & Gunzburger 1999) is only asymptotic,
+# so the actual inner/outer dc ratio is measured here rather than assumed.
+function report_region_summary(mesh, values, center, inner_radius, buffer_radius, density_ratio)
+    inner, buffer, outer = region_masks(mesh, center, inner_radius, buffer_radius)
+    dc = values["diameter_dim"]
+    n_inner, n_buffer, n_outer = count(inner), count(buffer), count(outer)
+    dc_inner = n_inner > 0 ? mean(dc[inner]) : NaN
+    dc_outer = n_outer > 0 ? mean(dc[outer]) : NaN
+    ratio = dc_inner / dc_outer
+    target = density_ratio^(-0.25)
+    println("    regions: n_inner=$n_inner, n_buffer=$n_buffer, n_outer=$n_outer")
+    println("    dc_inner=$(round(dc_inner, digits=4)), dc_outer=$(round(dc_outer, digits=4)), " *
+            "ratio=$(round(ratio, digits=3)) (target $(round(target, digits=3)))")
+    if n_buffer > 0
+        println("    buffer ring: distortion_rms mean=$(round(mean(values["distortion_rms"][buffer]), digits=4)), " *
+                "alignment mean=$(round(mean(values["alignment"][buffer]), digits=4))")
+    end
+    return (; n_inner, n_buffer, n_outer, dc_inner, dc_outer, ratio)
+end
+
 cell_area(mesh) = mesh.cells.area
 
-# Cell area relative to the mesh's own mean area. Raw area/diameter shrink with
-# resolution (area ~ 1/nc, diameter ~ 1/sqrt(nc)), so comparing their raw values
-# across different grid resolutions is meaningless. Normalizing by the mesh's
-# own mean turns them into a dimensionless "relative size" (1.0 = average cell),
-# which is what's actually comparable across resolutions. distortion/distortion_rms/
-# alignment are already dimensionless ratios and need no such normalization.
+# Normalized by the mesh's own mean so it's comparable across resolutions
+# (raw area/diameter shrink as nc grows).
 cell_area_normalized(mesh) = (a = cell_area(mesh); a ./ mean(a))
 
-# Per-cell irregularity: (max_edge - min_edge) / mean_edge over each cell's edges.
-# Zero for a perfectly regular cell, grows with distortion.
+# (max_edge - min_edge) / mean_edge per cell. Zero for a regular cell.
 function cell_distortion(mesh)
     edge_lengths    = mesh.edges.length
     cells_edges     = mesh.cells.edges
@@ -69,11 +109,9 @@ function cell_distortion(mesh)
     return d
 end
 
-# Per-cell distortion S, as formally defined in Peixoto & Barros thesis, eq. (2.5)
-# (following Tomita et al. 2001): S = sqrt(mean((li - lbar)^2)) / lbar, where
-# lbar = sqrt(mean(li^2)) is the quadratic mean of the cell's edge lengths.
-# This is an RMS deviation of edge lengths, distinct from the simpler
-# (max-min)/mean ratio used by `cell_distortion` above. Zero for a regular cell.
+# RMS deviation of edge lengths (Peixoto & Barros thesis eq. 2.5, after
+# Tomita et al. 2001): S = sqrt(mean((li-lbar)^2))/lbar, lbar = quadratic
+# mean of edge lengths. Zero for a regular cell.
 function cell_distortion_rms(mesh)
     edge_lengths    = mesh.edges.length
     cells_edges     = mesh.cells.edges
@@ -99,8 +137,8 @@ function cell_distortion_rms(mesh)
     return S
 end
 
-# Per-cell diameter: max distance between any two of the cell's vertices,
-# using their periodic images closest to the cell center.
+# Max distance between any two of a cell's vertices, using their periodic
+# images closest to the cell center.
 function cell_diameter(mesh)
     vert_pos        = mesh.vertices.position
     cell_pos        = mesh.cells.position
@@ -125,17 +163,11 @@ function cell_diameter(mesh)
     return diam
 end
 
-# Cell diameter relative to the mesh's own mean diameter (see cell_area_normalized).
 cell_diameter_normalized(mesh) = (d = cell_diameter(mesh); d ./ mean(d))
 
-# Per-cell alignment index Ξ (Peixoto & Barros 2013, Prop. 3.1.5 / thesis eq. 3.1),
-# adapted from the sphere to this package's periodic planar meshes.
-# A polygon with an even number of vertices is "aligned" (opposite edges parallel
-# and of equal length) iff Ξ = 0; Ξ grows as the cell departs from that symmetry.
-# Cells with an odd number of edges (e.g. pentagons/heptagons from local defects)
-# have no even-alignment notion, so Ξ is set to 0 for them, matching the thesis'
-# convention of assigning pentagons a null index purely so they can be plotted
-# alongside hexagons.
+# Alignment index Ξ (Peixoto & Barros 2013, Prop. 3.1.5): 0 for a cell whose
+# opposite edges are parallel and equal length, growing as it departs from
+# that symmetry. Odd-sided cells (no even-alignment notion) get Ξ = 0.
 function cell_alignment(mesh)
     vert_pos        = mesh.vertices.position
     cell_pos        = mesh.cells.position
@@ -169,10 +201,6 @@ function cell_alignment(mesh)
     return align
 end
 
-# Ordered (name, function) pairs used by scripts to compute and report
-# every available per-cell metric without hardcoding the list. "diameter_dim"
-# comes first since it's the one dimensional (non-normalized) metric and
-# directly indicates the mesh resolution; the rest are dimensionless ratios.
 const METRICS = (
     ("diameter_dim", cell_diameter),
     ("area", cell_area_normalized),
@@ -182,16 +210,8 @@ const METRICS = (
     ("alignment", cell_alignment),
 )
 
-# Computes every registered metric for `mesh` once, returning a
-# Dict{String,Vector} keyed by METRICS name. Callers that need more than one
-# of print_metrics_summary/save_all_metric_pngs/metrics_summary_row should
-# compute this once and pass it to all of them, rather than letting each one
-# recompute every metric (some, like cell_diameter/cell_alignment, are not
-# O(1) per cell) from scratch.
 compute_metrics(mesh) = Dict(mname => mfunc(mesh) for (mname, mfunc) in METRICS)
 
-# Prints mean/min/max of every registered metric, prefixed by `label`, from
-# precomputed `values` (see `compute_metrics`).
 function print_metrics_summary(mesh, values, label)
     nc = length(mesh.cells.position)
     println("  Metrics ($label): nc = $nc, x_period = $(mesh.x_period), y_period = $(mesh.y_period)")
@@ -202,7 +222,6 @@ function print_metrics_summary(mesh, values, label)
     return nothing
 end
 
-# Plain overlay plot: Voronoi diagram (blue) over its dual triangulation (orange).
 function save_mesh_png(filename, mesh, label)
     fig = Figure(size=(700, 700))
     ax = Axis(fig[1, 1], title=label, aspect=DataAspect())
@@ -213,7 +232,6 @@ function save_mesh_png(filename, mesh, label)
     return nothing
 end
 
-# Voronoi diagram colored by a per-cell scalar (e.g. one of the METRICS).
 function save_property_png(filename, mesh, values, title)
     polygons = create_cell_polygons(mesh)
     fig = Figure(size=(750, 700))
@@ -225,8 +243,6 @@ function save_property_png(filename, mesh, values, title)
     return nothing
 end
 
-# Saves "<label>_<metric>.png" for every registered metric, from precomputed
-# `values` (see `compute_metrics`).
 function save_all_metric_pngs(label, mesh, values)
     for (mname, _) in METRICS
         filename = "$(label)_$(mname).png"
@@ -236,16 +252,11 @@ function save_all_metric_pngs(label, mesh, values)
     return nothing
 end
 
-# Column order shared by print_summary_table/save_summary_csv: name, nc, then
-# <metric>_mean/min/max for each metric registered in METRICS.
 const SUMMARY_COLUMNS = (
     :name, :nc,
     (Symbol(mname, suffix) for (mname, _) in METRICS for suffix in ("_mean", "_min", "_max"))...,
 )
 
-# One summary row (Dict{Symbol,Any}) for `mesh`, identified by `name` in the
-# resulting table/CSV (e.g. a mesh label or level tag), from precomputed
-# `values` (see `compute_metrics`).
 function metrics_summary_row(mesh, values, name)
     nc = length(mesh.cells.position)
     row = Dict{Symbol, Any}(:name => name, :nc => nc)
@@ -276,15 +287,8 @@ function print_summary_table(rows)
     return nothing
 end
 
-# `filename` is caller-supplied (not hardcoded here) so each script can pick a
-# name that won't collide with the other build_set_*.jl / plot_mesh_properties.jl
-# summaries sharing the same output directory.
-#
-# If `filename` already exists (e.g. from an earlier run that built other
-# levels/scales), `rows` are appended to it rather than overwriting — that way
-# a later run adding just one new scale doesn't wipe out the rows already on
-# disk. A fresh file gets a header; an existing one does not (its header is
-# already there).
+# Appends rather than overwrites, so a later run adding more levels/scales
+# doesn't wipe out rows already on disk.
 function save_summary_csv(filename, rows)
     write_header = !isfile(filename)
     open(filename, write_header ? "w" : "a") do io
@@ -296,10 +300,6 @@ function save_summary_csv(filename, rows)
     return nothing
 end
 
-# Writes one "<mesh>_vor.vtu" name per line — a manifest that plot_mesh_properties.jl
-# reads (as "output/*_voronoi_meshes.txt") to process every mesh a build_set_*.jl
-# script produced, without having to guess at wildcards. `vtu_names` are written
-# as given, resolved relative to the manifest's own directory by the reader.
 function save_manifest(filename, vtu_names)
     open(filename, "w") do io
         for name in vtu_names
@@ -309,17 +309,9 @@ function save_manifest(filename, vtu_names)
     return nothing
 end
 
-# Scans `outdir` for "*_vor.vtu" filenames matching `pattern` and appends to
-# "<outdir>/<manifest_name>" any that aren't already listed there, ordered by
-# `sort_key` (typically the level/scale index parsed out of the filename,
-# e.g. `f -> parse(Int, match(pattern, f)[1])`). Creates the file (with all
-# matches) if it doesn't exist yet.
-#
-# Scanning whatever mesh files are actually on disk — rather than only the
-# ones a single run just produced — means new entries are picked up even when
-# they're leftovers from an earlier run (different nc, different random seed,
-# or built before manifest-writing existed). Appending only the delta, rather
-# than overwriting, preserves manual edits to the existing manifest.
+# Scans `outdir` for files matching `pattern` (not just what this run
+# produced, so leftovers from earlier runs are picked up too) and appends
+# any not already listed to the manifest, ordered by `sort_key`.
 function rebuild_manifest(outdir, manifest_name, pattern, sort_key)
     files = filter(f -> occursin(pattern, f), readdir(outdir))
     isempty(files) && return 0
@@ -343,27 +335,11 @@ function rebuild_manifest(outdir, manifest_name, pattern, sort_key)
     return length(existing) + length(new_files)
 end
 
-# Builds a sort_key function for rebuild_manifest/finalize_mesh_set: matches
-# `pattern` against a filename and returns its captured groups, parsed as
-# Float64s (works for both integer captures like nc and decimal ones like a
-# distortion strength), as a tuple (in capture-group order). Centralizes the
-# "regex match + parse capture groups" idiom so each build script only needs
-# to supply its own naming pattern, not re-derive a matching closure by hand.
 numeric_sort_key(pattern) = f -> Tuple(parse(Float64, g) for g in match(pattern, f).captures)
 
-# Builds the regular hex-mesh reference shared by the regular, irregular, and
-# localref build scripts (their common "Level 0"): a hex mesh at ~nc cells,
-# rebuilt against the exact periodic domain. create_planar_hex_mesh rounds the
-# cell count to fit an integer number of hex rows/columns, so its own returned
-# domain isn't exactly xperiod x yperiod; reusing its generator count (same
-# cell count) against the exact domain lets Lloyd relaxation (VoronoiMesh's
-# default) spread the generators to fill it precisely. `density`, if given, is
-# forwarded to VoronoiMesh for density-weighted (non-uniform-resolution)
-# relaxation; the default `nothing` reproduces the original uniform behavior.
-# Extra `kwargs` (e.g. `rtol`, `max_iter`) are forwarded to VoronoiMesh —
-# density-weighted relaxation with a high-contrast density converges much
-# more slowly than the uniform case, so callers using `density` typically
-# need a looser `rtol` and/or larger `max_iter` than the package defaults.
+# create_planar_hex_mesh rounds nc to fit an integer grid, so its own domain
+# isn't exactly xperiod x yperiod; reusing its generator count against the
+# exact domain lets Lloyd relaxation fill it precisely.
 function build_hex_reference(nc, xperiod, yperiod; density=nothing, kwargs...)
     dc = sqrt(xperiod * yperiod / nc)
     hex_mesh = create_planar_hex_mesh(xperiod, yperiod, dc)
@@ -373,29 +349,20 @@ function build_hex_reference(nc, xperiod, yperiod; density=nothing, kwargs...)
     return mesh, dc
 end
 
-# Saves one mesh "level"/scale to disk — Voronoi + triangulation VTU, a plain
-# overlay PNG, per-metric colored PNGs — and prints the metrics summary. This
-# is the common bundle of outputs every build_set_*.jl script produces per
-# mesh it generates. Returns the metrics_summary_row for `label`, which
-# callers accumulate into `rows` for the final summary table/CSV (see
-# `finalize_mesh_set`).
-function save_mesh_level(outdir, mesh, label, title=label)
+# `region`, if given as (center, inner_radius, buffer_radius, density_ratio),
+# also reports per-region stats on the same precomputed metrics.
+function save_mesh_level(outdir, mesh, label, title=label; region=nothing)
     save_voronoi_to_vtu(joinpath(outdir, "$(label)_vor.vtu"), mesh)
     save_triangulation_to_vtu(joinpath(outdir, "$(label)_tri.vtu"), mesh)
     save_mesh_png(joinpath(outdir, "$(label).png"), mesh, title)
     println("  Saved: $label")
     values = compute_metrics(mesh)
     print_metrics_summary(mesh, values, title)
+    region === nothing || report_region_summary(mesh, values, region...)
     save_all_metric_pngs(joinpath(outdir, label), mesh, values)
     return metrics_summary_row(mesh, values, label)
 end
 
-# Wraps up a mesh_set build: prints/saves the combined summary table + CSV for
-# `rows`, and (re)writes the `kind`'s manifest by rescanning `outdir` for every
-# matching mesh (see `rebuild_manifest`) rather than just the ones this run
-# produced. `kind` names the output files: "<kind>_metrics_summary.csv" and
-# "<kind>_voronoi_meshes.txt". The common "wrap up a build" step shared by all
-# three build_set_*.jl scripts.
 function finalize_mesh_set(outdir, kind, rows, pattern, sort_key)
     if isempty(rows)
         println("\nNo meshes were built this run; skipping summary table/CSV.")

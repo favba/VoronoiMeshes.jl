@@ -1,231 +1,127 @@
 # Scripts
 
-Utility scripts for generating periodic planar Voronoi meshes, computing
-per-cell quality metrics, and visualizing both. All scripts are run from this
-`scripts/` directory with the local `Project.toml` environment:
+Utility scripts for generating periodic planar Voronoi meshes and their
+per-cell quality metrics. Run from this `scripts/` directory:
 
 ```
 julia --project=. <script>.jl [args...]
 ```
 
-All build scripts write into `scripts/output/` (created if missing, and
-git-ignored). Filenames are self-descriptive: `mesh_periodic_<kind>_<level>_nc<N>...`.
+Every `build_set_*.jl` script writes to its own `output/<kind>_<params>/`
+subfolder and accepts `--help`/`-h` for full usage.
 
 ## Mesh-building scripts
 
-### `build_set_irregular_meshes.jl`
+### `build_set_global_distortion_meshes.jl`
 
-Generates a sequence of same-resolution meshes with increasing irregularity,
-starting from a converged centroidal (Level 0) mesh. Only cells within a band
-around a fixed line are perturbed at each level; growing Gaussian noise is
-added to their generator points, then a few Lloyd iterations are run — enough
-to fix degenerate cells without erasing the introduced irregularity. Extra
-Lloyd iterations are applied automatically if obtuse Delaunay triangles remain.
+Same-resolution meshes with increasing distortion: every cell's generator
+point is randomly perturbed, then lightly relaxed to remove bad triangles.
 
 ```
-julia --project=. build_set_irregular_meshes.jl [nc] [num_levels] [base_strength]
-julia --project=. build_set_irregular_meshes.jl [nc] 0 [strength]   # single perturbed mesh
+julia --project=. build_set_global_distortion_meshes.jl [nc] [num_levels] [base_strength]
 ```
 
-- `nc` (default 80): target cell count for the Level 0 reference mesh.
-- `num_levels` (default 5): number of perturbed levels to build. **Use `0`**
-  to build only the Level 0 mesh plus a single perturbation at exactly
-  `base_strength` (no multi-level sweep).
-- `base_strength` (default 0.15): perturbation amplitude at level 1, as a
-  fraction of the average cell spacing dc ≈ 1/√nc. Level `i` uses
-  `strength = base_strength * i` (except in the `num_levels=0` case, where
-  it's used directly as the single perturbation strength).
-
-Outputs per level: `..._vor.vtu`, `..._tri.vtu`, `....png` (mesh overlay),
-`..._<metric>.png` (one per registered metric), plus
-`output/irregular_metrics_summary.csv` and `output/irregular_voronoi_meshes.txt`
-(manifest, see below).
+- `nc` (default 80): cell count, fixed across all levels.
+- `num_levels` (default 6): number of perturbed levels.
+- `base_strength` (default 0.05): perturbation amplitude at level 1, as a
+  fraction of the mean cell spacing; level `i` uses `base_strength * i`.
 
 ### `build_set_regular_meshes.jl`
 
-Builds a sequence of regular meshes by successive refinement: Level 0 is a
-converged hex mesh; each subsequent level uses the previous level's cell
-centers + edge midpoints as generators and re-converges via Lloyd relaxation,
-roughly quadrupling the cell count each time.
+Regular meshes by successive refinement, quadrupling cell count each level.
 
 ```
 julia --project=. build_set_regular_meshes.jl [nc_ref] [num_levels]
 ```
 
-- `nc_ref` (default 16): target cell count for the Level 0 mesh.
-- `num_levels` (default 4): number of refinement levels.
-
-Same outputs as above, under `output/regular_metrics_summary.csv` /
-`output/regular_voronoi_meshes.txt`.
+- `nc_ref` (default 16): cell count for Level 0.
+- `num_levels` (default 4): number of refinement levels after Level 0.
 
 ### `build_set_refined_meshes_vtu.jl`
 
-Builds a sequence of independently-generated centroidal meshes with cell
-counts growing as `base_cells * 2^i` (geometric refinement, not derived from
-one another).
+Independently-generated meshes with cell counts growing as `base_cells * 2^i`.
 
 ```
 julia --project=. build_set_refined_meshes_vtu.jl [base_cells] [num_scales] [ini_scale]
 ```
 
-- `base_cells` (default 16), `num_scales` (default 11), `ini_scale` (default 0):
-  cell counts are `base_cells*2^ini_scale, ..., base_cells*2^(ini_scale+num_scales-1)`
-  (defaults give 16, 32, ..., 16384).
+- `base_cells` (default 16), `num_scales` (default 11), `ini_scale` (default 0).
 
-Same per-mesh outputs as above, under `output/refined_metrics_summary.csv` /
-`output/refined_voronoi_meshes.txt`.
+### `build_set_circular_refined_meshes.jl`
 
-### `build_set_localref_meshes.jl`
-
-Builds a sequence of locally-refined variable-resolution meshes: cell density
-is ~16x higher (`RIDGE_RATIO`) along the same diagonal band used by
-`build_set_irregular_meshes.jl` (`LINE_SLOPE`/`LINE_INTERCEPT`) than in the
-background, smoothly (Gaussian) tapering over `RIDGE_SIGMA`, using
-`VoronoiMesh`'s `density` keyword. Like `build_set_regular_meshes.jl`, each
-level refines from the previous one's cells + edge midpoints, quadrupling
-`nc` — this doubles both the ridge and background resolution each level while
-the fixed density-function shape keeps their 2x ratio constant.
-
-`RIDGE_RATIO = 16` comes from Du, Faber & Gunzburger (1999), *Centroidal
-Voronoi Tessellations: Applications and Algorithms* (SIAM Review): in 2D,
-`dc(x) ∝ ρ(x)^(-1/4)` asymptotically, so a target 2x resolution
-(`dc_ridge/dc_background = 1/2`) needs a density ratio `R = 2^4 = 16`. This is
-an asymptotic result, not exact at finite resolution, so each level prints
-the actual measured ridge/background `dc` ratio (via the `diameter_dim`
-metric) rather than trusting the formula blindly.
+Locally-refined meshes: cell density is 16x higher within an off-center
+circular region than in the background, tapering smoothly. Refines by
+quadrupling cell count each level, like `build_set_regular_meshes.jl`.
 
 ```
-julia --project=. build_set_localref_meshes.jl [nc_ref] [num_levels]
+julia --project=. build_set_circular_refined_meshes.jl [nc_ref] [num_levels]
 ```
 
-- `nc_ref` (default 80): target cell count for the Level 0 mesh.
-- `num_levels` (default 5): number of levels (Level 0 + refinements).
+- `nc_ref` (default 64): cell count for Level 0.
+- `num_levels` (default 4): number of levels (Level 0 + refinements).
 
-**Much slower than the other build scripts.** Density-weighted Lloyd
-relaxation at this contrast (16x) converges far more slowly than uniform
-relaxation — observed to exhaust a 20,000-iteration budget without reaching
-`rtol=1e-3` even at nc~50-200. `rtol`/`max_iter`/`max_time` are loosened well
-beyond the package defaults (`LOCALREF_RTOL=1e-3`, `LOCALREF_MAX_ITER=50_000`,
-`LOCALREF_MAX_TIME=60` minutes/level) to compensate; expect each level,
-especially the finer ones, to take substantially longer than the equivalent
-`build_set_regular_meshes.jl` level.
 
-Same outputs as above, under `output/localref_metrics_summary.csv` /
-`output/localref_voronoi_meshes.txt`.
-
-All four build scripts above share the same structure: a `main(...)`
-function driven by positional CLI args (with the same defaults as running
-with no args), building each level/scale through the shared helpers below,
-then a single call to `MeshTools.finalize_mesh_set` to print/save the summary
-table, CSV, and manifest.
+All four scripts write per level: `..._vor.vtu`, `..._tri.vtu`, `....png`
+(mesh overlay), `..._<metric>.png` (one per metric), a `<kind>_metrics_summary.csv`,
+and a `<kind>_voronoi_meshes.txt` manifest.
 
 ## Metrics and plotting
 
 ### `mesh_tools.jl`
 
-Not run directly — the shared build/report pipeline, `include`d by the three
-build scripts above and by `plot_mesh_properties.jl`. Defines:
-
-- Per-cell metric functions (each mesh → one `Vector` per cell), registered in
-  `METRICS`: `cell_area_normalized`, `cell_distortion`, `cell_distortion_rms`,
-  `cell_diameter_normalized`, `cell_alignment`. Add a new metric by writing
-  the function and adding it to the `METRICS` tuple — it then automatically
-  shows up everywhere `METRICS` is iterated (printing, plotting, CSV export).
-- Shared plotting helpers (need a Makie backend loaded first, e.g.
-  `using GLMakie`): `save_mesh_png` (plain Voronoi + triangulation overlay),
-  `save_property_png` / `save_all_metric_pngs` (per-cell-metric colored plots).
-- Shared printing/export helpers: `print_metrics_summary`, `metrics_summary_row`,
-  `print_summary_table`, `save_summary_csv`, `save_manifest`, `rebuild_manifest`
-  (scans an output directory for every mesh file matching a given kind's
-  naming pattern and writes the manifest from that — not just the meshes the
-  current run produced — so a manifest stays complete even when it should
-  include meshes left over from an earlier run).
-- Shared build-script helpers, factored out of what used to be duplicated
-  across the build scripts: `build_hex_reference` (the common Level-0 regular
-  hex mesh, rebuilt against the exact periodic domain; accepts an optional
-  `density` keyword for non-uniform-resolution meshes),
-  `save_mesh_level` (saves one mesh's VTU + overlay PNG + per-metric PNGs +
-  metrics summary, returning its summary row), `finalize_mesh_set` (the
-  common end-of-build step: summary table + CSV + manifest rebuild), and
-  `line_distance` (perpendicular distance from a point to a line — shared by
-  `build_set_irregular_meshes.jl`'s perturbation band and
-  `build_set_localref_meshes.jl`'s density ridge).
+Shared library (metric functions, plotting, build/report helpers) used by
+all scripts above. Not run directly.
 
 ### `plot_mesh_properties.jl`
 
-Reads previously-saved meshes (VTU) and, for each, computes every metric in
-`MeshTools.METRICS`, plots it as a colored Voronoi diagram, and prints/saves
-a combined summary table.
+Recomputes metrics and per-metric PNGs for already-saved meshes.
 
 ```
-julia --project=. plot_mesh_properties.jl                     # process every manifest in output/
+julia --project=. plot_mesh_properties.jl                     # every manifest under output/
 julia --project=. plot_mesh_properties.jl output/some_manifest.txt
 julia --project=. plot_mesh_properties.jl output/mesh_vor.vtu  # single mesh
 ```
 
-With no argument, it looks for `output/irregular_voronoi_meshes.txt`,
-`output/regular_voronoi_meshes.txt`, and `output/refined_voronoi_meshes.txt` —
-the manifests written automatically by the three build scripts above (each
-lists one `*_vor.vtu` filename per line, relative to the manifest's own
-directory). This is the easiest way to (re)generate metric plots for
-everything currently in `output/` without hunting down individual files.
-
-Output: `output/<mesh>_<metric>.png` for every mesh/metric pair, plus a
-printed table and `output/mesh_properties_summary.csv`.
-
 ### `plot_metrics_summary.jl`
 
-Reads one `<kind>_metrics_summary.csv` (as written by the build_set_*.jl
-scripts / `MeshTools.save_summary_csv`) and plots a paper-ready figure of a
-shared y-axis of normalized metrics — `distortion_rms`, `alignment`, and the
-min/max ratio (min divided by max, a measure of spread) of `area` and
-`diameter`. The x-axis is auto-detected from the CSV:
-
-- **Resolution sweep** (`regular`/`refined` sets, nc varies row to row):
-  number of cells (log-scaled bottom x-axis), with a linked top x-axis
-  relabeled in the corresponding mean cell diameter in km — the periodic
-  domain's unit length scaled by `2*pi*earth_radius`, treating it as a
-  great-circle circumference, matching how these meshes are meant to be used.
-- **Perturbation sweep** (`irregular` sets, nc constant, "name" column
-  encodes `..._d<strength>`): perturbation strength `d` on the x-axis
-  instead, with the (fixed) resolution noted in the axis label.
+Plots a convergence figure from one `<kind>_metrics_summary.csv` — cell
+count on the x-axis if it varies row to row, else perturbation strength `d`.
 
 ```
-julia --project=. plot_metrics_summary.jl output/regular_metrics_summary.csv
-julia --project=. plot_metrics_summary.jl output/refined_metrics_summary.csv
-julia --project=. plot_metrics_summary.jl output/irregular_metrics_summary.csv
+julia --project=. plot_metrics_summary.jl output/<run>/<kind>_metrics_summary.csv
 ```
 
-Output: `<csv_basename>_convergence.pdf` and `..._convergence.eps` (both
-vector formats) next to the input CSV.
-
-Output: `<csv_basename>_convergence.pdf` next to the input CSV. Uses
-CairoMakie (vector PDF) rather than GLMakie, since this is a static
-publication figure rather than a rendered mesh view.
+Output: `<csv_basename>_convergence.pdf`/`.eps` next to the input CSV.
 
 ## Other scripts
 
-- `save_regular_mesh_vtu.jl` — minimal worked example of building a small
-  mesh, saving/reading Voronoi + triangulation VTU files, and plotting.
-  Not part of the metrics workflow above.
-- `create_distorted_meshes.jl` — older standalone script that builds a
-  sequence of variable-resolution meshes (density-function-driven Lloyd
-  relaxation) and saves them to NetCDF. Usage:
-  `julia --project=. create_distorted_meshes.jl <x_period> <y_period> <dc>`.
-  Predates `mesh_tools.jl` and does not use it.
+- `save_regular_mesh_vtu.jl` — minimal worked example (build, save/read VTU, plot).
+- `create_distorted_meshes.jl` — older standalone script, predates `mesh_tools.jl`.
+  Usage: `julia --project=. create_distorted_meshes.jl <x_period> <y_period> <dc>`.
 
 ## Typical workflow
 
 ```
 julia --project=. build_set_regular_meshes.jl
-julia --project=. build_set_irregular_meshes.jl
+julia --project=. build_set_global_distortion_meshes.jl
 julia --project=. build_set_refined_meshes_vtu.jl
-julia --project=. build_set_localref_meshes.jl
+julia --project=. build_set_circular_refined_meshes.jl
 julia --project=. plot_mesh_properties.jl        # metric plots + summary CSV for everything above
 ```
 
-## Intensive runs for high-resolution grids
+## Production runs (cluster)
 
+Convergence cases to ~100k cells finest level, distortion case at 10k cells,
+all run in parallel:
+
+```bash
+mkdir -p cluster_logs
+
+julia -O3 --threads=2 --project=. build_set_regular_meshes.jl 100 5            > cluster_logs/regular.log 2>&1 &
+julia -O3 --threads=2 --project=. build_set_refined_meshes_vtu.jl 100 11       > cluster_logs/refined.log 2>&1 &
+julia -O3 --threads=2 --project=. build_set_circular_refined_meshes.jl 64 6    > cluster_logs/circular_refined.log 2>&1 &
+julia -O3 --threads=2 --project=. build_set_global_distortion_meshes.jl 10000  > cluster_logs/global_distortion.log 2>&1 &
+
+wait
 ```
-julia -O3 --threads=2 --project=. build_set_regular_meshes.jl 16 6
-```
+

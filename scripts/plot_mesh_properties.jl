@@ -1,34 +1,15 @@
-# plot_mesh_properties.jl
-#
-# Reads one or more previously-saved Voronoi meshes (VTU format) and, for each
-# one, computes per-cell metrics (see mesh_tools.jl: area, distortion,
-# diameter, ...), then plots each property as a colored Voronoi diagram saved
-# to a PNG.
+# Computes per-cell metrics for previously-saved meshes and plots each as a
+# colored Voronoi diagram PNG.
 #
 # Usage:
 #   julia --project=. plot_mesh_properties.jl [manifest.txt | mesh_vor.vtu]
 #
-#   With no argument, processes every "output/*_voronoi_meshes.txt" manifest
-#   produced by the build_set_*.jl scripts.
-#
-#   - manifest.txt : a text file listing one "*_vor.vtu" path per line
-#                    (blank lines and lines starting with '#' are ignored;
-#                    relative paths are resolved against the manifest's
-#                    own directory). This is the format written by the
-#                    build_set_*.jl scripts into scripts/output/*.txt.
-#   - mesh_vor.vtu : a single mesh, given either as "<base>_vor.vtu" (the
-#                    matching "<base>_tri.vtu" is derived automatically) or
-#                    as a bare "<base>.vtu" base name.
-#
-# Output: for each mesh "<base>" and each metric in MeshTools.METRICS,
-# writes "<base>_<metric>.png". Each input (one manifest, or one bare mesh) is
-# summarized separately: a table is printed and a CSV is saved next to the
-# processed mesh(es), named after the manifest — "<kind>_voronoi_meshes.txt"
-# produces "<kind>_metrics_summary.csv" (matching the name the build_set_*.jl
-# scripts themselves use); a bare mesh path produces "mesh_properties_summary.csv".
-#
-# Note: PNG export uses GLMakie. On headless servers swap to CairoMakie
-# (add it to the environment and replace `using GLMakie` below).
+# With no argument, processes every "*_voronoi_meshes.txt" manifest found
+# under output/. A manifest lists one "*_vor.vtu" path per line, relative to
+# its own directory; a bare mesh path works too ("<base>_vor.vtu" or
+# "<base>.vtu"). Writes "<base>_<metric>.png" per mesh, plus a summary CSV
+# next to each input ("<kind>_metrics_summary.csv" for a manifest,
+# "mesh_properties_summary.csv" for a bare mesh).
 
 using VoronoiMeshes
 using TensorsLite
@@ -56,8 +37,6 @@ function base_label(path)
     return joinpath(dirname(path), name)
 end
 
-# Returns a Dict{Symbol,Any} summary row: :name, :nc, and <metric>_mean/min/max
-# for every metric registered in MeshTools.METRICS.
 function process_mesh(path)
     println("Reading: $path")
     mesh = load_mesh(path)
@@ -86,14 +65,18 @@ function resolve_mesh_paths(input_path)
     end
 end
 
-# Default: no argument given -> process every manifest already in output/.
-default_manifests() = filter(isfile, joinpath.("output", (
-    "regular_voronoi_meshes.txt", "irregular_voronoi_meshes.txt", "refined_voronoi_meshes.txt",
-)))
+function default_manifests()
+    isdir("output") || return String[]
+    found = String[]
+    for (dir, _, files) in walkdir("output")
+        for f in files
+            endswith(f, "_voronoi_meshes.txt") && push!(found, joinpath(dir, f))
+        end
+    end
+    sort!(found)
+    return found
+end
 
-# Derives this input's own summary CSV name: "<kind>_voronoi_meshes.txt" (the
-# convention the build_set_*.jl scripts write) -> "<kind>_metrics_summary.csv";
-# any other ".txt" -> "<name>_summary.csv"; a bare mesh path -> the generic name.
 function summary_csv_name(input_path)
     endswith(input_path, ".txt") || return "mesh_properties_summary.csv"
     base = replace(basename(input_path), "_voronoi_meshes.txt" => "", ".txt" => "")

@@ -1,41 +1,18 @@
-# plot_metrics_summary.jl
-#
-# Reads one "<kind>_metrics_summary.csv" file (as produced by the
-# build_set_*.jl scripts / mesh_tools.jl's save_summary_csv, one row per
-# mesh resolution or perturbation level) and plots a paper-ready figure of
-# a set of normalized quality metrics on a shared y-axis — distortion_rms,
-# alignment, and the min/max ratio (min/max, a measure of spread) of area
-# and diameter.
-#
-# Two x-axis modes, auto-detected from the CSV:
-#
-# - Resolution sweep (regular/refined sets: nc varies row to row): number of
-#   cells on the bottom x-axis, with a linked top x-axis relabeled in the
-#   corresponding mean cell diameter, converted from the periodic domain's
-#   unit length to km assuming that domain wraps a great circle of the
-#   earth — the intended later use of these meshes.
-# - Perturbation sweep (irregular sets: nc constant, "name" column encodes
-#   "..._d<strength>"): perturbation strength d on the x-axis instead.
+# Reads a "<kind>_metrics_summary.csv" (as written by mesh_tools.jl's
+# save_summary_csv) and plots distortion_rms/alignment/area/diameter against
+# either cell count (nc varies row to row) or perturbation strength d (nc
+# fixed, "name" column encodes "..._d<strength>") — auto-detected.
 #
 # Usage:
 #   julia --project=. plot_metrics_summary.jl <metrics_summary.csv>
 #
-# Output: "<csv_basename>_convergence.pdf" and "..._convergence.eps" next to
-# the input CSV (both vector formats, since it's unclear yet which one the
-# target journal submission will want).
-#
-# Uses CairoMakie (vector output) rather than GLMakie, since this produces a
-# static publication figure rather than an interactive/rendered mesh view.
+# Output: "<csv_basename>_convergence.pdf"/".eps" next to the input CSV.
 
 using CairoMakie
 using Printf
 
 const NUMERIC_COLUMNS = (:nc, :diameter_dim_mean, :distortion_rms_mean, :alignment_mean, :area_min, :area_max, :diameter_min, :diameter_max)
 
-# Reads `path` (the plain, unquoted CSV format written by
-# MeshTools.save_summary_csv) into a Dict{Symbol,Vector} with one
-# Vector{Float64} per column in NUMERIC_COLUMNS plus :name (Vector{String}),
-# sorted by ascending nc.
 function read_summary_csv(path)
     lines = readlines(path)
     header = split(lines[1], ",")
@@ -56,9 +33,9 @@ function read_summary_csv(path)
     return data
 end
 
-# Extracts the perturbation strength from a mesh name of the form
-# "..._d<strength>" (the naming convention build_set_irregular_meshes.jl
-# uses for each perturbation level), e.g. "mesh_periodic_irregular_nc2340_d0.15" -> 0.15.
+# Extracts the perturbation/distortion strength from a mesh name of the form
+# "..._d<strength>" (the naming convention build_set_global_distortion_meshes.jl
+# uses for each level), e.g. "mesh_periodic_global_distortion_nc80_d0.45" -> 0.45.
 function perturbation_strength(name)
     m = match(r"_d([0-9.]+)$", name)
     m === nothing && error("Could not parse perturbation strength 'd' from name: $name")
@@ -71,16 +48,10 @@ const COLOR_ALIGNMENT  = RGBf(0.90, 0.62, 0.0)
 const COLOR_AREA       = RGBf(0.0, 0.45, 0.70)
 const COLOR_DIAMETER   = RGBf(0.0, 0.62, 0.45)
 
-# Mean earth radius (km); the periodic planar domain (side length 1) is
-# treated as a great-circle circumference of the sphere these meshes will
-# eventually be mapped onto, so a domain-unit length converts to km via
-# 2*pi*EARTH_RADIUS_KM.
+# Domain side length 1 is treated as a great-circle circumference of Earth.
 const EARTH_RADIUS_KM = 6371.0
 const DOMAIN_UNIT_TO_KM = 2 * pi * EARTH_RADIUS_KM
 
-# Builds the shared y-axis (Axis at fig[2,1]) and plots the four metric
-# series against `x`. Returns the Axis so callers can add axis-specific
-# x-scale/ticks/labels before or after.
 function plot_metric_series!(fig, x, data)
     ax = Axis(fig[2, 1], ylabel = "Normalized metric value")
 
@@ -103,8 +74,6 @@ function plot_metric_series!(fig, x, data)
     return ax
 end
 
-# Resolution sweep (regular/refined sets): nc on the bottom x-axis, with a
-# linked top x-axis relabeled in the corresponding mean cell diameter in km.
 function plot_resolution_sweep(fig, data)
     nc = data[:nc]
     ax = plot_metric_series!(fig, nc, data)
@@ -123,10 +92,6 @@ function plot_resolution_sweep(fig, data)
     return nothing
 end
 
-# Perturbation sweep (irregular sets): all rows share one nc, so the
-# resolution is fixed and reported in the x-axis label instead of being the
-# x variable; perturbation strength d (parsed from each row's "name") is the
-# x variable.
 function plot_perturbation_sweep(fig, data)
     nc = round(Int, data[:nc][1])
     d = perturbation_strength.(data[:name])

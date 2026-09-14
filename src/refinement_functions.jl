@@ -3,7 +3,7 @@ function circular_refinement_function(lx, ly; center = (lx/2)𝐢 + (ly/2)𝐣, 
             inner_density = inner_density, outer_density = outer_density, lx = lx, ly = ly
 
         function(x)
-            xp = periodic_to_base_point(x, lx, ly)
+            xp = closest(center, x, lx, ly)
             d = norm(xp - center)
             if d <= inner_radius
                 return inner_density
@@ -25,8 +25,8 @@ function y_refinement_function(lx, ly; center_y = ly/2, length = ly/4, buffer_le
             inner_density = inner_density, outer_density = outer_density
 
         function(x)
-            xp = periodic_to_base_point(x, lx, ly)
-            d = norm(xp.y - center_y)
+            yp = closest(center_y, x.y, ly)
+            d = norm(yp - center_y)
             if d <= length
                 return inner_density
             elseif d <= buffer_length
@@ -46,8 +46,8 @@ function x_refinement_function(lx, ly; center_x = lx/2, length = lx/4, buffer_le
             inner_density = inner_density, outer_density = outer_density
 
         function(x)
-            xp = periodic_to_base_point(x, lx, ly)
-            d = norm(xp.x - center_x)
+            xp = closest(center_x, x.x, lx)
+            d = norm(xp - center_x)
             if d <= length
                 return inner_density
             elseif d <= buffer_length

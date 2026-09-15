@@ -14,7 +14,7 @@ const Y_PERIOD = 1.0
 # never get large enough to invert/overlap a cell.
 const MAX_DISPLACEMENT_FRAC = 0.3
 
-const DEFAULT_FIXUP_ITERS = 4
+const DEFAULT_FIXUP_ITERS = 10
 
 const MESH_PATTERN = r"^mesh_periodic_global_distortion_nc\d+_d([\d.]+)_vor\.vtu$"
 
@@ -39,7 +39,7 @@ function perturb_positions(mesh, strength)
         x_new[c] = mod(p.x + dx, X_PERIOD)
         y_new[c] = mod(p.y + dy, Y_PERIOD)
     end
-    return VecArray(x = x_new, y = y_new)
+    return VecArray(x=x_new, y=y_new)
 end
 
 function build_reference_mesh(nc, outdir)
@@ -65,9 +65,9 @@ function perturb_level(ref_mesh, strength, level, actual_nc, outdir, fixup_iters
     println("Level $level: perturbing (strength=$(round(strength, digits=3)))...")
 
     generators = perturb_positions(ref_mesh, strength)
-    raw_mesh = VoronoiMesh(generators, X_PERIOD, Y_PERIOD; max_iter = 0)
+    raw_mesh = VoronoiMesh(generators, X_PERIOD, Y_PERIOD; max_iter=0)
     print_obtuse_triangles(raw_mesh, "before fixup")
-    mesh = VoronoiMesh(generators, X_PERIOD, Y_PERIOD; max_iter = fixup_iters)
+    mesh = VoronoiMesh(generators, X_PERIOD, Y_PERIOD; max_iter=fixup_iters)
     print_obtuse_triangles(mesh, "after fixup")
 
     label = "mesh_periodic_global_distortion_nc$(actual_nc)_d$(round(strength, digits=3))"
@@ -127,7 +127,7 @@ Arguments (all optional, positional):
                  average cell spacing dc ≈ 1/√nc (default 0.05). Level i uses
                  strength = base_strength * i (default sweep: d=0.05,0.1,...,0.3).
   fixup_iters    Lloyd iterations always applied after perturbing, to clean
-                 up obtuse triangles (default 4).
+                 up obtuse triangles (default 10).
 """
 MeshTools.handle_help(ARGS, USAGE)
 

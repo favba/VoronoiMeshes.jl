@@ -5,7 +5,7 @@
 module MeshTools
 
 using VoronoiMeshes: create_cell_polygons, plotmesh!, plotdualmesh!, create_planar_hex_mesh,
-                      VoronoiMesh, save_voronoi_to_vtu, save_triangulation_to_vtu
+                      VoronoiMesh, save_voronoi_to_vtu, save_triangulation_to_vtu, find_obtuse_triangles
 using TensorsLiteGeometry: closest
 using Statistics: mean
 using Dates: now
@@ -20,7 +20,7 @@ export METRICS, cell_area, cell_area_normalized, cell_distortion, cell_distortio
        save_manifest, rebuild_manifest, numeric_sort_key,
        build_hex_reference, save_mesh_level, finalize_mesh_set,
        center_distance, region_masks, report_region_summary, handle_help, run_outdir,
-       save_run_info
+       save_run_info, obtuse_triangle_count
 
 function handle_help(args, usage)
     if "--help" in args || "-h" in args
@@ -212,9 +212,13 @@ const METRICS = (
 
 compute_metrics(mesh) = Dict(mname => mfunc(mesh) for (mname, mfunc) in METRICS)
 
+obtuse_triangle_count(mesh) = length(find_obtuse_triangles(mesh)), length(mesh.vertices.cells)
+
 function print_metrics_summary(mesh, values, label)
     nc = length(mesh.cells.position)
+    n_obtuse, n_triangles = obtuse_triangle_count(mesh)
     println("  Metrics ($label): nc = $nc, x_period = $(mesh.x_period), y_period = $(mesh.y_period)")
+    println("    obtuse triangles: $n_obtuse / $n_triangles")
     for (mname, _) in METRICS
         v = values[mname]
         println("    $mname: mean = $(round(mean(v), digits=5)), min = $(round(minimum(v), digits=5)), max = $(round(maximum(v), digits=5))")
@@ -253,13 +257,14 @@ function save_all_metric_pngs(label, mesh, values)
 end
 
 const SUMMARY_COLUMNS = (
-    :name, :nc,
+    :name, :nc, :n_obtuse, :n_triangles,
     (Symbol(mname, suffix) for (mname, _) in METRICS for suffix in ("_mean", "_min", "_max"))...,
 )
 
 function metrics_summary_row(mesh, values, name)
     nc = length(mesh.cells.position)
-    row = Dict{Symbol, Any}(:name => name, :nc => nc)
+    n_obtuse, n_triangles = obtuse_triangle_count(mesh)
+    row = Dict{Symbol, Any}(:name => name, :nc => nc, :n_obtuse => n_obtuse, :n_triangles => n_triangles)
     for (mname, _) in METRICS
         v = values[mname]
         row[Symbol(mname, "_mean")] = mean(v)

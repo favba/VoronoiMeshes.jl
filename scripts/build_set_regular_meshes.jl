@@ -12,6 +12,26 @@ const Y_PERIOD = 1.0
 
 const MESH_PATTERN = r"^mesh_periodic_regular_nc(\d+)_vor\.vtu$"
 
+# create_planar_hex_mesh doesn't always land exactly on an arbitrary target
+# nc (it rounds to the nearest valid hex row/column count), so Level 0 is
+# bootstrapped from a small exact mesh and bisected up — same approach as
+# build_set_circular_refined_meshes.jl — guaranteeing nc_ref lands exactly
+# whenever it's reachable by quadrupling from BOOTSTRAP_NC.
+const BOOTSTRAP_NC = 16
+
+function refine_step(mesh)
+    generators = vcat(mesh.cells.position, mesh.edges.position)
+    return VoronoiMesh(generators, X_PERIOD, Y_PERIOD)
+end
+
+function build_level0(nc_ref)
+    mesh, _ = MeshTools.build_hex_reference(min(nc_ref, BOOTSTRAP_NC), X_PERIOD, Y_PERIOD)
+    while length(mesh.cells.position) < nc_ref
+        mesh = refine_step(mesh)
+    end
+    return mesh
+end
+
 function build_level(outdir, mesh)
     nc = length(mesh.cells.position)
     label = "mesh_periodic_regular_nc$(nc)"
@@ -32,15 +52,14 @@ function main(nc_ref, num_levels)
         "Each level refines from the previous one's cells + edge midpoints as new generators.",
     ])
 
-    mesh, dc = MeshTools.build_hex_reference(nc_ref, X_PERIOD, Y_PERIOD)
-    println("Level 0: creating regular hex mesh (reference nc≈$nc_ref, dc=$(round(dc, digits=4)))...")
+    mesh = build_level0(nc_ref)
+    println("Level 0: regular hex mesh (reference nc≈$nc_ref, actual=$(length(mesh.cells.position)))...")
     rows = [build_level(outdir, mesh)]
 
-    for i in 1:num_levels
+    for i in 1:(num_levels - 1)
         nc_prev = length(mesh.cells.position)
         println("Level $i: refining from $nc_prev cells (cells + edge midpoints as generators)...")
-        generators = vcat(mesh.cells.position, mesh.edges.position)
-        mesh = VoronoiMesh(generators, X_PERIOD, Y_PERIOD)
+        mesh = refine_step(mesh)
         push!(rows, build_level(outdir, mesh))
     end
 
@@ -55,12 +74,12 @@ Builds a series of regular Voronoi meshes by successive refinement, starting
 from a regular hex mesh and quadrupling the cell count each level.
 
 Arguments (all optional, positional):
-  nc_ref      Target cell count for the Level 0 mesh (default 16).
-  num_levels  Number of refinement levels after Level 0 (default 4).
+  nc_ref      Target cell count for Level 0 (default 64).
+  num_levels  Number of levels, Level 0 + refinements (default 4).
 """
 MeshTools.handle_help(ARGS, USAGE)
 
-nc_ref     = length(ARGS) >= 1 ? parse(Int, ARGS[1]) : 16
+nc_ref     = length(ARGS) >= 1 ? parse(Int, ARGS[1]) : 64
 num_levels = length(ARGS) >= 2 ? parse(Int, ARGS[2]) : 4
 
 main(nc_ref, num_levels)

@@ -19,8 +19,7 @@ const DEFAULT_FIXUP_ITERS = 4
 const MESH_PATTERN = r"^mesh_periodic_global_distortion_nc\d+_d([\d.]+)_vor\.vtu$"
 
 function print_obtuse_triangles(mesh, label)
-    n_obtuse = length(find_obtuse_triangles(mesh))
-    n_tri = length(mesh.vertices.cells)
+    n_obtuse, n_tri = MeshTools.obtuse_triangle_count(mesh)
     println("    $label: obtuse triangles = $n_obtuse / $n_tri")
     return n_obtuse
 end

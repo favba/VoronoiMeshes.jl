@@ -37,18 +37,21 @@ Regular meshes by successive refinement, quadrupling cell count each level.
 julia --project=. build_set_regular_meshes.jl [nc_ref] [num_levels]
 ```
 
-- `nc_ref` (default 16): cell count for Level 0.
-- `num_levels` (default 4): number of refinement levels after Level 0.
+- `nc_ref` (default 64): cell count for Level 0.
+- `num_levels` (default 4): number of levels (Level 0 + refinements) — same
+  convention as `circular_refined`'s `num_levels` and `refined_meshes_vtu`'s
+  `num_scales`, so the same number gives the same finest cell count on all three.
 
 ### `build_set_refined_meshes_vtu.jl`
 
-Independently-generated meshes with cell counts growing as `base_cells * 2^i`.
+Independently-generated meshes with cell counts growing as `base_cells * 4^i`
+(not derived from one another) — same cell-count ladder as `regular`/`circular_refined`.
 
 ```
 julia --project=. build_set_refined_meshes_vtu.jl [base_cells] [num_scales] [ini_scale]
 ```
 
-- `base_cells` (default 16), `num_scales` (default 11), `ini_scale` (default 0).
+- `base_cells` (default 64), `num_scales` (default 4), `ini_scale` (default 0).
 
 ### `build_set_circular_refined_meshes.jl`
 
@@ -113,26 +116,24 @@ julia --project=. plot_mesh_properties.jl        # metric plots + summary CSV fo
 
 ## Production runs (cluster)
 
-Convergence cases to ~100k cells finest level, distortion case at 10k cells,
-all run in parallel:
+Convergence cases share the same 64→65536 cell-count ladder
+(64/256/1024/4096/16384/65536), distortion case at 10k cells, all run in
+parallel:
 
 ```bash
-mkdir -p cluster_logs
-
-julia -O3 --threads=2 --project=. build_set_regular_meshes.jl 100 5              > cluster_logs/regular.log 2>&1 &
-julia -O3 --threads=2 --project=. build_set_refined_meshes_vtu.jl 100 11         > cluster_logs/refined.log 2>&1 &
-julia -O3 --threads=2 --project=. build_set_circular_refined_meshes.jl 64 6      > cluster_logs/circular_refined.log 2>&1 &
-julia -O3 --threads=2 --project=. build_set_global_distortion_meshes.jl 10000 6 0.05 10  > cluster_logs/global_distortion.log 2>&1 &
+julia -O3 --threads=2 --project=. build_set_regular_meshes.jl 64 6               > regular.log 2>&1 &
+julia -O3 --threads=2 --project=. build_set_refined_meshes_vtu.jl 64 6           > refined.log 2>&1 &
+julia -O3 --threads=2 --project=. build_set_circular_refined_meshes.jl 64 6      > circular_refined.log 2>&1 &
+julia -O3 --threads=2 --project=. build_set_global_distortion_meshes.jl 10000 6 0.05 10  > global_distortion.log 2>&1 &
 
 wait
 ```
 
-Finest cell counts: `regular` ≈102400, `refined` =102400, `circular_refined`
-=65536 (nearest quadrupling step to 100k), `global_distortion` =10000 (fixed
-resolution, distortion sweep). `circular_refined` is dramatically slower
-than the others (density-weighted Lloyd) — expect it to still be running
-after the rest finish (observed ~2.5h for this exact command on a desktop
-machine).
+Finest cell counts: `regular`/`refined`/`circular_refined` all =65536,
+`global_distortion` =10000 (fixed resolution, distortion sweep).
+`circular_refined` is dramatically slower than the others (density-weighted
+Lloyd) — expect it to still be running after the rest finish (observed
+~2.5h for this exact command on a desktop machine).
 
 `global_distortion`'s `fixup_iters=10` (vs. the script's own default of 4)
 was validated overnight: it keeps obtuse triangles near zero across the

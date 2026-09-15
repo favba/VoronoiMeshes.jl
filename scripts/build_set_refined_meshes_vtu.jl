@@ -30,7 +30,7 @@ function main(base_cells, num_scales, ini_scale)
 
     rows = []
     for i in ini_scale:(ini_scale+num_scales-1)
-        num_cells = base_cells * (2^i)
+        num_cells = base_cells * (4^i)
         println("Scale p$i: creating centroidal mesh ($num_cells cells)...")
 
         # max_time raised from the 4-minute default: an early time-cap cutoff
@@ -49,19 +49,20 @@ const USAGE = """
 Usage: julia --project=. build_set_refined_meshes_vtu.jl [base_cells] [num_scales] [ini_scale]
 
 Builds a series of independently-generated centroidal Voronoi meshes with
-cell counts growing as base_cells * 2^i (not derived from one another).
+cell counts growing as base_cells * 4^i (not derived from one another) —
+same cell-count ladder as build_set_regular_meshes.jl / circular_refined.
 
 Arguments (all optional, positional):
-  base_cells  Cell count at ini_scale (default 16).
-  num_scales  Number of scales to build (default 11).
-  ini_scale   Starting power of 2 (default 0). Cell counts:
-              base_cells*2^ini_scale, ..., base_cells*2^(ini_scale+num_scales-1)
-              — defaults give 16, 32, 64, ..., 16384.
+  base_cells  Cell count at ini_scale (default 64).
+  num_scales  Number of scales to build (default 4).
+  ini_scale   Starting power of 4 (default 0). Cell counts:
+              base_cells*4^ini_scale, ..., base_cells*4^(ini_scale+num_scales-1)
+              — defaults give 64, 256, 1024, 4096.
 """
 MeshTools.handle_help(ARGS, USAGE)
 
-base_cells = length(ARGS) >= 1 ? parse(Int, ARGS[1]) : 16
-num_scales = length(ARGS) >= 2 ? parse(Int, ARGS[2]) : 11
+base_cells = length(ARGS) >= 1 ? parse(Int, ARGS[1]) : 64
+num_scales = length(ARGS) >= 2 ? parse(Int, ARGS[2]) : 4
 ini_scale = length(ARGS) >= 3 ? parse(Int, ARGS[3]) : 0
 
 main(base_cells, num_scales, ini_scale)

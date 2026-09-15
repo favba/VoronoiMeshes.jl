@@ -18,13 +18,16 @@ Same-resolution meshes with increasing distortion: every cell's generator
 point is randomly perturbed, then lightly relaxed to remove bad triangles.
 
 ```
-julia --project=. build_set_global_distortion_meshes.jl [nc] [num_levels] [base_strength]
+julia --project=. build_set_global_distortion_meshes.jl [nc] [num_levels] [base_strength] [fixup_iters]
 ```
 
 - `nc` (default 80): cell count, fixed across all levels.
 - `num_levels` (default 6): number of perturbed levels.
 - `base_strength` (default 0.05): perturbation amplitude at level 1, as a
   fraction of the mean cell spacing; level `i` uses `base_strength * i`.
+- `fixup_iters` (default 4): Lloyd iterations applied after perturbing, to
+  clean up obtuse triangles. Raise this if obtuse triangles remain a problem
+  at the strengths you need.
 
 ### `build_set_regular_meshes.jl`
 
@@ -59,7 +62,6 @@ julia --project=. build_set_circular_refined_meshes.jl [nc_ref] [num_levels]
 
 - `nc_ref` (default 64): cell count for Level 0.
 - `num_levels` (default 4): number of levels (Level 0 + refinements).
-
 
 All four scripts write per level: `..._vor.vtu`, `..._tri.vtu`, `....png`
 (mesh overlay), `..._<metric>.png` (one per metric), a `<kind>_metrics_summary.csv`,
@@ -117,11 +119,26 @@ all run in parallel:
 ```bash
 mkdir -p cluster_logs
 
-julia -O3 --threads=2 --project=. build_set_regular_meshes.jl 100 5            > cluster_logs/regular.log 2>&1 &
-julia -O3 --threads=2 --project=. build_set_refined_meshes_vtu.jl 100 11       > cluster_logs/refined.log 2>&1 &
-julia -O3 --threads=2 --project=. build_set_circular_refined_meshes.jl 64 6    > cluster_logs/circular_refined.log 2>&1 &
-julia -O3 --threads=2 --project=. build_set_global_distortion_meshes.jl 10000  > cluster_logs/global_distortion.log 2>&1 &
+julia -O3 --threads=2 --project=. build_set_regular_meshes.jl 100 5              > cluster_logs/regular.log 2>&1 &
+julia -O3 --threads=2 --project=. build_set_refined_meshes_vtu.jl 100 11         > cluster_logs/refined.log 2>&1 &
+julia -O3 --threads=2 --project=. build_set_circular_refined_meshes.jl 64 6      > cluster_logs/circular_refined.log 2>&1 &
+julia -O3 --threads=2 --project=. build_set_global_distortion_meshes.jl 10000 6 0.05 10  > cluster_logs/global_distortion.log 2>&1 &
 
 wait
 ```
+
+Finest cell counts: `regular` ≈102400, `refined` =102400, `circular_refined`
+=65536 (nearest quadrupling step to 100k), `global_distortion` =10000 (fixed
+resolution, distortion sweep). `circular_refined` is dramatically slower
+than the others (density-weighted Lloyd) — expect it to still be running
+after the rest finish (observed ~2.5h for this exact command on a desktop
+machine).
+
+`global_distortion`'s `fixup_iters=10` (vs. the script's own default of 4)
+was validated overnight: it keeps obtuse triangles near zero across the
+whole sweep, at the cost of roughly halving the achieved distortion at each
+nominal `d` (more Lloyd relaxation smooths the perturbation back down). If
+you need comparable distortion magnitude *and* clean triangles, raise
+`base_strength` alongside `fixup_iters` rather than using `fi=10` with the
+default strengths.
 

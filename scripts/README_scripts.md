@@ -44,14 +44,19 @@ julia --project=. build_set_regular_meshes.jl [nc_ref] [num_levels]
 
 ### `build_set_refined_meshes_vtu.jl`
 
-Independently-generated meshes with cell counts growing as `base_cells * 4^i`
-(not derived from one another) — same cell-count ladder as `regular`/`circular_refined`.
+Every level is independently generated from random initial points (not a hex
+grid, not warm-started — bisecting from a parent mesh reintroduces visible
+hex-like regularity, even from a single step), quadrupling the cell count —
+same cell-count ladder as `regular`/`circular_refined`. Lloyd's `max_time`
+scales with cell count (10 min per 1000 cells, 4 min floor, 6 hour ceiling),
+so large levels can take hours.
 
 ```
-julia --project=. build_set_refined_meshes_vtu.jl [base_cells] [num_scales] [ini_scale]
+julia --project=. build_set_refined_meshes_vtu.jl [base_cells] [num_scales]
 ```
 
-- `base_cells` (default 64), `num_scales` (default 4), `ini_scale` (default 0).
+- `base_cells` (default 64): cell count at scale 0.
+- `num_scales` (default 4): number of scales to build.
 
 ### `build_set_circular_refined_meshes.jl`
 

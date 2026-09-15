@@ -105,6 +105,10 @@ Output: `<csv_basename>_convergence.pdf`/`.eps` next to the input CSV.
 
 ## Other scripts
 
+- `smooth_mesh_vtu.jl` — touches up an already-saved mesh with further Lloyd
+  relaxation (warm-started from its own cells, same cell count), for a level
+  that stopped early (e.g. hit a time cap) without rebuilding it from
+  scratch. Usage: `julia --project=. smooth_mesh_vtu.jl <mesh_vor.vtu> [max_time] [rtol]`.
 - `save_regular_mesh_vtu.jl` — minimal worked example (build, save/read VTU, plot).
 - `create_distorted_meshes.jl` — older standalone script, predates `mesh_tools.jl`.
   Usage: `julia --project=. create_distorted_meshes.jl <x_period> <y_period> <dc>`.

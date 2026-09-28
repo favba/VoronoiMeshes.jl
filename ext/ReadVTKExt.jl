@@ -90,10 +90,10 @@ function read_mesh_from_vtu_data(::Val{maxEdges}, vtk_vor, vtk_tri) where {maxEd
     # Vertices on cells (convert to SmVecArray)
     #--------------------
     vtk_cells_vor = get_cells(vtk_vor)
-    connectivity = vtk_cells_vor.connectivity
-    offsets = vtk_cells_vor.offsets
-    ranges = [((i == 1 ? 1 : offsets[i-1] + 1):offsets[i]) for i in 1:num_cells]
-    verticesOnCell_raw = [Int32.(connectivity[r]) for r in ranges]
+    connectivity_vor = vtk_cells_vor.connectivity
+    offsets_vor = vtk_cells_vor.offsets
+    ranges_vor = [((i == 1 ? 1 : offsets_vor[i-1] + 1):offsets_vor[i]) for i in 1:num_cells]
+    verticesOnCell_raw = [Int32.(connectivity_vor[r]) for r in ranges_vor]
 
     # Ghost indexes are in the end (num_vertices+1:) and have negative sign pointing to original vertex index
     vertex_indx_with_ghosts = get_data(ReadVTK.get_point_data(vtk_vor)["Index"])
@@ -126,10 +126,10 @@ function read_mesh_from_vtu_data(::Val{maxEdges}, vtk_vor, vtk_tri) where {maxEd
     # cellsOnVertex (convert to Vector{FixedVector{3, Int32}})
     #--------------------
     vtk_cells_tri = get_cells(vtk_tri)
-    connectivity = vtk_cells_tri.connectivity
-    offsets = vtk_cells_tri.offsets
-    ranges = [((i == 1 ? 1 : offsets[i-1] + 1):offsets[i]) for i in 1:num_vertices]
-    cellsOnVertex = [FixedVector{3,Int32}(Int32.(connectivity[r])) for r in ranges]
+    connectivity_tri = vtk_cells_tri.connectivity
+    offsets_tri = vtk_cells_tri.offsets
+    ranges_tri = [((i == 1 ? 1 : offsets_tri[i-1] + 1):offsets_tri[i]) for i in 1:num_vertices]
+    cellsOnVertex = [FixedVector{3,Int32}(Int32.(connectivity_tri[r])) for r in ranges_tri]
 
     # Ghost indexes are in the end (num_cells+1:) and have negative sign pointing to original cell index
     cell_indx_with_ghosts = get_data(ReadVTK.get_point_data(vtk_tri)["Index"])

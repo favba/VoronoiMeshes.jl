@@ -185,15 +185,15 @@ function save_to_netcdf!(ds::NCDataset, diag::PlanarVoronoiDiagram{maxEdges, TI}
     attrib = ds.attrib
     attrib["on_a_sphere"] = "NO"
     attrib["is_periodic"] = "YES"
-    attrib["x_period"] = diag.x_period
-    attrib["y_period"] = diag.y_period
+    attrib["x_period"] = diag.x_period[]
+    attrib["y_period"] = diag.y_period[]
     write_diagram_data!(ds, diag, force3D)
 end
 
 function save_to_netcdf!(ds::NCDataset, diag::SphericalVoronoiDiagram{maxEdges, TI}, force3D::Bool = false) where {maxEdges, TI}
     attrib = ds.attrib
     attrib["on_a_sphere"] = "YES"
-    attrib["sphere_radius"] = diag.sphere_radius
+    attrib["sphere_radius"] = diag.sphere_radius[]
     write_diagram_data!(ds, diag, force3D)
 end
 

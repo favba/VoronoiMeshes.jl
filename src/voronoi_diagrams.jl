@@ -6,8 +6,19 @@ struct PlanarVoronoiDiagram{maxEdges, TI, TF} <: AbstractVoronoiDiagram{false, m
     verticesOnCell::SmVecArray{maxEdges, TI, 1}
     cellsOnVertex::Vector{FixedVector{3, TI}}
     meshDensity::Vector{TF}
-    x_period::TF
-    y_period::TF
+    x_period::Base.RefValue{TF}
+    y_period::Base.RefValue{TF}
+
+    function PlanarVoronoiDiagram(generators::Vec2DxyArray{TF, 1},
+                                  vertices::Vec2DxyArray{TF, 1},
+                                  verticesOnCell::SmVecArray{maxEdges, TI, 1},
+                                  cellsOnVertex::Vector{FixedVector{3, TI}},
+                                  meshDensity::Vector{TF},
+                                  x_period::TF,
+                                  y_period::TF) where {maxEdges, TI, TF}
+
+        return new{maxEdges, TI, TF}(generators, vertices, verticesOnCell, cellsOnVertex, meshDensity, Ref(x_period), Ref(y_period))
+    end
 end
 
 struct SphericalVoronoiDiagram{maxEdges, TI, TF} <: AbstractVoronoiDiagram{true, maxEdges, TI, TF, TF}
@@ -16,7 +27,17 @@ struct SphericalVoronoiDiagram{maxEdges, TI, TF} <: AbstractVoronoiDiagram{true,
     verticesOnCell::SmVecArray{maxEdges, TI, 1}
     cellsOnVertex::Vector{FixedVector{3, TI}}
     meshDensity::Vector{TF}
-    sphere_radius::TF
+    sphere_radius::Base.RefValue{TF}
+
+    function SphericalVoronoiDiagram(generators::Vec3DArray{TF, 1},
+                                     vertices::Vec3DArray{TF, 1},
+                                     verticesOnCell::SmVecArray{maxEdges, TI, 1},
+                                     cellsOnVertex::Vector{FixedVector{3, TI}},
+                                     meshDensity::Vector{TF},
+                                     sphere_radius::TF) where {maxEdges, TI, TF}
+
+        return new{maxEdges, TI, TF}(generators, vertices, verticesOnCell, cellsOnVertex, meshDensity, Ref(sphere_radius))
+    end
 end
 
 struct VoronoiDiagram{S, maxEdges, TI, TF, Tz} <: AbstractVoronoiDiagram{S, maxEdges, TI, TF, Tz}
@@ -53,7 +74,14 @@ for maxEdges in 6:10
 end
 
 for s in fieldnames(PlanarVoronoiDiagram)
-    @eval _getproperty(v::VoronoiDiagram{false}, ::Val{$(QuoteNode(s))}) = getfield(get_diagram(v), $(QuoteNode(s)))
+    if s == :x_period
+        @eval _getproperty(v::VoronoiDiagram{false}, ::Val{:x_period}) = (get_diagram(v).x_period)[]
+    elseif s == :y_period
+        @eval _getproperty(v::VoronoiDiagram{false}, ::Val{:y_period}) = (get_diagram(v).y_period)[]
+    else
+        @eval _getproperty(v::VoronoiDiagram{false}, ::Val{$(QuoteNode(s))}) = getfield(get_diagram(v), $(QuoteNode(s)))
+    end
+
 
     for maxEdges in 6:10
         let TF = Float64, TI = Int32
@@ -66,7 +94,11 @@ const pvd_property_names = (fieldnames(VoronoiDiagram)..., fieldnames(PlanarVoro
 Base.propertynames(::VoronoiDiagram{false}) = pvd_property_names
 
 for s in fieldnames(SphericalVoronoiDiagram)
-    @eval _getproperty(v::VoronoiDiagram{true}, ::Val{$(QuoteNode(s))}) = getfield(get_diagram(v), $(QuoteNode(s)))
+    if s == :sphere_radius
+        @eval _getproperty(v::VoronoiDiagram{true}, ::Val{:sphere_radius}) = (get_diagram(v).sphere_radius)[]
+    else
+        @eval _getproperty(v::VoronoiDiagram{true}, ::Val{$(QuoteNode(s))}) = getfield(get_diagram(v), $(QuoteNode(s)))
+    end
 
     for maxEdges in 6:10
         let TF = Float64, TI = Int32

@@ -398,7 +398,7 @@ end
 
 function fix_diagram!(d::PlanarVoronoiDiagram)
     verticesOnCell = d.verticesOnCell
-    verticesOnCell_inverted = check_if_counter_clockwise(d.generators, verticesOnCell, d.vertices, d.x_period, d.y_period)
+    verticesOnCell_inverted = check_if_counter_clockwise(d.generators, verticesOnCell, d.vertices, d.x_period[], d.y_period[])
     if !isnothing(verticesOnCell_inverted)
         let voc = verticesOnCell_inverted::Vector{Int}
             @parallel for i in voc
@@ -408,7 +408,7 @@ function fix_diagram!(d::PlanarVoronoiDiagram)
     end
 
     cellsOnVertex = d.cellsOnVertex
-    cellsOnVertex_inverted = check_if_counter_clockwise(d.vertices, cellsOnVertex, d.generators, d.x_period, d.y_period)
+    cellsOnVertex_inverted = check_if_counter_clockwise(d.vertices, cellsOnVertex, d.generators, d.x_period[], d.y_period[])
     if !isnothing(cellsOnVertex_inverted)
         let cov = cellsOnVertex_inverted::Vector{Int}
             @parallel for i in cov
@@ -422,7 +422,7 @@ end
 
 function fix_diagram!(d::SphericalVoronoiDiagram)
     verticesOnCell = d.verticesOnCell
-    verticesOnCell_inverted = check_if_counter_clockwise(d.sphere_radius, d.generators, verticesOnCell, d.vertices)
+    verticesOnCell_inverted = check_if_counter_clockwise(d.sphere_radius[], d.generators, verticesOnCell, d.vertices)
     if !isnothing(verticesOnCell_inverted)
         let voc = verticesOnCell_inverted::Vector{Int}
             @parallel for i in voc
@@ -432,7 +432,7 @@ function fix_diagram!(d::SphericalVoronoiDiagram)
     end
 
     cellsOnVertex = d.cellsOnVertex
-    cellsOnVertex_inverted = check_if_counter_clockwise(d.sphere_radius, d.vertices, cellsOnVertex, d.generators)
+    cellsOnVertex_inverted = check_if_counter_clockwise(d.sphere_radius[], d.vertices, cellsOnVertex, d.generators)
     if !isnothing(cellsOnVertex_inverted)
         let cov = cellsOnVertex_inverted::Vector{Int}
             @parallel for i in cov

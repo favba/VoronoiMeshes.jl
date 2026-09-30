@@ -21,6 +21,13 @@ function tmap!(output, func::F, var::Vararg) where {F <: Function}
     return output
 end
 
+function scale!(inout::AbstractArray, factor::Number)
+    @parallel for i in eachindex(inout)
+        @inbounds inout[i] = factor*inout[i]
+    end
+    return inout
+end
+
 function copy_matrix_to_fixedvector_vector!(tuple_vector::AbstractVector{FixedVector{N, T}}, matrix::AbstractMatrix{T2}) where {N, T, T2}
     n = Val{N}()
     @parallel for k in axes(matrix, 2)

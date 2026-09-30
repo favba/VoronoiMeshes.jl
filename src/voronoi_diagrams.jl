@@ -110,3 +110,19 @@ end
 const svd_property_names = (fieldnames(VoronoiDiagram)..., fieldnames(SphericalVoronoiDiagram)...)
 Base.propertynames(::VoronoiDiagram{true}) = svd_property_names
 
+scale!(d::VoronoiDiagram, factor::Real) = begin; scale!(get_diagram(d), factor); d; end
+
+function scale!(d::PlanarVoronoiDiagram, factor::Real)
+    d.x_period[] = d.x_period[]*factor
+    d.y_period[] = d.y_period[]*factor
+    scale!(d.generators, factor)
+    scale!(d.vertices, factor)
+    return d
+end
+
+function scale!(d::SphericalVoronoiDiagram, factor::Real)
+    d.sphere_radius[] = d.sphere_radius[]*factor
+    scale!(d.generators, factor)
+    scale!(d.vertices, factor)
+    return d
+end

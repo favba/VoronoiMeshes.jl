@@ -246,3 +246,88 @@ end
     Base.Filesystem.rm("test_save_tri.vtu")
     Base.Filesystem.rm("test_save_vor.vtu")
 end
+
+@testset "Mesh scaling Periodic" begin
+    factor = 17.4
+
+    d1 = VoronoiDiagram("mesh_distorted.nc")
+
+    #scale before creating the edges for the VoronoiMesh
+    mesh1 = VoronoiMesh(scale!(d1, factor))
+
+    mesh2 = VoronoiMesh(VoronoiDiagram("mesh_distorted.nc"))
+
+    xpo = mesh2.x_period
+    ypo = mesh2.y_period
+
+    @test mesh1.x_period ≈ factor*xpo
+    @test mesh1.y_period ≈ factor*ypo
+
+    #Trigger computation of computable fields
+    for p in Base.propertynames(mesh2.cells)
+        Base.getproperty(mesh2.cells, p)
+    end
+    for p in Base.propertynames(mesh2.vertices)
+        Base.getproperty(mesh2.vertices, p)
+    end
+    for p in Base.propertynames(mesh2.edges)
+        Base.getproperty(mesh2.edges, p)
+    end
+
+    #Then scale
+    scale!(mesh2, factor)
+
+    @test mesh2.x_period ≈ factor*xpo
+    @test mesh2.y_period ≈ factor*ypo
+
+    for p in Base.propertynames(mesh2.cells)
+        @test my_approx(Base.getproperty(mesh2.cells, p), Base.getproperty(mesh1.cells, p))
+    end
+    for p in Base.propertynames(mesh2.vertices)
+        @test my_approx(Base.getproperty(mesh2.vertices, p), Base.getproperty(mesh1.vertices, p))
+    end
+    for p in Base.propertynames(mesh2.edges)
+        @test my_approx(Base.getproperty(mesh2.edges, p), Base.getproperty(mesh1.edges, p))
+    end
+end
+
+@testset "Mesh scaling Spherical" begin
+    factor = 17.4
+
+    d1 = VoronoiDiagram("spherical_grid_500km.nc")
+
+    #scale before creating the edges for the VoronoiMesh
+    mesh1 = VoronoiMesh(scale!(d1, factor))
+
+    @test mesh1.sphere_radius ≈ factor
+
+    mesh2 = VoronoiMesh(VoronoiDiagram("spherical_grid_500km.nc"))
+
+    @test mesh2.sphere_radius ≈ 1.0
+
+    #Trigger computation of computable fields
+    for p in Base.propertynames(mesh2.cells)
+        Base.getproperty(mesh2.cells, p)
+    end
+    for p in Base.propertynames(mesh2.vertices)
+        Base.getproperty(mesh2.vertices, p)
+    end
+    for p in Base.propertynames(mesh2.edges)
+        Base.getproperty(mesh2.edges, p)
+    end
+
+    #Then scale
+    scale!(mesh2, factor)
+
+    @test mesh2.sphere_radius ≈ factor
+
+    for p in Base.propertynames(mesh2.cells)
+        @test my_approx(Base.getproperty(mesh2.cells, p), Base.getproperty(mesh1.cells, p))
+    end
+    for p in Base.propertynames(mesh2.vertices)
+        @test my_approx(Base.getproperty(mesh2.vertices, p), Base.getproperty(mesh1.vertices, p))
+    end
+    for p in Base.propertynames(mesh2.edges)
+        @test my_approx(Base.getproperty(mesh2.edges, p), Base.getproperty(mesh1.edges, p))
+    end
+end

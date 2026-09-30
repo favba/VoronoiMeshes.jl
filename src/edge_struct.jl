@@ -14,6 +14,13 @@ mutable struct EdgeInfo{S, NE, TI, TF, Tz}
     end
 end
 
+function scale!(e::EdgeInfo, factor::Real)
+    isdefined(e, :midpoint) && scale!(e.midpoint, factor)
+    isdefined(e, :length) && scale!(e.length, factor)
+    isdefined(e, :lengthDual) && scale!(e.lengthDual, factor)
+    return e
+end
+
 const planar_edgeinfo_names = (:midpoint, :length, :lengthDual, :angle, :normal, :tangent, :x_period, :y_period)
 const spherical_edgeinfo_names = (filter(!=(:diagram), fieldnames(EdgeInfo))..., :sphere_radius)
 
@@ -224,4 +231,10 @@ end
 function Edges(diagram::VoronoiDiagram)
     edges,_,_ = build_edges(diagram)
     return edges
+end
+
+function scale!(e::Edges, factor::Real)
+    scale!(e.position, factor)
+    scale!(getfield(e, :info), factor)
+    return e
 end

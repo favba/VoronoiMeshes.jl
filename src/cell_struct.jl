@@ -24,6 +24,13 @@ for nEdges in 6:10
     precompile(CellInfo, (VoronoiDiagram{true, nEdges, Int32, Float64, Float64},))
 end
 
+function scale!(c::CellInfo, factor::Real)
+    isdefined(c, :centroid) && scale!(c.centroid, factor)
+    isdefined(c, :area) && scale!(c.area, factor*factor)
+    isdefined(c, :areaMimetic) && scale!(c.areaMimetic, factor*factor)
+    return c
+end
+
 """
     Cells{OnSphere, max_nEdges, <:Integer, <:Float, <:Union{Float, Zeros.Zero}} 
 

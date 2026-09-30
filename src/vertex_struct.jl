@@ -15,6 +15,14 @@ mutable struct VertexInfo{S, NE, TI, TF, Tz}
     end
 end
 
+function scale!(v::VertexInfo, factor::Real)
+    isdefined(v, :centroid) && scale!(v.centroid, factor)
+    isdefined(v, :area) && scale!(v.area, factor*factor)
+    isdefined(v, :areaMimetic) && scale!(v.areaMimetic, factor*factor)
+    isdefined(v, :kiteAreas) && scale!(v.kiteAreas, factor*factor)
+    isdefined(v, :kiteAreasMimetic) && scale!(v.kiteAreasMimetic, factor*factor)
+end
+
 const planar_vertexinfo_names = (:centroid, :area, :kiteAreas, :edgesSign, :x_period, :y_period)
 const spherical_vertexinfo_names = (filter(x -> ((x != :diagram) & (x != :verticesOnEdge)), fieldnames(VertexInfo))..., :sphere_radius)
 

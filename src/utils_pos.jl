@@ -351,7 +351,7 @@ warn_mesh_issues(mesh::AbstractVoronoiMesh) = warn_mesh_issues(check_mesh(mesh),
 
 warn_edge_issues(::Nothing, ::AbstractVoronoiMesh) = nothing
 
-function warn_edge_issues(nt, mesh::AbstractVoronoiMesh)
+function warn_edge_issues(nt, ::AbstractVoronoiMesh)
     if !isnothing(nt)
         @warn "The edges indexing arrays from this mesh do not follow the mesh specification on $(length(nt.ordering)) edges. The indices of the offending edges can be given by running `check_edge_indexing(mesh).ordering`."
     end
@@ -359,7 +359,7 @@ end
 
 warn_vertex_issues(::Nothing, ::AbstractVoronoiMesh) = nothing
 
-function warn_vertex_issues(nt, mesh::AbstractVoronoiMesh)
+function warn_vertex_issues(nt, ::AbstractVoronoiMesh)
     if !isnothing(nt)
        if !isnothing(nt.counter_clockwise)
             if !isnothing(nt.counter_clockwise.cells)
@@ -377,7 +377,7 @@ end
 
 warn_cell_issues(::Nothing, ::AbstractVoronoiMesh) = nothing
 
-function warn_cell_issues(nt, mesh::AbstractVoronoiMesh)
+function warn_cell_issues(nt, ::AbstractVoronoiMesh)
     if !isnothing(nt)
        if !isnothing(nt.counter_clockwise)
             if !isnothing(nt.counter_clockwise.cells)
@@ -450,3 +450,19 @@ end
 Fix any elements in `d.cellsOnVertex` and `d.verticesOnCell` that is not in counter-clockwise order
 """
 fix_diagram!(d::VoronoiDiagram) = (fix_diagram!(get_diagram(d)); d )
+
+"""
+    scale!(m::AbstractVoronoiMesh, factor::Real) -> m
+
+Rescale the mesh domain by a factor `factor`.
+For a planar mesh with domain `[0, xp] ⨯ [0, yp]`, the domain is changed to
+`[0, factor*xp] ⨯ [0, factor*xp]`. 
+For a spherical mesh with `sphere_radius=r`, the radius is changed to `sphere_radius=factor*r`.
+"""
+function scale!(m::AbstractVoronoiMesh, factor::Real)
+    scale!(m.diagram, factor)
+    scale!(getfield(m.cells, :info), factor)
+    scale!(getfield(m.vertices, :info), factor)
+    scale!(m.edges, factor)
+    return m
+end

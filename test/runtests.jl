@@ -340,3 +340,24 @@ end
         @test my_approx(Base.getproperty(mesh2.edges, p), Base.getproperty(mesh1.edges, p))
     end
 end
+
+@testset "Utilities" begin
+
+    for mesh in (VoronoiMesh("mesh_distorted.nc"), VoronoiMesh("spherical_grid_500km.nc"))
+        oc = ones(mesh.cells.n)
+        ov = ones(mesh.vertices.n)
+        oe = ones(mesh.edges.n)
+
+        At = sum(mesh.cells.area)
+
+        @test surface_integral(mesh, oc) ≈ At
+        @test surface_integral(mesh, ov) ≈ At
+        @test surface_integral(mesh, oe) ≈ At
+
+        @test surface_integral(mesh, -, 3 .* oc, 2 .* oc) ≈ At
+        @test surface_integral(mesh, -, 3 .* ov, 2 .* ov) ≈ At
+        @test surface_integral(mesh, -, 3 .* oe, 2 .* oe) ≈ At
+
+        @test_throws DomainError surface_integral(mesh, rand(10))
+    end
+end

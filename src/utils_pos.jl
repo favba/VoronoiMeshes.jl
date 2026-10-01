@@ -466,3 +466,48 @@ function scale!(m::AbstractVoronoiMesh, factor::Real)
     scale!(m.edges, factor)
     return m
 end
+
+@inline function get_same_index(var::NTuple{N}, i::Integer) where {N}
+    f = @inline function(el)
+        @inbounds(var[el][i])
+    end
+    @inline ntuple(f , Val{N}())
+end
+
+function surface_integral(A::AbstractVector, func::F, args::Vararg{AbstractVector}) where F<:Function
+
+    lA = length(A)
+    @assert all(x -> (length(x) == lA), args)
+
+    r = zero(promote_type(eltype(A), eltype.(args)...))
+
+    @batch reduction=((+, r),) for i in eachindex(A)
+        @inbounds begin
+            t = @inline get_same_index(args, i)
+            term = @inline func(t...)
+            r = muladd(A[i], term, r)
+        end
+    end
+
+    return r
+end
+
+surface_integral(A::AbstractVector, arg::AbstractVector) = surface_integral(A, identity, arg)
+
+function surface_integral(m::AbstractVoronoiMesh, func::F, args::Vararg{AbstractVector}) where F<:Function
+
+    lA = length(args[1])
+    @assert all(x -> (length(x) == lA), args)
+
+    if lA == m.cells.n
+        surface_integral(m.cells.area, func, args...)
+    elseif lA == m.vertices.n
+        surface_integral(m.vertices.area, func, args...)
+    elseif lA == m.edges.n
+        surface_integral(m.edges.area, func, args...)
+    else
+        throw(DomainError(args, "Input vectors doesn't seem to belong to input mesh $m"))
+    end
+end
+
+surface_integral(m::AbstractVoronoiMesh, arg::AbstractVector) = surface_integral(m, identity, arg)

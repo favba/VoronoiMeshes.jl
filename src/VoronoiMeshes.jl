@@ -3,6 +3,7 @@ module VoronoiMeshes
 using LinearAlgebra
 using Zeros, TensorsLite, SmallCollections, TensorsLiteGeometry
 using PrecompileTools
+using Polyester
 
 export @parallel
 
@@ -23,6 +24,8 @@ export save_to_netcdf, save_to_netcdf!, read_from_netcdf, write_field_to_netcdf!
 
 # WriteVTKExt and ReadVTKExt functions
 export save_voronoi_to_vtu, save_triangulation_to_vtu, read_from_vtu   
+
+export surface_integral
 
 const VecMaybe1DxArray{TX, TYZ, N} = TensorsLite.TensorArray{Tensor{1, Union{TX, TYZ}, TX, TYZ, TYZ}, N, Array{TX, N}, Array{TYZ, N}, Array{TYZ, N}}
 const Vec1DxOr2DxyArray{TX, TXY, N} = TensorsLite.TensorArray{Tensor{1, Union{TX, Zero}, TX, TXY, Zero}, N, Array{TX, N}, Array{TXY, N}, Array{Zero, N}}

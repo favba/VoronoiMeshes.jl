@@ -3,6 +3,7 @@ mutable struct EdgeInfo{S, NE, TI, TF, Tz}
     midpoint::TensorsLite.VecMaybe2DxyArray{TF, Tz, 1}
     length::Vector{TF}
     lengthDual::Vector{TF}
+    area::Vector{TF}
     angle::Vector{TF}
     longitude::Vector{TF}
     latitude::Vector{TF}
@@ -18,10 +19,12 @@ function scale!(e::EdgeInfo, factor::Real)
     isdefined(e, :midpoint) && scale!(e.midpoint, factor)
     isdefined(e, :length) && scale!(e.length, factor)
     isdefined(e, :lengthDual) && scale!(e.lengthDual, factor)
+    isdefined(e, :area) && scale!(e.area, factor*factor)
     return e
 end
 
-const planar_edgeinfo_names = (:midpoint, :length, :lengthDual, :angle, :normal, :tangent, :x_period, :y_period)
+const planar_edgeinfo_names = (:midpoint, :length, :lengthDual, :area, :angle, :normal, :tangent, :x_period, :y_period)
+
 const spherical_edgeinfo_names = (filter(!=(:diagram), fieldnames(EdgeInfo))..., :sphere_radius)
 
 """
@@ -58,6 +61,7 @@ An array with a particular coordinate can also be extracted throught the dot
 - `midpoint::TensorArray`: An array with the position vector of the Voronoi cell edge midpoint.
 - `normal::TensorArray`: An array with unit vectors that are normal to the edge and tangent to the mesh, at the edge `position`.
 - `tangent::TensorArray`: An array with unit vectors that are tangent both to the the edge and to the mesh, at the edge `position`.
+- `area::Vector`: An array with the area of the kite quadilateral formed by the cell and vertex positions surrounding the edge.
 - `angle::Vector`: Angle in radians between local north and the positive tangential direction of an edge.
   Which is the same as the angle between the edge normal and the eastward direction.
 - `longitude::Vector`(Spherical meshes only): The longitude in radians of the edge `position` vector.

@@ -95,6 +95,15 @@ end
         else
             @test all(𝐤 .≈ edges.normal .× edges.tangent)
         end
+
+        At = if mesh === mesh_spherical
+            mesh_spherical.sphere_radius^2*pi*4
+        else
+            mesh.x_period*mesh.y_period
+        end
+
+        @test sum(mesh.edges.area) ≈ At
+
     end
 end
 

@@ -56,6 +56,43 @@ compute_edge_lengthDual!(output, edges::Edges{false}) = compute_edge_length_peri
 compute_edge_lengthDual!(output, edges::Edges{true}) = compute_edge_length_spherical!(output, edges.info.diagram.generators, edges.cells, edges.sphere_radius)
 compute_edge_lengthDual(edges::Edges) = compute_edge_lengthDual!(similar(edges.position.x), edges)
 
+function compute_edge_area_periodic!(output, vpos, verticesOnEdge, cpos, cellsOnEdge, xp, yp)
+    @parallel for e in eachindex(verticesOnEdge)
+        @inbounds begin
+            v1, v2 = verticesOnEdge[e]
+            vp1 = vpos[v1]
+            vp2 = closest(vp1, vpos[v2], xp, yp)
+            c1, c2 = cellsOnEdge[e]
+
+            cp1 = closest(vp1, cpos[c1], xp, yp)
+            cp2 = closest(vp1, cpos[c2], xp, yp)
+            output[e] = area(vp1, cp2, vp2, cp1)
+        end
+    end
+    return output
+end
+
+compute_edge_area!(output, edges::Edges{false}) = compute_edge_area_periodic!(output, edges.info.diagram.vertices, edges.vertices, edges.info.diagram.generators, edges.cells, edges.x_period, edges.y_period)
+
+function compute_edge_area_spherical!(output, vpos, verticesOnEdge, cpos, cellsOnEdge, R)
+    @parallel for e in eachindex(verticesOnEdge)
+        @inbounds begin
+            v1, v2 = verticesOnEdge[e]
+            vp1 = vpos[v1] / R
+            vp2 = vpos[v2] / R
+            c1, c2 = cellsOnEdge[e]
+
+            cp1 = cpos[c1] / R
+            cp2 = cpos[c2] / R
+            output[e] = R*R*spherical_polygon_area(1, vp1, cp2, vp2, cp1)
+        end
+    end
+    return output
+end
+
+compute_edge_area!(output, edges::Edges{true}) = compute_edge_area_spherical!(output, edges.info.diagram.vertices, edges.vertices, edges.info.diagram.generators, edges.cells, edges.sphere_radius)
+compute_edge_area(edges::Edges) = compute_edge_area!(similar(edges.position.x), edges)
+
 function compute_edge_angle_periodic!(output, cpos, cellsOnEdge, xp::Number, yp::Number)
     @parallel for i in eachindex(cellsOnEdge)
         @inbounds begin
